@@ -4,8 +4,15 @@ Sends emails using Twilio SendGrid
 """
 import os
 from flask import url_for
-from sendgrid import SendGridAPIClient
-from sendgrid.helpers.mail import Mail, Email, To, Content
+
+# Try to import sendgrid - gracefully handle if not installed
+try:
+    from sendgrid import SendGridAPIClient
+    from sendgrid.helpers.mail import Mail, Email, To, Content
+    SENDGRID_AVAILABLE = True
+except ImportError:
+    SENDGRID_AVAILABLE = False
+    print("Warning: sendgrid package not installed. Email sending will be disabled.")
 
 
 class EmailService:
@@ -17,7 +24,10 @@ class EmailService:
         self.from_email = os.environ.get('SENDGRID_FROM_EMAIL', 'noreply@soloquy.app')
         self.from_name = os.environ.get('SENDGRID_FROM_NAME', 'Soloquy')
 
-        if not self.api_key:
+        if not SENDGRID_AVAILABLE:
+            print("Warning: sendgrid package not installed. Email sending will be disabled.")
+            self.client = None
+        elif not self.api_key:
             print("Warning: SENDGRID_API_KEY not configured. Email sending will be disabled.")
             self.client = None
         else:
@@ -186,7 +196,11 @@ This invitation will expire in 7 days.
 Soloquy - AI for everyone
             """
 
-            # Create SendGrid message
+            # Create SendGrid message (only if sendgrid is available)
+            if not SENDGRID_AVAILABLE:
+                print(f"Cannot send email - sendgrid not installed")
+                return False
+
             message = Mail(
                 from_email=Email(self.from_email, self.from_name),
                 to_emails=To(invitation.email),
@@ -316,6 +330,11 @@ If you have any questions or need help getting started, don't hesitate to reach 
 Best regards,
 The Soloquy Team
             """
+
+            # Create SendGrid message (only if sendgrid is available)
+            if not SENDGRID_AVAILABLE:
+                print(f"Cannot send email - sendgrid not installed")
+                return False
 
             message = Mail(
                 from_email=Email(self.from_email, self.from_name),
