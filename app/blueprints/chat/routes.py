@@ -146,7 +146,7 @@ def send_message():
             'sender_id': current_user.id,
             'sender': current_user.full_name,
             'created_at': message.created_at.isoformat()
-        }, room=conversation_id, skip_sid=request.sid)
+        }, room=conversation_id)
     elif agent_id:
         # User-to-agent DM
         conversation_id = f"agent_{agent_id}_user_{current_user.id}"
@@ -157,7 +157,7 @@ def send_message():
             'sender_id': current_user.id,
             'sender': current_user.full_name,
             'created_at': message.created_at.isoformat()
-        }, room=conversation_id, skip_sid=request.sid)
+        }, room=conversation_id)
 
     # If message is to an agent, generate AI response
     agent_response = None
@@ -327,7 +327,7 @@ def typing_indicator():
         'user_id': current_user.id,
         'user_name': current_user.full_name,
         'is_typing': is_typing
-    }, room=conversation_id, skip_sid=request.sid)
+    }, room=conversation_id)
 
     return jsonify({'success': True})
 
@@ -375,7 +375,7 @@ def mark_message_read(message_id):
             'user_id': current_user.id,
             'user_name': current_user.full_name,
             'read_at': datetime.utcnow().isoformat()
-        }, room=conversation_id, skip_sid=request.sid)
+        }, room=conversation_id)
 
     return jsonify({'success': True})
 
@@ -495,7 +495,7 @@ def send_channel_message(slug):
         'sender': current_user.full_name,
         'message_type': 'text',
         'created_at': message.created_at.isoformat()
-    }, room=conversation_id, skip_sid=request.sid)
+    }, room=conversation_id)
 
     # Parse mentions from the message
     mentions = message.parse_mentions()
