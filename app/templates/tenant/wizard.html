@@ -829,13 +829,18 @@ const wizardState = {
 };
 
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('[Wizard] DOMContentLoaded fired');
     const prevBtn = document.getElementById('prevBtn');
     const nextBtn = document.getElementById('nextBtn');
     const submitBtn = document.getElementById('submitBtn');
 
     // Plan selection
-    document.querySelectorAll('.select-plan').forEach(btn => {
+    const planButtons = document.querySelectorAll('.select-plan');
+    console.log('[Wizard] Found', planButtons.length, 'plan buttons');
+    planButtons.forEach(btn => {
+        console.log('[Wizard] Attaching click handler to plan button:', btn.dataset.plan);
         btn.addEventListener('click', function() {
+            console.log('[Wizard] Plan button clicked:', this.dataset.plan);
             const plan = this.dataset.plan;
             wizardState.data.plan = plan;
 
@@ -849,7 +854,9 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Template selection
-    document.querySelectorAll('.select-template').forEach(btn => {
+    const templateButtons = document.querySelectorAll('.select-template');
+    console.log('[Wizard] Found', templateButtons.length, 'template buttons');
+    templateButtons.forEach(btn => {
         btn.addEventListener('click', function() {
             const template = this.dataset.template;
             wizardState.data.template = template;
