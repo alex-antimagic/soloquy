@@ -31,6 +31,11 @@ cloudinary==1.41.0
 # Security
 Flask-Limiter==3.5.0
 Flask-Talisman==1.1.0
+cryptography==41.0.7
+
+# Integrations
+intuit-oauth==1.2.6
+python-quickbooks==0.9.12
 
 # Production WSGI Server
 gunicorn==21.2.0

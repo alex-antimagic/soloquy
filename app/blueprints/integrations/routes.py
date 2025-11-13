@@ -1,11 +1,21 @@
-from flask import render_template
+from flask import render_template, g
 from flask_login import login_required
 from app.blueprints.integrations import integrations_bp
+from app.models.integration import Integration
 
 @integrations_bp.route('/')
 @login_required
 def index():
     """Integrations management page"""
+
+    # Check QuickBooks connection status
+    qb_integration = None
+    if g.current_tenant:
+        qb_integration = Integration.query.filter_by(
+            tenant_id=g.current_tenant.id,
+            integration_type='quickbooks',
+            is_active=True
+        ).first()
 
     # Define available integrations with their status
     integrations = [
@@ -14,7 +24,11 @@ def index():
             'description': 'Sync your accounting and financial data',
             'logo': 'quickbooks.svg',
             'category': 'Accounting',
-            'available': False
+            'available': True,
+            'connected': qb_integration is not None,
+            'connect_url': 'integrations.quickbooks_connect' if not qb_integration else None,
+            'status_url': 'integrations.quickbooks_status',
+            'disconnect_url': 'integrations.quickbooks_disconnect' if qb_integration else None
         },
         {
             'name': 'Salesforce',

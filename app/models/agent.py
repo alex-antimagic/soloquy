@@ -128,6 +128,61 @@ class Agent(db.Model):
             except json.JSONDecodeError:
                 pass  # Skip if business context is malformed
 
+        # QuickBooks Financial Data (HIGH PRIORITY)
+        if tenant:
+            from app.models.integration import Integration
+            from app.services.quickbooks_service import quickbooks_service
+
+            qb_integration = Integration.query.filter_by(
+                tenant_id=tenant.id,
+                integration_type='quickbooks',
+                is_active=True
+            ).first()
+
+            if qb_integration:
+                try:
+                    financial_data = quickbooks_service.get_financial_summary(qb_integration)
+
+                    if financial_data:
+                        context_parts.append("=== QUICKBOOKS FINANCIAL DATA ===")
+
+                        if financial_data.get('company'):
+                            company = financial_data['company']
+                            context_parts.append(f"Company: {company.get('company_name', 'N/A')}")
+
+                        if financial_data.get('metrics'):
+                            metrics = financial_data['metrics']
+                            context_parts.append(f"Accounts Receivable: ${metrics.get('total_accounts_receivable', 0):,.2f}")
+                            context_parts.append(f"Open Invoices: {metrics.get('num_open_invoices', 0)} totaling ${metrics.get('total_open_invoices', 0):,.2f}")
+                            if metrics.get('num_overdue_invoices', 0) > 0:
+                                context_parts.append(f"⚠️ Overdue Invoices: {metrics['num_overdue_invoices']} totaling ${metrics.get('total_overdue', 0):,.2f}")
+
+                        if financial_data.get('profit_loss'):
+                            pl = financial_data['profit_loss']
+                            context_parts.append(f"\nProfit & Loss ({pl.get('start_date')} to {pl.get('end_date')}):")
+                            context_parts.append(f"  Revenue: ${pl.get('total_revenue', 0):,.2f}")
+                            context_parts.append(f"  Expenses: ${pl.get('total_expenses', 0):,.2f}")
+                            context_parts.append(f"  Net Income: ${pl.get('net_income', 0):,.2f}")
+
+                        if financial_data.get('top_customers'):
+                            context_parts.append("\nTop Customers by Balance:")
+                            for customer in financial_data['top_customers'][:3]:
+                                context_parts.append(f"  - {customer['name']}: ${customer['balance']:,.2f}")
+
+                        if financial_data.get('overdue_invoices'):
+                            overdue = financial_data['overdue_invoices'][:3]
+                            if overdue:
+                                context_parts.append("\n⚠️ Overdue Invoices (Action Required):")
+                                for inv in overdue:
+                                    context_parts.append(f"  - Invoice #{inv.get('invoice_number')}: {inv.get('customer_name')} - ${inv.get('balance'):,.2f} (Due: {inv.get('due_date')})")
+
+                        context_parts.append("")  # Blank line for separation
+
+                except Exception as e:
+                    # Silently skip if QuickBooks data fetch fails
+                    print(f"Error fetching QuickBooks data for agent context: {e}")
+                    pass
+
         # Custom User-Provided Context (HIGH PRIORITY)
         if tenant and tenant.custom_context:
             context_parts.append("=== CUSTOM WORKSPACE CONTEXT ===")
