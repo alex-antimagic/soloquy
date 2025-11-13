@@ -129,6 +129,7 @@
                             <div class="col-sm-12">
                                 {% if current_tenant.context_scraping_status in ['failed', 'completed'] %}
                                 <form method="POST" action="{{ url_for('tenant.refresh_context') }}" class="d-inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                     <button type="submit" class="btn btn-sm btn-outline-primary">
                                         <i class="bi bi-arrow-clockwise"></i> Refresh Business Context
                                     </button>
@@ -240,6 +241,7 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                     <form method="POST" action="{{ url_for('tenant.delete_workspace', tenant_id=current_tenant.id) }}" id="deleteForm">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" class="btn btn-danger" id="confirmDelete" disabled>
                             I understand, delete this workspace
                         </button>
