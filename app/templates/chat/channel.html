@@ -199,6 +199,16 @@
             }
         });
 
+        socket.on('typing', (typingData) => {
+            console.log('Typing:', typingData);
+
+            if (typingData.is_typing) {
+                showUserTypingIndicator(typingData.user_name);
+            } else {
+                hideUserTypingIndicator(typingData.user_id);
+            }
+        });
+
         socket.on('disconnect', () => {
             console.log('Socket.IO disconnected');
         });
@@ -410,12 +420,89 @@
         }
     }
 
+    // Show user typing indicator
+    function showUserTypingIndicator(userName) {
+        const userId = userName.replace(/\s+/g, '-');
+        // Don't show duplicate typing indicators
+        if (document.getElementById(`typing-user-${userId}`)) {
+            return;
+        }
+
+        const typingDiv = document.createElement('div');
+        typingDiv.className = 'message message-left typing-indicator';
+        typingDiv.id = `typing-user-${userId}`;
+
+        typingDiv.innerHTML = `
+            <div class="message-avatar">
+                <i class="bi bi-person-square"></i>
+            </div>
+            <div class="message-bubble">
+                <div class="message-header">
+                    <span class="message-author">${escapeHtml(userName)}</span>
+                    <span class="message-time text-muted">typing...</span>
+                </div>
+                <div class="message-content">
+                    <div class="typing-dots">
+                        <span class="typing-dot"></span>
+                        <span class="typing-dot"></span>
+                        <span class="typing-dot"></span>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        messagesContainer.appendChild(typingDiv);
+        scrollToBottom();
+    }
+
+    // Hide user typing indicator
+    function hideUserTypingIndicator(userId) {
+        const indicator = document.getElementById(`typing-user-${userId}`);
+        if (indicator) {
+            indicator.remove();
+        }
+    }
+
+    // Send typing status
+    let typingDebounce = null;
+    let isCurrentlyTyping = false;
+
+    function sendTypingStatus(isTyping) {
+        if (socket && socket.connected) {
+            socket.emit('typing', {
+                conversation_id: conversationId,
+                is_typing: isTyping
+            });
+        }
+    }
+
+    // Listen for input to send typing notifications
+    messageInput.addEventListener('input', () => {
+        if (!isCurrentlyTyping) {
+            isCurrentlyTyping = true;
+            sendTypingStatus(true);
+        }
+
+        if (typingDebounce) clearTimeout(typingDebounce);
+        typingDebounce = setTimeout(() => {
+            isCurrentlyTyping = false;
+            sendTypingStatus(false);
+        }, 1000);
+    });
+
     // Send message
     messageForm.addEventListener('submit', async (e) => {
         e.preventDefault();
 
         const content = messageInput.value.trim();
         if (!content) return;
+
+        // Clear typing status
+        if (typingDebounce) clearTimeout(typingDebounce);
+        if (isCurrentlyTyping) {
+            isCurrentlyTyping = false;
+            sendTypingStatus(false);
+        }
 
         // Immediately add user message to UI
         addMessageToUI(content, '{{ current_user.full_name }}', false);
