@@ -40,8 +40,14 @@ class Config:
     # Redis (for SocketIO message queue)
     REDIS_URL = os.environ.get('REDIS_URL') or 'redis://localhost:6379/0'
 
+    # For rediss:// (SSL) connections, disable certificate verification for Heroku Redis
+    # which uses self-signed certificates
+    _redis_url = os.environ.get('REDIS_URL') or 'redis://localhost:6379/0'
+    if _redis_url.startswith('rediss://'):
+        _redis_url += '?ssl_cert_reqs=none'
+
     # SocketIO
-    SOCKETIO_MESSAGE_QUEUE = os.environ.get('REDIS_URL') or 'redis://localhost:6379/0'
+    SOCKETIO_MESSAGE_QUEUE = _redis_url
     SOCKETIO_ASYNC_MODE = 'eventlet'
 
     # Application
