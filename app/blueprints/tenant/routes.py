@@ -648,7 +648,7 @@ def edit_context():
                           form=form)
 
 
-@tenant_bp.route('/delete/<int:tenant_id>', methods=['POST'])
+@tenant_bp.route('/delete/<int:tenant_id>', methods=['GET', 'POST'])
 @login_required
 def delete_workspace(tenant_id):
     """Delete a workspace (owner only)"""
@@ -663,6 +663,13 @@ def delete_workspace(tenant_id):
         flash('Only workspace owners can delete a workspace.', 'danger')
         return redirect(url_for('tenant.home'))
 
+    # GET request - show confirmation page
+    if request.method == 'GET':
+        return render_template('tenant/delete_confirm.html',
+                             title='Delete Workspace',
+                             tenant=tenant)
+
+    # POST request - perform deletion
     # Store name for flash message
     tenant_name = tenant.name
 
