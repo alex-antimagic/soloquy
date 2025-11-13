@@ -17,8 +17,14 @@ depends_on = None
 
 
 def upgrade():
+    # Check if channels table already exists (production database may already have it)
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    existing_tables = inspector.get_table_names()
+
     # Create channels table
-    op.create_table(
+    if 'channels' not in existing_tables:
+        op.create_table(
         'channels',
         sa.Column('id', sa.Integer(), nullable=False),
         sa.Column('tenant_id', sa.Integer(), nullable=False),
@@ -33,34 +39,36 @@ def upgrade():
         sa.Column('updated_at', sa.DateTime(), nullable=False, server_default=sa.text('CURRENT_TIMESTAMP')),
         sa.ForeignKeyConstraint(['created_by_id'], ['users.id'], ),
         sa.ForeignKeyConstraint(['department_id'], ['departments.id'], ),
-        sa.ForeignKeyConstraint(['tenant_id'], ['tenants.id'], ),
-        sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_channels_slug'), 'channels', ['slug'], unique=False)
-    op.create_index(op.f('ix_channels_tenant_id'), 'channels', ['tenant_id'], unique=False)
-    op.create_index(op.f('ix_channels_department_id'), 'channels', ['department_id'], unique=False)
+            sa.ForeignKeyConstraint(['tenant_id'], ['tenants.id'], ),
+            sa.PrimaryKeyConstraint('id')
+        )
+        op.create_index(op.f('ix_channels_slug'), 'channels', ['slug'], unique=False)
+        op.create_index(op.f('ix_channels_tenant_id'), 'channels', ['tenant_id'], unique=False)
+        op.create_index(op.f('ix_channels_department_id'), 'channels', ['department_id'], unique=False)
 
     # Create channel_members association table
-    op.create_table(
-        'channel_members',
-        sa.Column('channel_id', sa.Integer(), nullable=False),
-        sa.Column('user_id', sa.Integer(), nullable=False),
-        sa.Column('added_at', sa.DateTime(), nullable=False, server_default=sa.text('CURRENT_TIMESTAMP')),
-        sa.ForeignKeyConstraint(['channel_id'], ['channels.id'], ),
-        sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
-        sa.PrimaryKeyConstraint('channel_id', 'user_id')
-    )
+    if 'channel_members' not in existing_tables:
+        op.create_table(
+            'channel_members',
+            sa.Column('channel_id', sa.Integer(), nullable=False),
+            sa.Column('user_id', sa.Integer(), nullable=False),
+            sa.Column('added_at', sa.DateTime(), nullable=False, server_default=sa.text('CURRENT_TIMESTAMP')),
+            sa.ForeignKeyConstraint(['channel_id'], ['channels.id'], ),
+            sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
+            sa.PrimaryKeyConstraint('channel_id', 'user_id')
+        )
 
     # Create channel_agents association table
-    op.create_table(
-        'channel_agents',
-        sa.Column('channel_id', sa.Integer(), nullable=False),
-        sa.Column('agent_id', sa.Integer(), nullable=False),
-        sa.Column('added_at', sa.DateTime(), nullable=False, server_default=sa.text('CURRENT_TIMESTAMP')),
-        sa.ForeignKeyConstraint(['agent_id'], ['agents.id'], ),
-        sa.ForeignKeyConstraint(['channel_id'], ['channels.id'], ),
-        sa.PrimaryKeyConstraint('channel_id', 'agent_id')
-    )
+    if 'channel_agents' not in existing_tables:
+        op.create_table(
+            'channel_agents',
+            sa.Column('channel_id', sa.Integer(), nullable=False),
+            sa.Column('agent_id', sa.Integer(), nullable=False),
+            sa.Column('added_at', sa.DateTime(), nullable=False, server_default=sa.text('CURRENT_TIMESTAMP')),
+            sa.ForeignKeyConstraint(['agent_id'], ['agents.id'], ),
+            sa.ForeignKeyConstraint(['channel_id'], ['channels.id'], ),
+            sa.PrimaryKeyConstraint('channel_id', 'agent_id')
+        )
 
 
 def downgrade():
