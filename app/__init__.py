@@ -63,7 +63,8 @@ def create_app(config_name='default'):
                 'script-src': [
                     "'self'",
                     "'unsafe-inline'",  # Needed for Bootstrap inline scripts
-                    "https://cdn.jsdelivr.net"
+                    "https://cdn.jsdelivr.net",
+                    "https://cdn.socket.io"  # Needed for Socket.IO client
                 ],
                 'style-src': [
                     "'self'",
@@ -78,9 +79,13 @@ def create_app(config_name='default'):
                     "'self'",
                     "data:",
                     "https:"
+                ],
+                'connect-src': [
+                    "'self'",
+                    "https://cdn.jsdelivr.net"  # Allow fetching source maps
                 ]
             },
-            content_security_policy_nonce_in=['script-src'],
+            content_security_policy_nonce_in=[],  # Disable nonce since we're using 'unsafe-inline'
             frame_options='DENY',
             frame_options_allow_from=None,
             content_security_policy_report_only=False
