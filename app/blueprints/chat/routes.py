@@ -221,16 +221,8 @@ def send_message():
                 db.session.add(agent_message)
                 db.session.commit()
 
-                # Broadcast agent response via Socket.IO
-                conversation_id = f"agent_{agent.id}_user_{current_user.id}"
-                socketio.emit('new_message', {
-                    'id': agent_message.id,
-                    'content': agent_message.content,
-                    'sender_id': None,
-                    'agent_id': agent.id,
-                    'sender': agent.name,
-                    'created_at': agent_message.created_at.isoformat()
-                }, room=conversation_id)
+                # Don't broadcast via Socket.IO - agent response is returned in HTTP response
+                # to avoid duplicate messages in UI
 
                 # Detect if agent mentioned any tasks using Haiku
                 mentioned_tasks = []

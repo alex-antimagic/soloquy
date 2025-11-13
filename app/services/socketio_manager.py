@@ -159,3 +159,25 @@ def init_socketio_events(socketio: SocketIO):
         if conversation_id:
             leave_room(conversation_id)
             emit('left', {'conversation_id': conversation_id})
+
+    @socketio.on('typing')
+    def handle_typing(data):
+        """
+        Handle typing indicator from client.
+
+        Args:
+            data: Dict with 'conversation_id' and 'is_typing' keys
+        """
+        if not current_user.is_authenticated:
+            return
+
+        conversation_id = data.get('conversation_id')
+        is_typing = data.get('is_typing', False)
+
+        if conversation_id:
+            # Broadcast typing status to room, excluding sender
+            emit('typing', {
+                'user_id': current_user.id,
+                'user_name': current_user.full_name,
+                'is_typing': is_typing
+            }, room=conversation_id, include_self=False)

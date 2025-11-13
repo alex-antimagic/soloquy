@@ -393,22 +393,13 @@
     let typingDebounce = null;
     let isCurrentlyTyping = false;
 
-    async function sendTypingStatus(isTyping) {
-        try {
-            const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-            await fetch('/chat/typing', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': csrfToken
-                },
-                body: JSON.stringify({
-                    conversation_id: conversationId,
-                    is_typing: isTyping
-                })
+    function sendTypingStatus(isTyping) {
+        // Send typing status via Socket.IO instead of HTTP to avoid request.sid issues
+        if (socket && socket.connected) {
+            socket.emit('typing', {
+                conversation_id: conversationId,
+                is_typing: isTyping
             });
-        } catch (error) {
-            console.error('Error sending typing status:', error);
         }
     }
 
