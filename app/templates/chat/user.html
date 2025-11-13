@@ -1,0 +1,366 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<div class="chat-container">
+    <!-- Chat Main Area -->
+    <div class="chat-main">
+        <div class="container-fluid h-100 d-flex flex-column">
+            <!-- Chat Header -->
+            <div class="border-bottom pb-3 mb-3">
+                <h4 class="mb-1">{{ other_user.full_name }}</h4>
+                <p class="text-muted small mb-0">
+                    <span class="user-status {{ 'online' if other_user.is_online_now() else 'offline' }}"></span>
+                    Direct Message
+                </p>
+            </div>
+
+            <!-- Messages Area -->
+            <div class="flex-grow-1 overflow-auto mb-3" id="messages-container">
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="message">
+                            <div class="message-avatar">
+                                <i class="bi bi-person-square fs-2"></i>
+                            </div>
+                            <div class="message-content">
+                                <div class="message-header">
+                                    <span class="message-author">{{ message.get_sender_name() }}</span>
+                                    <span class="message-time">{{ message.created_at.strftime('%I:%M %p') }}</span>
+                                </div>
+                                <div class="message-body">{{ message.content | format_message }}</div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center text-muted py-5">
+                        <i class="bi bi-chat-dots fs-1 d-block mb-3"></i>
+                        <p>Start a conversation with {{ other_user.full_name }}</p>
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Message Input -->
+            <div class="chat-input">
+                <form id="message-form">
+                    <div class="input-group">
+                        <input type="text"
+                               class="form-control"
+                               id="message-input"
+                               placeholder="Message {{ other_user.full_name }}..."
+                               autocomplete="off"
+                               required>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-send"></i> Send
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tasks Sidebar -->
+    {% include 'components/tasks_sidebar.html' %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const messageForm = document.getElementById('message-form');
+    const messageInput = document.getElementById('message-input');
+    const messagesContainer = document.getElementById('messages-container');
+
+    // Notification sound
+    const notificationSound = new Audio('{{ url_for("static", filename="pop.mp3") }}');
+
+    // Scroll to bottom of messages
+    function scrollToBottom() {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+    scrollToBottom();
+
+    // Real-time message updates via Server-Sent Events (SSE)
+    const currentUserId = {{ current_user.id }};
+    const otherUserId = {{ other_user.id }};
+    const userIds = [currentUserId, otherUserId].sort();
+    const conversationId = `user_${userIds[0]}_${userIds[1]}`;
+
+    let socket = null;
+
+    function connectSocket() {
+        if (socket) {
+            socket.disconnect();
+        }
+
+        socket = io({
+            transports: ['websocket', 'polling']
+        });
+
+        socket.on('connect', () => {
+            console.log('Socket.IO connected');
+            // Join the conversation room
+            socket.emit('join_conversation', { conversation_id: conversationId });
+        });
+
+        socket.on('joined', (data) => {
+            console.log('Joined conversation:', data);
+        });
+
+        socket.on('new_message', (messageData) => {
+            console.log('Received new message:', messageData);
+
+            // Only add if message is from the other user (sender already sees their own message)
+            if (messageData.sender_id !== currentUserId) {
+                addMessageToUI(messageData, true);
+                // Play notification sound
+                notificationSound.play().catch(e => console.log('Audio play failed:', e));
+            }
+        });
+
+        socket.on('typing', (typingData) => {
+            console.log('User typing:', typingData);
+
+            if (typingData.is_typing) {
+                showTypingIndicator(typingData.user_name);
+            } else {
+                hideTypingIndicator();
+            }
+        });
+
+        socket.on('presence', (presenceData) => {
+            console.log('Presence update:', presenceData);
+
+            // Update online/offline status indicator if it's the other user
+            if (presenceData.user_id === otherUserId) {
+                updateUserStatus(presenceData.status);
+            }
+        });
+
+        socket.on('disconnect', () => {
+            console.log('Socket.IO disconnected');
+        });
+
+        socket.on('connect_error', (error) => {
+            console.error('Socket.IO connection error:', error);
+        });
+    }
+
+    // Start Socket.IO connection
+    connectSocket();
+
+    // Cleanup function to close connections
+    function cleanupConnections() {
+        console.log('Cleaning up Socket.IO connections');
+        if (socket) {
+            socket.emit('leave_conversation', { conversation_id: conversationId });
+            socket.disconnect();
+            socket = null;
+        }
+    }
+
+    // Close Socket.IO connection when page unloads
+    window.addEventListener('beforeunload', cleanupConnections);
+    window.addEventListener('pagehide', cleanupConnections);
+
+    // AGGRESSIVE: Close connections immediately when clicking any link
+    document.addEventListener('click', (e) => {
+        const link = e.target.closest('a');
+        if (link && link.href && !link.target) {
+            // Navigating to another page - close connections immediately
+            console.log('Link clicked, pre-emptively closing SSE');
+            cleanupConnections();
+        }
+    }, true); // Use capture phase to run before other handlers
+
+    // Escape HTML to prevent XSS
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // Apply inline markdown-style formatting
+    function applyInlineFormatting(text) {
+        // Bold: **text** or __text__
+        text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        text = text.replace(/__(.+?)__/g, '<strong>$1</strong>');
+
+        // Italic: *text* or _text_
+        text = text.replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, '<em>$1</em>');
+        text = text.replace(/(?<!_)_(?!_)(.+?)(?<!_)_(?!_)/g, '<em>$1</em>');
+
+        // Code: `text`
+        text = text.replace(/`(.+?)`/g, '<code>$1</code>');
+
+        // Strikethrough: ~~text~~
+        text = text.replace(/~~(.+?)~~/g, '<del>$1</del>');
+
+        return text;
+    }
+
+    // Add message to UI
+    function addMessageToUI(message, isOther = false) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'message';
+
+        const avatar = '<i class="bi bi-person-square fs-2"></i>';
+        const time = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+
+        messageDiv.innerHTML = `
+            <div class="message-avatar">${avatar}</div>
+            <div class="message-content">
+                <div class="message-header">
+                    <span class="message-author">${escapeHtml(message.sender)}</span>
+                    <span class="message-time">${time}</span>
+                </div>
+                <div class="message-body">${applyInlineFormatting(escapeHtml(message.content))}</div>
+            </div>
+        `;
+
+        messagesContainer.appendChild(messageDiv);
+        scrollToBottom();
+        return messageDiv;
+    }
+
+    // Typing indicator management
+    let typingTimeout = null;
+
+    function showTypingIndicator(userName) {
+        // Remove existing indicator if any
+        hideTypingIndicator();
+
+        const typingDiv = document.createElement('div');
+        typingDiv.className = 'message typing-indicator';
+        typingDiv.id = 'typing-indicator';
+
+        typingDiv.innerHTML = `
+            <div class="message-avatar">
+                <i class="bi bi-person-square fs-2"></i>
+            </div>
+            <div class="message-content">
+                <div class="message-header">
+                    <span class="message-author text-muted">${escapeHtml(userName)} is typing...</span>
+                </div>
+                <div class="typing-dots">
+                    <span class="typing-dot"></span>
+                    <span class="typing-dot"></span>
+                    <span class="typing-dot"></span>
+                </div>
+            </div>
+        `;
+
+        messagesContainer.appendChild(typingDiv);
+        scrollToBottom();
+
+        // Auto-hide after 3 seconds
+        if (typingTimeout) clearTimeout(typingTimeout);
+        typingTimeout = setTimeout(hideTypingIndicator, 3000);
+    }
+
+    function hideTypingIndicator() {
+        const indicator = document.getElementById('typing-indicator');
+        if (indicator) {
+            indicator.remove();
+        }
+        if (typingTimeout) {
+            clearTimeout(typingTimeout);
+            typingTimeout = null;
+        }
+    }
+
+    // Update user online/offline status
+    function updateUserStatus(status) {
+        const statusIndicator = document.querySelector('.user-status');
+        if (statusIndicator) {
+            statusIndicator.className = `user-status ${status}`;
+        }
+    }
+
+    // Debounced typing indicator
+    let typingDebounce = null;
+    let isCurrentlyTyping = false;
+
+    async function sendTypingStatus(isTyping) {
+        try {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+            await fetch('/chat/typing', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({
+                    conversation_id: conversationId,
+                    is_typing: isTyping
+                })
+            });
+        } catch (error) {
+            console.error('Error sending typing status:', error);
+        }
+    }
+
+    messageInput.addEventListener('input', () => {
+        // User started typing - send typing=true if not already sent
+        if (!isCurrentlyTyping) {
+            isCurrentlyTyping = true;
+            sendTypingStatus(true);
+        }
+
+        // Reset debounce timer - after 1 second of no typing, send typing=false
+        if (typingDebounce) clearTimeout(typingDebounce);
+        typingDebounce = setTimeout(() => {
+            isCurrentlyTyping = false;
+            sendTypingStatus(false);
+        }, 1000);
+    });
+
+    // Handle message submission
+    messageForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const content = messageInput.value.trim();
+        if (!content) return;
+
+        // Clear typing status
+        if (typingDebounce) clearTimeout(typingDebounce);
+        if (isCurrentlyTyping) {
+            isCurrentlyTyping = false;
+            sendTypingStatus(false);
+        }
+
+        // Immediately show user message
+        const userMessage = {
+            sender: '{{ current_user.full_name }}',
+            content: content
+        };
+        addMessageToUI(userMessage, false);
+
+        // Clear input immediately
+        messageInput.value = '';
+
+        try {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+            const response = await fetch('/chat/send', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({
+                    content: content,
+                    recipient_id: {{ other_user.id }}
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to send message');
+            }
+        } catch (error) {
+            console.error('Error sending message:', error);
+            alert('Failed to send message. Please try again.');
+        }
+
+        // Keep input focused
+        messageInput.focus();
+    });
+</script>
+{% endblock %}

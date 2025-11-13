@@ -1,0 +1,348 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<style>
+    .launch-modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.9);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+    }
+
+    .launch-modal.active {
+        display: flex;
+    }
+
+    .launch-content {
+        text-align: center;
+        color: white;
+    }
+
+    .rocket {
+        font-size: 80px;
+        animation: launch 2s ease-in-out infinite;
+        display: inline-block;
+    }
+
+    @keyframes launch {
+        0%, 100% {
+            transform: translateY(0) rotate(-45deg);
+        }
+        50% {
+            transform: translateY(-30px) rotate(-45deg);
+        }
+    }
+
+    .stars {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+    }
+
+    .star {
+        position: absolute;
+        background: white;
+        border-radius: 50%;
+        animation: twinkle 1.5s infinite;
+    }
+
+    @keyframes twinkle {
+        0%, 100% { opacity: 0.3; }
+        50% { opacity: 1; }
+    }
+
+    .loading-text {
+        font-size: 24px;
+        font-weight: 600;
+        margin-top: 30px;
+        animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+        0%, 100% { opacity: 0.6; }
+        50% { opacity: 1; }
+    }
+
+    .loading-subtext {
+        font-size: 16px;
+        color: #999;
+        margin-top: 10px;
+    }
+</style>
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">Create New Workspace</h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('tenant.create') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div class="mb-3">
+                            <label for="name" class="form-label">Workspace Name</label>
+                            <input type="text" class="form-control" id="name" name="name" required
+                                   placeholder="My Company">
+                            <div class="form-text">This is the name of your business or organization.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="slug" class="form-label">Workspace Slug</label>
+                            <input type="text" class="form-control" id="slug" name="slug" required
+                                   placeholder="my-company" pattern="[a-z0-9-]+">
+                            <div class="form-text">URL-friendly identifier (lowercase letters, numbers, and hyphens only).</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description (Optional)</label>
+                            <textarea class="form-control" id="description" name="description" rows="3"
+                                      placeholder="Describe what this workspace is for..."></textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="website_url" class="form-label">Company Website (Optional)</label>
+                            <input type="text" class="form-control" id="website_url" name="website_url"
+                                   placeholder="example.com">
+                            <div class="form-text">Enter your website (e.g., "stripe.com"). We'll analyze it to help our AI agents understand your business.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="company_size" class="form-label">Company Size (Optional)</label>
+                            <select class="form-select" id="company_size" name="company_size">
+                                <option value="">Select company size...</option>
+                                <option value="1-10">1-10 employees</option>
+                                <option value="11-50">11-50 employees</option>
+                                <option value="51-200">51-200 employees</option>
+                                <option value="201-500">201-500 employees</option>
+                                <option value="501+">501+ employees</option>
+                            </select>
+                            <div class="form-text">Helps our AI understand the scale of your operations.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Workspace Template</label>
+                            <div class="template-options">
+                                <div class="form-check template-card">
+                                    <input class="form-check-input" type="radio" name="template" id="templateBusiness" value="business" checked>
+                                    <label class="form-check-label" for="templateBusiness">
+                                        <strong>🏢 Business</strong>
+                                        <p class="small mb-0 text-muted">Full-featured workspace with 9 departments, AI agents, and all applets (CRM, Projects, Support, Tasks)</p>
+                                    </label>
+                                </div>
+                                <div class="form-check template-card">
+                                    <input class="form-check-input" type="radio" name="template" id="templateFamily" value="family">
+                                    <label class="form-check-label" for="templateFamily">
+                                        <strong>🏠 Family</strong>
+                                        <p class="small mb-0 text-muted">Lightweight workspace with 1 AI assistant and task management only - perfect for personal/family use</p>
+                                    </label>
+                                </div>
+                                <div class="form-check template-card">
+                                    <input class="form-check-input" type="radio" name="template" id="templateCustom" value="custom">
+                                    <label class="form-check-label" for="templateCustom">
+                                        <strong>⚙️ Custom</strong>
+                                        <p class="small mb-0 text-muted">Choose which departments and applets to enable</p>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Custom Configuration (shown when Custom template selected) -->
+                        <div id="customConfig" style="display: none;">
+                            <div class="card mb-3">
+                                <div class="card-header">
+                                    <h6 class="mb-0">Select Departments</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="departments" value="executive" id="deptExecutive">
+                                                <label class="form-check-label" for="deptExecutive">👔 Executive</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="departments" value="finance" id="deptFinance">
+                                                <label class="form-check-label" for="deptFinance">💰 Finance</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="departments" value="marketing" id="deptMarketing">
+                                                <label class="form-check-label" for="deptMarketing">📢 Marketing</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="departments" value="sales" id="deptSales">
+                                                <label class="form-check-label" for="deptSales">💼 Sales</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="departments" value="support" id="deptSupport">
+                                                <label class="form-check-label" for="deptSupport">🎧 Support</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="departments" value="product" id="deptProduct">
+                                                <label class="form-check-label" for="deptProduct">🎯 Product</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="departments" value="legal" id="deptLegal">
+                                                <label class="form-check-label" for="deptLegal">⚖️ Legal</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="departments" value="hr" id="deptHR">
+                                                <label class="form-check-label" for="deptHR">👥 HR/People</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="departments" value="it" id="deptIT">
+                                                <label class="form-check-label" for="deptIT">💻 IT/Engineering</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card mb-3">
+                                <div class="card-header">
+                                    <h6 class="mb-0">Select Applets</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="applets" value="crm" id="appletCRM">
+                                        <label class="form-check-label" for="appletCRM">
+                                            <strong>CRM</strong> - Companies, Contacts, Deals, Leads
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="applets" value="projects" id="appletProjects">
+                                        <label class="form-check-label" for="appletProjects">
+                                            <strong>Projects</strong> - Kanban boards and project management
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="applets" value="support" id="appletSupport">
+                                        <label class="form-check-label" for="appletSupport">
+                                            <strong>Support</strong> - Customer support ticketing
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="applets" value="tasks" id="appletTasks">
+                                        <label class="form-check-label" for="appletTasks">
+                                            <strong>Tasks</strong> - Task management
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="applets" value="chat" id="appletChat">
+                                        <label class="form-check-label" for="appletChat">
+                                            <strong>Chat</strong> - Team messaging and channels
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="applets" value="integrations" id="appletIntegrations">
+                                        <label class="form-check-label" for="appletIntegrations">
+                                            <strong>Integrations</strong> - Third-party integrations
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('tenant.home') }}" class="btn btn-secondary">Cancel</a>
+                            <button type="submit" class="btn btn-primary">Create Workspace</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Launch Loading Modal -->
+<div id="launchModal" class="launch-modal">
+    <div class="stars"></div>
+    <div class="launch-content">
+        <div class="rocket">🚀</div>
+        <div class="loading-text">Launching your workspace...</div>
+        <div class="loading-subtext">Setting up departments, agents, and your business intelligence</div>
+    </div>
+</div>
+
+<script>
+    // Generate random stars
+    function createStars() {
+        const starsContainer = document.querySelector('.stars');
+        for (let i = 0; i < 50; i++) {
+            const star = document.createElement('div');
+            star.className = 'star';
+            star.style.width = Math.random() * 3 + 'px';
+            star.style.height = star.style.width;
+            star.style.left = Math.random() * 100 + '%';
+            star.style.top = Math.random() * 100 + '%';
+            star.style.animationDelay = Math.random() * 1.5 + 's';
+            starsContainer.appendChild(star);
+        }
+    }
+    createStars();
+
+    // Toggle custom configuration visibility based on template selection
+    const templateRadios = document.querySelectorAll('input[name="template"]');
+    const customConfig = document.getElementById('customConfig');
+
+    templateRadios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            if (this.value === 'custom') {
+                customConfig.style.display = 'block';
+            } else {
+                customConfig.style.display = 'none';
+            }
+        });
+    });
+
+    // Show modal on form submit
+    const form = document.querySelector('form');
+    const launchModal = document.getElementById('launchModal');
+
+    form.addEventListener('submit', function(e) {
+        // Show the launch modal
+        launchModal.classList.add('active');
+
+        // Disable the submit button to prevent double submission
+        const submitBtn = form.querySelector('button[type="submit"]');
+        submitBtn.disabled = true;
+    });
+</script>
+
+<style>
+    .template-card {
+        border: 2px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 10px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .template-card:hover {
+        border-color: #3b82f6;
+        background-color: #f0f9ff;
+    }
+
+    .template-card input[type="radio"]:checked ~ label {
+        color: #3b82f6;
+    }
+
+    .template-card input[type="radio"]:checked {
+        border-color: #3b82f6;
+    }
+
+    .template-card input[type="radio"] {
+        margin-top: 4px;
+    }
+</style>
+
+{% endblock %}

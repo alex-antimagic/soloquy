@@ -1,0 +1,486 @@
+{% extends "layouts/base.html" %}
+
+{% block extra_css %}
+<style>
+    .detail-section {
+        background-color: var(--bs-secondary-bg);
+        border-radius: 0.5rem;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .info-item {
+        padding: 0.75rem;
+        background-color: var(--bs-body-bg);
+        border-radius: 0.375rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .info-label {
+        font-size: 0.75rem;
+        color: var(--bs-secondary-color);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.25rem;
+    }
+
+    .info-value {
+        font-size: 1rem;
+        font-weight: 500;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-start mb-4">
+        <div class="flex-grow-1">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-2">
+                    <li class="breadcrumb-item"><a href="{{ url_for('projects.index') }}">Tasks</a></li>
+                    {% if task.project %}
+                    <li class="breadcrumb-item"><a href="{{ url_for('projects.view', project_id=task.project_id) }}">{{ task.project.name }}</a></li>
+                    {% endif %}
+                    <li class="breadcrumb-item active">{{ task.title }}</li>
+                </ol>
+            </nav>
+            <div class="d-flex align-items-start gap-3">
+                <div class="form-check">
+                    <input class="form-check-input task-complete-checkbox" type="checkbox"
+                           {% if task.status == 'completed' %}checked{% endif %}
+                           data-task-id="{{ task.id }}"
+                           style="width: 1.5rem; height: 1.5rem;">
+                </div>
+                <div class="flex-grow-1">
+                    <h2 class="mb-2">{{ task.title }}</h2>
+                    <div class="d-flex gap-2 align-items-center flex-wrap">
+                        <span class="badge {{ task.get_priority_badge_class() }}">{{ task.priority }}</span>
+                        <span class="badge {{ task.get_status_badge_class() }}">{{ task.status }}</span>
+                        {% if task.due_date %}
+                        <span class="badge bg-secondary {% if task.is_overdue() %}bg-danger{% endif %}">
+                            <i class="bi bi-calendar3"></i> {{ task.due_date.strftime('%b %d, %Y') }}
+                            {% if task.is_overdue() %} (Overdue){% endif %}
+                        </span>
+                        {% endif %}
+                        {% if task.story_points %}
+                        <span class="badge bg-info">{{ task.story_points }} points</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-secondary" onclick="editTask()">
+                <i class="bi bi-pencil"></i> Edit
+            </button>
+            <button class="btn btn-outline-danger" onclick="deleteTask()">
+                <i class="bi bi-trash"></i> Delete
+            </button>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Main Content -->
+        <div class="col-lg-9">
+            <!-- Description -->
+            <div class="detail-section">
+                <h5 class="mb-3">Description</h5>
+                {% if task.description %}
+                <div style="white-space: pre-wrap; font-size: 1rem; line-height: 1.6; min-height: 150px;">{{ task.description }}</div>
+                {% else %}
+                <p class="text-muted mb-0">No description provided</p>
+                {% endif %}
+            </div>
+
+            <!-- Project/Section Info -->
+            {% if task.project or task.section %}
+            <div class="detail-section">
+                <h5 class="mb-3">Organization</h5>
+                <div class="d-flex gap-3 flex-wrap">
+                    {% if task.project %}
+                    <div class="info-item flex-grow-1">
+                        <div class="info-label">Project</div>
+                        <div class="info-value">
+                            <a href="{{ url_for('projects.view', project_id=task.project_id) }}">
+                                {% if task.project.icon %}{{ task.project.icon }}{% endif %}
+                                {{ task.project.name }}
+                            </a>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% if task.section %}
+                    <div class="info-item flex-grow-1">
+                        <div class="info-label">Section</div>
+                        <div class="info-value">{{ task.section }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Tags -->
+            {% if task.tags %}
+            <div class="detail-section">
+                <h5 class="mb-3">Tags</h5>
+                <div class="d-flex gap-2 flex-wrap">
+                    {% for tag in task.tags.split(',') %}
+                    <span class="badge bg-secondary">{{ tag.strip() }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-3">
+            <!-- Assignment -->
+            <div class="detail-section">
+                <h5 class="mb-3">Assignment</h5>
+                {% if task.assigned_to %}
+                <div class="info-item">
+                    <div class="info-label">Assigned To</div>
+                    <div class="info-value">
+                        <i class="bi bi-person"></i> {{ task.assigned_to.full_name }}
+                    </div>
+                </div>
+                {% elif task.assigned_to_agent %}
+                <div class="info-item">
+                    <div class="info-label">Assigned To</div>
+                    <div class="info-value">
+                        {{ task.assigned_to_agent.name }}
+                    </div>
+                </div>
+                {% else %}
+                <div class="info-item">
+                    <div class="info-label">Assigned To</div>
+                    <div class="info-value text-muted">Unassigned</div>
+                </div>
+                {% endif %}
+
+                {% if task.created_by %}
+                <div class="info-item">
+                    <div class="info-label">Created By</div>
+                    <div class="info-value">
+                        <i class="bi bi-person-badge"></i> {{ task.created_by.full_name }}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Department -->
+            {% if task.department %}
+            <div class="detail-section">
+                <h5 class="mb-3">Department</h5>
+                <div class="info-item">
+                    <div class="info-value">
+                        <span class="dept-badge" style="background-color: {{ task.department.color }};"></span>
+                        {{ task.department.name }}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Due Date -->
+            <div class="detail-section">
+                <h5 class="mb-3">Due Date</h5>
+                <div class="info-item">
+                    {% if task.due_date %}
+                    <div class="info-value {% if task.is_overdue() %}text-danger{% endif %}">
+                        <i class="bi bi-calendar-event"></i> {{ task.due_date.strftime('%b %d, %Y') }}
+                        {% if task.is_overdue() %}
+                        <span class="badge bg-danger ms-2">Overdue</span>
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <div class="info-value text-muted">No due date set</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Dates -->
+            <div class="detail-section">
+                <h5 class="mb-3">Activity</h5>
+                <div class="info-item">
+                    <div class="info-label">Created</div>
+                    <div class="info-value">{{ task.created_at.strftime('%b %d, %Y at %I:%M %p') }}</div>
+                </div>
+                {% if task.updated_at and task.updated_at != task.created_at %}
+                <div class="info-item">
+                    <div class="info-label">Last Updated</div>
+                    <div class="info-value">{{ task.updated_at.strftime('%b %d, %Y at %I:%M %p') }}</div>
+                </div>
+                {% endif %}
+                {% if task.completed_at %}
+                <div class="info-item">
+                    <div class="info-label">Completed</div>
+                    <div class="info-value">{{ task.completed_at.strftime('%b %d, %Y at %I:%M %p') }}</div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="detail-section">
+                <h5 class="mb-3">Quick Actions</h5>
+                <div class="d-grid gap-2">
+                    <select class="form-select" id="priority-select" onchange="updatePriority()">
+                        <option value="low" {% if task.priority == 'low' %}selected{% endif %}>Low Priority</option>
+                        <option value="medium" {% if task.priority == 'medium' %}selected{% endif %}>Medium Priority</option>
+                        <option value="high" {% if task.priority == 'high' %}selected{% endif %}>High Priority</option>
+                        <option value="urgent" {% if task.priority == 'urgent' %}selected{% endif %}>Urgent</option>
+                    </select>
+                    {% if task.status != 'completed' %}
+                    <button class="btn btn-success" onclick="completeTask()">
+                        <i class="bi bi-check-circle"></i> Mark Complete
+                    </button>
+                    {% else %}
+                    <button class="btn btn-secondary" onclick="reopenTask()">
+                        <i class="bi bi-arrow-counterclockwise"></i> Reopen Task
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Task Modal -->
+<div class="modal fade" id="editTaskModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Task</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editTaskForm">
+                    <div class="mb-3">
+                        <label for="editTaskTitle" class="form-label">Title *</label>
+                        <input type="text" class="form-control" id="editTaskTitle" value="{{ task.title }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editTaskDescription" class="form-label">Description</label>
+                        <textarea class="form-control" id="editTaskDescription" rows="8" style="min-height: 200px;">{{ task.description or '' }}</textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="editTaskPriority" class="form-label">Priority</label>
+                            <select class="form-select" id="editTaskPriority">
+                                <option value="low" {% if task.priority == 'low' %}selected{% endif %}>Low</option>
+                                <option value="medium" {% if task.priority == 'medium' %}selected{% endif %}>Medium</option>
+                                <option value="high" {% if task.priority == 'high' %}selected{% endif %}>High</option>
+                                <option value="urgent" {% if task.priority == 'urgent' %}selected{% endif %}>Urgent</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="editTaskDueDate" class="form-label">Due Date</label>
+                            <input type="date" class="form-control" id="editTaskDueDate"
+                                   value="{% if task.due_date %}{{ task.due_date.strftime('%Y-%m-%d') }}{% endif %}">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="editTaskSection" class="form-label">Section</label>
+                            <input type="text" class="form-control" id="editTaskSection" value="{{ task.section or '' }}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="editTaskStoryPoints" class="form-label">Story Points</label>
+                            <input type="number" class="form-control" id="editTaskStoryPoints"
+                                   value="{{ task.story_points or '' }}" min="1" max="100">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editTaskTags" class="form-label">Tags (comma-separated)</label>
+                        <input type="text" class="form-control" id="editTaskTags"
+                               value="{{ task.tags or '' }}" placeholder="bug, urgent, frontend">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveTaskEdits()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const taskId = {{ task.id }};
+
+// Handle task completion checkbox
+document.querySelector('.task-complete-checkbox').addEventListener('change', async function() {
+    const isChecked = this.checked;
+
+    try {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        const response = await fetch(`/tasks/${taskId}/complete`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            }
+        });
+
+        if (response.ok) {
+            location.reload();
+        } else {
+            this.checked = !isChecked;
+            alert('Failed to update task. Please try again.');
+        }
+    } catch (error) {
+        console.error('Error updating task:', error);
+        this.checked = !isChecked;
+        alert('Failed to update task. Please try again.');
+    }
+});
+
+function updatePriority() {
+    const priority = document.getElementById('priority-select').value;
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+    fetch(`/tasks/${taskId}/priority`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify({ priority: priority })
+    })
+    .then(response => {
+        if (response.ok) {
+            location.reload();
+        } else {
+            alert('Failed to update priority. Please try again.');
+        }
+    })
+    .catch(error => {
+        console.error('Error updating priority:', error);
+        alert('Failed to update priority. Please try again.');
+    });
+}
+
+function completeTask() {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    fetch(`/tasks/${taskId}/complete`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        }
+    })
+    .then(response => {
+        if (response.ok) {
+            location.reload();
+        } else {
+            alert('Failed to complete task. Please try again.');
+        }
+    })
+    .catch(error => {
+        console.error('Error completing task:', error);
+        alert('Failed to complete task. Please try again.');
+    });
+}
+
+function reopenTask() {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    fetch(`/tasks/${taskId}/complete`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        }
+    })
+    .then(response => {
+        if (response.ok) {
+            location.reload();
+        } else {
+            alert('Failed to reopen task. Please try again.');
+        }
+    })
+    .catch(error => {
+        console.error('Error reopening task:', error);
+        alert('Failed to reopen task. Please try again.');
+    });
+}
+
+function editTask() {
+    // Show the edit modal
+    const editModal = new bootstrap.Modal(document.getElementById('editTaskModal'));
+    editModal.show();
+}
+
+function saveTaskEdits() {
+    const title = document.getElementById('editTaskTitle').value;
+    const description = document.getElementById('editTaskDescription').value;
+    const priority = document.getElementById('editTaskPriority').value;
+    const dueDate = document.getElementById('editTaskDueDate').value;
+    const section = document.getElementById('editTaskSection').value;
+    const storyPoints = document.getElementById('editTaskStoryPoints').value;
+    const tags = document.getElementById('editTaskTags').value;
+
+    if (!title) {
+        alert('Please enter a task title');
+        return;
+    }
+
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+    fetch(`/tasks/${taskId}/update`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify({
+            title: title,
+            description: description,
+            priority: priority,
+            due_date: dueDate || null,
+            section: section || null,
+            story_points: storyPoints ? parseInt(storyPoints) : null,
+            tags: tags || null
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            alert('Error: ' + data.error);
+        } else {
+            location.reload();
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to update task');
+    });
+}
+
+function deleteTask() {
+    if (confirm('Delete this task permanently? This cannot be undone.')) {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+        fetch(`/tasks/${taskId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                window.location.href = '{{ url_for("projects.index") }}';
+            } else {
+                alert('Failed to delete task. Please try again.');
+            }
+        })
+        .catch(error => {
+            console.error('Error deleting task:', error);
+            alert('Failed to delete task. Please try again.');
+        });
+    }
+}
+</script>
+{% endblock %}

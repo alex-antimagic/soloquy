@@ -1,0 +1,278 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h2>Workspace Settings</h2>
+            <p class="text-muted">{{ current_tenant.name }}</p>
+        </div>
+    </div>
+
+    <!-- Workspace Information -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Workspace Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-sm-4">
+                            <strong>Name:</strong>
+                        </div>
+                        <div class="col-sm-8">
+                            {{ current_tenant.name }}
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4">
+                            <strong>Slug:</strong>
+                        </div>
+                        <div class="col-sm-8">
+                            {{ current_tenant.slug }}
+                        </div>
+                    </div>
+                    {% if current_tenant.description %}
+                    <div class="row mb-3">
+                        <div class="col-sm-4">
+                            <strong>Description:</strong>
+                        </div>
+                        <div class="col-sm-8">
+                            {{ current_tenant.description }}
+                        </div>
+                    </div>
+                    {% endif %}
+                    <div class="row mb-3">
+                        <div class="col-sm-4">
+                            <strong>Created:</strong>
+                        </div>
+                        <div class="col-sm-8">
+                            {{ current_tenant.created_at.strftime('%B %d, %Y') }}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-sm-4">
+                            <strong>Your Role:</strong>
+                        </div>
+                        <div class="col-sm-8">
+                            <span class="badge bg-primary">{{ user_role }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Business Intelligence -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Business Intelligence</h5>
+                </div>
+                <div class="card-body">
+                    {% if current_tenant.website_url %}
+                        <div class="row mb-3">
+                            <div class="col-sm-4">
+                                <strong>Website:</strong>
+                            </div>
+                            <div class="col-sm-8">
+                                <a href="{{ current_tenant.website_url }}" target="_blank" rel="noopener noreferrer">
+                                    {{ current_tenant.website_url }}
+                                    <i class="bi bi-box-arrow-up-right small"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                        {% if current_tenant.company_size %}
+                        <div class="row mb-3">
+                            <div class="col-sm-4">
+                                <strong>Company Size:</strong>
+                            </div>
+                            <div class="col-sm-8">
+                                {{ current_tenant.company_size }} employees
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <div class="row mb-3">
+                            <div class="col-sm-4">
+                                <strong>AI Context Status:</strong>
+                            </div>
+                            <div class="col-sm-8">
+                                {% if current_tenant.context_scraping_status == 'completed' %}
+                                    <span class="badge bg-success">✓ Context Available</span>
+                                    {% if current_tenant.context_scraped_at %}
+                                        <small class="text-muted d-block mt-1">
+                                            Last updated: {{ current_tenant.context_scraped_at.strftime('%B %d, %Y at %I:%M %p') }}
+                                        </small>
+                                    {% endif %}
+                                {% elif current_tenant.context_scraping_status == 'processing' %}
+                                    <span class="badge bg-warning text-dark">⏳ Processing...</span>
+                                    <small class="text-muted d-block mt-1">Analyzing your website to personalize AI agents</small>
+                                {% elif current_tenant.context_scraping_status == 'failed' %}
+                                    <span class="badge bg-danger">✗ Failed</span>
+                                    {% if current_tenant.context_scraping_error %}
+                                        <p class="text-danger small mb-0 mt-1">{{ current_tenant.context_scraping_error }}</p>
+                                    {% endif %}
+                                {% elif current_tenant.context_scraping_status == 'pending' %}
+                                    <span class="badge bg-secondary">Pending</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Skipped</span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        {% if user_role in ['owner', 'admin'] %}
+                        <div class="row">
+                            <div class="col-sm-12">
+                                {% if current_tenant.context_scraping_status in ['failed', 'completed'] %}
+                                <form method="POST" action="{{ url_for('tenant.refresh_context') }}" class="d-inline">
+                                    <button type="submit" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-arrow-clockwise"></i> Refresh Business Context
+                                    </button>
+                                </form>
+                                {% endif %}
+                                <a href="{{ url_for('tenant.edit_context') }}" class="btn btn-sm btn-primary {% if current_tenant.context_scraping_status in ['failed', 'completed'] %}ms-2{% endif %}">
+                                    <i class="bi bi-pencil-square"></i> Edit Custom Context
+                                </a>
+                                <small class="text-muted d-block mt-2">
+                                    {% if current_tenant.custom_context %}
+                                    <i class="bi bi-check-circle text-success"></i> Custom context provided
+                                    {% else %}
+                                    Add custom information to enhance AI agent understanding
+                                    {% endif %}
+                                </small>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                    {% else %}
+                        <p class="text-muted mb-0">No website configured. Add one during workspace setup to enable business intelligence for AI agents.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Members List -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Members ({{ members|length }})</h5>
+                    <a href="{{ url_for('tenant.invite') }}" class="btn btn-sm btn-primary">
+                        <i class="bi bi-person-plus"></i> Invite Member
+                    </a>
+                </div>
+                <div class="list-group list-group-flush">
+                    {% for member in members %}
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <div class="d-flex align-items-center mb-1">
+                                        <span class="user-status {{ 'online' if member.is_online else 'offline' }} me-2"></span>
+                                        <strong>{{ member.full_name }}</strong>
+                                    </div>
+                                    <div class="text-muted small">{{ member.email }}</div>
+                                    {% if member.id == current_user.id %}
+                                        <span class="badge bg-info mt-1">You</span>
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    <span class="badge bg-secondary">{{ member.get_role_in_tenant(current_tenant.id) }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Danger Zone (Owner Only) -->
+    {% if user_role == 'owner' %}
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-exclamation-triangle"></i> Danger Zone
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <h6>Delete Workspace</h6>
+                    <p class="text-muted mb-3">
+                        Once you delete a workspace, there is no going back. This will permanently delete:
+                    </p>
+                    <ul class="text-muted mb-3">
+                        <li>All departments and AI agents</li>
+                        <li>All messages and conversations</li>
+                        <li>All tasks, CRM data, and support tickets</li>
+                        <li>All member associations</li>
+                    </ul>
+                    <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                        <i class="bi bi-trash"></i> Delete This Workspace
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div class="modal fade" id="deleteModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">Confirm Workspace Deletion</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p><strong>Are you absolutely sure?</strong></p>
+                    <p>This action <strong>cannot</strong> be undone. This will permanently delete the <strong>{{ current_tenant.name }}</strong> workspace and all of its data.</p>
+                    <p class="mb-0">Please type <code>{{ current_tenant.name }}</code> to confirm:</p>
+                    <input type="text" class="form-control mt-2" id="confirmName" placeholder="Workspace name">
+                    <div class="form-text text-danger" id="confirmError" style="display: none;">
+                        Name does not match. Please try again.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <form method="POST" action="{{ url_for('tenant.delete_workspace', tenant_id=current_tenant.id) }}" id="deleteForm">
+                        <button type="submit" class="btn btn-danger" id="confirmDelete" disabled>
+                            I understand, delete this workspace
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Confirmation name check
+    const confirmInput = document.getElementById('confirmName');
+    const confirmButton = document.getElementById('confirmDelete');
+    const confirmError = document.getElementById('confirmError');
+    const expectedName = "{{ current_tenant.name }}";
+
+    if (confirmInput && confirmButton) {
+        confirmInput.addEventListener('input', function() {
+            if (this.value === expectedName) {
+                confirmButton.disabled = false;
+                confirmError.style.display = 'none';
+            } else {
+                confirmButton.disabled = true;
+                if (this.value.length > 0) {
+                    confirmError.style.display = 'block';
+                }
+            }
+        });
+    }
+</script>
+{% endblock %}

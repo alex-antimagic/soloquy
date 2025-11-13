@@ -1,0 +1,274 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card shadow-sm">
+                <div class="card-body p-5">
+                    <h1 class="mb-4">Help & Support</h1>
+                    <p class="lead text-muted mb-5">Get help with Soloquy and learn how to use our features</p>
+
+                    <div class="content">
+                        <h2 class="h4 mt-4 mb-3">Getting Started</h2>
+
+                        <div class="accordion mb-4" id="gettingStarted">
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#createWorkspace">
+                                        How do I create a workspace?
+                                    </button>
+                                </h2>
+                                <div id="createWorkspace" class="accordion-collapse collapse" data-bs-parent="#gettingStarted">
+                                    <div class="accordion-body">
+                                        <ol>
+                                            <li>Click on the workspace dropdown in the top-left corner</li>
+                                            <li>Select "Create New Workspace"</li>
+                                            <li>Enter your workspace name and details</li>
+                                            <li>Click "Create" to set up your new workspace</li>
+                                        </ol>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#inviteUsers">
+                                        How do I invite team members?
+                                    </button>
+                                </h2>
+                                <div id="inviteUsers" class="accordion-collapse collapse" data-bs-parent="#gettingStarted">
+                                    <div class="accordion-body">
+                                        <ol>
+                                            <li>Navigate to Tenant Settings (click your name → Tenant Settings)</li>
+                                            <li>Go to the "Members" or "Team" section</li>
+                                            <li>Click "Invite Member"</li>
+                                            <li>Enter their email address and select their role</li>
+                                            <li>Click "Send Invitation"</li>
+                                        </ol>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <h2 class="h4 mt-5 mb-3">Chat & Messaging</h2>
+
+                        <div class="accordion mb-4" id="chatHelp">
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#aiAgents">
+                                        How do AI agents work?
+                                    </button>
+                                </h2>
+                                <div id="aiAgents" class="accordion-collapse collapse" data-bs-parent="#chatHelp">
+                                    <div class="accordion-body">
+                                        <p>AI agents in Soloquy are powered by Anthropic's Claude AI. They can:</p>
+                                        <ul>
+                                            <li>Respond when you @mention them (e.g., "@Support help me with...")</li>
+                                            <li>Proactively join conversations when they detect relevant topics</li>
+                                            <li>Help with tasks, answer questions, and provide assistance</li>
+                                            <li>Access conversation context to provide informed responses</li>
+                                        </ul>
+                                        <p class="mb-0"><strong>Tip:</strong> You can also chat directly with agents via the Conversations sidebar.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#channels">
+                                        What's the difference between channels and DMs?
+                                    </button>
+                                </h2>
+                                <div id="channels" class="accordion-collapse collapse" data-bs-parent="#chatHelp">
+                                    <div class="accordion-body">
+                                        <p><strong>Channels:</strong></p>
+                                        <ul>
+                                            <li>Group conversations for teams or topics</li>
+                                            <li>Can be associated with departments</li>
+                                            <li>Multiple people can participate</li>
+                                            <li>AI agents can listen and respond</li>
+                                        </ul>
+                                        <p><strong>Direct Messages (DMs):</strong></p>
+                                        <ul>
+                                            <li>One-on-one conversations</li>
+                                            <li>Private between you and another user or agent</li>
+                                            <li>Great for private discussions or focused agent assistance</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#formatting">
+                                        Can I format my messages?
+                                    </button>
+                                </h2>
+                                <div id="formatting" class="accordion-collapse collapse" data-bs-parent="#chatHelp">
+                                    <div class="accordion-body">
+                                        <p>Yes! Soloquy automatically formats:</p>
+                                        <ul>
+                                            <li><strong>Bullet points:</strong> Start lines with -, *, or •</li>
+                                            <li><strong>Numbered lists:</strong> Start lines with 1., 2., etc.</li>
+                                            <li><strong>Paragraphs:</strong> Separated by blank lines</li>
+                                            <li><strong>@mentions:</strong> Use @username to mention someone</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <h2 class="h4 mt-5 mb-3">Tasks & Projects</h2>
+
+                        <div class="accordion mb-4" id="tasksHelp">
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#createTask">
+                                        How do I create a task?
+                                    </button>
+                                </h2>
+                                <div id="createTask" class="accordion-collapse collapse" data-bs-parent="#tasksHelp">
+                                    <div class="accordion-body">
+                                        <p>You can create tasks in multiple ways:</p>
+                                        <ol>
+                                            <li><strong>From chat:</strong> Look for the Tasks sidebar on the right while in any chat</li>
+                                            <li><strong>From Projects:</strong> Navigate to Projects → Select a project → Add task</li>
+                                            <li><strong>Quick add:</strong> Use the "+" button in the Tasks section</li>
+                                        </ol>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#assignTask">
+                                        How do I assign a task to someone?
+                                    </button>
+                                </h2>
+                                <div id="assignTask" class="accordion-collapse collapse" data-bs-parent="#tasksHelp">
+                                    <div class="accordion-body">
+                                        <ol>
+                                            <li>Open the task details</li>
+                                            <li>Click on the "Assignee" field</li>
+                                            <li>Select a team member from the dropdown</li>
+                                            <li>Save the task</li>
+                                        </ol>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <h2 class="h4 mt-5 mb-3">CRM & Contacts</h2>
+
+                        <div class="accordion mb-4" id="crmHelp">
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#addCompany">
+                                        How do I add a company or contact?
+                                    </button>
+                                </h2>
+                                <div id="addCompany" class="accordion-collapse collapse" data-bs-parent="#crmHelp">
+                                    <div class="accordion-body">
+                                        <ol>
+                                            <li>Navigate to CRM from the sidebar</li>
+                                            <li>Choose Companies or Contacts</li>
+                                            <li>Click "Add Company" or "Add Contact"</li>
+                                            <li>Fill in the details</li>
+                                            <li>Click "Save"</li>
+                                        </ol>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#deals">
+                                        How do deals work?
+                                    </button>
+                                </h2>
+                                <div id="deals" class="accordion-collapse collapse" data-bs-parent="#crmHelp">
+                                    <div class="accordion-body">
+                                        <p>Deals represent sales opportunities in your pipeline:</p>
+                                        <ul>
+                                            <li>Create a deal and associate it with a company or contact</li>
+                                            <li>Move deals through pipeline stages (Lead → Qualified → Proposal → Won/Lost)</li>
+                                            <li>Track deal value and expected close dates</li>
+                                            <li>View all deals on a kanban board for easy management</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <h2 class="h4 mt-5 mb-3">Support Tickets</h2>
+
+                        <div class="accordion mb-4" id="supportHelp">
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#createTicket">
+                                        How do I create a support ticket?
+                                    </button>
+                                </h2>
+                                <div id="createTicket" class="accordion-collapse collapse" data-bs-parent="#supportHelp">
+                                    <div class="accordion-body">
+                                        <ol>
+                                            <li>Navigate to Support from the sidebar</li>
+                                            <li>Click "New Ticket"</li>
+                                            <li>Fill in the ticket details (subject, description, priority)</li>
+                                            <li>Select the associated company if applicable</li>
+                                            <li>Click "Create Ticket"</li>
+                                        </ol>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <h2 class="h4 mt-5 mb-3">Need More Help?</h2>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h5 class="card-title"><i class="bi bi-chat-dots"></i> Chat Support</h5>
+                                        <p class="card-text">Use the in-app chat to talk with our support agents. They're available to help!</p>
+                                        <a href="{{ url_for('support.index') }}" class="btn btn-sm btn-primary">Go to Support</a>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h5 class="card-title"><i class="bi bi-envelope"></i> Email Support</h5>
+                                        <p class="card-text">Send us an email and we'll get back to you within 24 hours.</p>
+                                        <a href="mailto:support@soloquy.com" class="btn btn-sm btn-outline-primary">Email Us</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <h2 class="h4 mt-5 mb-3">Common Questions</h2>
+                        <div class="alert alert-info">
+                            <h6><i class="bi bi-question-circle"></i> Is my data secure?</h6>
+                            <p class="mb-0">Yes! We use industry-standard encryption and security practices. See our <a href="{{ url_for('pages.privacy') }}" class="alert-link">Privacy Policy</a> for details.</p>
+                        </div>
+                        <div class="alert alert-info">
+                            <h6><i class="bi bi-question-circle"></i> Can I export my data?</h6>
+                            <p class="mb-0">Yes, you can export your data from Tenant Settings → Data & Privacy.</p>
+                        </div>
+                        <div class="alert alert-info">
+                            <h6><i class="bi bi-question-circle"></i> How much does Soloquy cost?</h6>
+                            <p class="mb-0">Soloquy is currently free during our beta period. We'll announce pricing before any charges are introduced.</p>
+                        </div>
+                    </div>
+
+                    <div class="mt-5 pt-4 border-top">
+                        <a href="{{ url_for('tenant.home') }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left"></i> Back to Dashboard
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

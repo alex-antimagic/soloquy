@@ -1,0 +1,311 @@
+{% extends "layouts/base.html" %}
+
+{% block extra_css %}
+<style>
+    .metric-icon {
+        width: 60px;
+        height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50% !important;
+    }
+
+    .company-card {
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .company-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    .lifecycle-badge {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">Companies</h2>
+            <p class="text-muted mb-0">Manage your customer accounts and organizations</p>
+        </div>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createCompanyModal">
+            <i class="bi bi-building-add"></i> New Company
+        </button>
+    </div>
+
+    <!-- Search and Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" action="{{ url_for('crm.companies') }}" class="row g-3">
+                <div class="col-md-8">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="text" class="form-control" name="search" placeholder="Search companies..." value="{{ search }}">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" name="status">
+                        <option value="">All Statuses</option>
+                        <option value="active" {% if status == 'active' %}selected{% endif %}>Active</option>
+                        <option value="inactive" {% if status == 'inactive' %}selected{% endif %}>Inactive</option>
+                        <option value="customer" {% if status == 'customer' %}selected{% endif %}>Customer</option>
+                    </select>
+                </div>
+                <div class="col-md-1">
+                    <button type="submit" class="btn btn-outline-primary w-100">
+                        <i class="bi bi-funnel"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Companies Grid -->
+    {% if companies %}
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+        {% for company in companies %}
+        <div class="col">
+            <div class="card h-100 company-card" style="cursor: pointer;" onclick="window.location.href='{{ url_for('crm.company_detail', company_id=company.id) }}'">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div class="flex-grow-1">
+                            <h5 class="card-title mb-1">
+                                <i class="bi bi-building text-primary"></i>
+                                {{ company.name }}
+                            </h5>
+                            <div class="d-flex gap-2 align-items-center flex-wrap">
+                                <span class="badge lifecycle-badge bg-{{ 'success' if company.lifecycle_stage == 'customer' else 'info' if company.lifecycle_stage == 'opportunity' else 'secondary' }}">
+                                    {{ company.lifecycle_stage or 'lead' }}
+                                </span>
+                                {% if company.status %}
+                                <span class="badge lifecycle-badge bg-{{ 'success' if company.status == 'active' else 'secondary' }}">
+                                    {{ company.status }}
+                                </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="dropdown" onclick="event.stopPropagation();">
+                            <button class="btn btn-sm btn-link text-muted p-0" data-bs-toggle="dropdown">
+                                <i class="bi bi-three-dots-vertical"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item" href="{{ url_for('crm.company_detail', company_id=company.id) }}"><i class="bi bi-eye"></i> View Details</a></li>
+                                <li><a class="dropdown-item" href="#" onclick="editCompany({{ company.id }}, event)"><i class="bi bi-pencil"></i> Edit</a></li>
+                                <li><a class="dropdown-item" href="#" onclick="createDeal({{ company.id }}, event)"><i class="bi bi-currency-dollar"></i> Create Deal</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-danger" href="#" onclick="deleteCompany({{ company.id }}, event)"><i class="bi bi-trash"></i> Delete</a></li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    {% if company.industry %}
+                    <p class="text-muted small mb-2">
+                        <i class="bi bi-briefcase"></i> {{ company.industry }}
+                    </p>
+                    {% endif %}
+
+                    {% if company.description %}
+                    <p class="card-text text-muted small mb-3">{{ company.description[:120] }}{% if company.description|length > 120 %}...{% endif %}</p>
+                    {% endif %}
+
+                    <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
+                        <div class="d-flex gap-3 small text-muted">
+                            <span title="Contacts">
+                                <i class="bi bi-person"></i> {{ company.contacts.count() }}
+                            </span>
+                            <span title="Deals">
+                                <i class="bi bi-currency-dollar"></i> {{ company.deals.count() }}
+                            </span>
+                        </div>
+                        {% if company.website %}
+                        <a href="{{ company.website }}" target="_blank" class="text-decoration-none small" onclick="event.stopPropagation();">
+                            <i class="bi bi-globe"></i> Website
+                        </a>
+                        {% endif %}
+                    </div>
+
+                    {% if company.owner %}
+                    <div class="mt-2 small text-muted">
+                        <i class="bi bi-person-badge"></i> {{ company.owner.full_name }}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="card">
+        <div class="card-body text-center text-muted py-5">
+            <i class="bi bi-building fs-1 d-block mb-3"></i>
+            <h5>No companies yet</h5>
+            <p class="mb-3">Create your first company to start building your CRM</p>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createCompanyModal">
+                <i class="bi bi-building-add"></i> Add Company
+            </button>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Create Company Modal -->
+<div class="modal fade" id="createCompanyModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add New Company</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="createCompanyForm">
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label for="companyName" class="form-label">Company Name *</label>
+                            <input type="text" class="form-control" id="companyName" name="name" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="companyWebsite" class="form-label">Website</label>
+                            <input type="url" class="form-control" id="companyWebsite" name="website" placeholder="https://example.com">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="companyIndustry" class="form-label">Industry</label>
+                            <input type="text" class="form-control" id="companyIndustry" name="industry" placeholder="e.g. Technology, Healthcare">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="companySize" class="form-label">Company Size</label>
+                            <select class="form-select" id="companySize" name="company_size">
+                                <option value="">Select size...</option>
+                                <option value="1-10">1-10 employees</option>
+                                <option value="11-50">11-50 employees</option>
+                                <option value="51-200">51-200 employees</option>
+                                <option value="201-500">201-500 employees</option>
+                                <option value="501-1000">501-1000 employees</option>
+                                <option value="1001+">1001+ employees</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="companyAnnualRevenue" class="form-label">Annual Revenue</label>
+                            <input type="number" class="form-control" id="companyAnnualRevenue" name="annual_revenue" placeholder="100000">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="companyPhone" class="form-label">Phone</label>
+                            <input type="tel" class="form-control" id="companyPhone" name="phone">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="companyLifecycleStage" class="form-label">Lifecycle Stage</label>
+                            <select class="form-select" id="companyLifecycleStage" name="lifecycle_stage">
+                                <option value="lead">Lead</option>
+                                <option value="prospect">Prospect</option>
+                                <option value="opportunity">Opportunity</option>
+                                <option value="customer">Customer</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="companyDescription" class="form-label">Description</label>
+                        <textarea class="form-control" id="companyDescription" name="description" rows="3"></textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="companyLinkedin" class="form-label">LinkedIn URL</label>
+                            <input type="url" class="form-control" id="companyLinkedin" name="linkedin_url" placeholder="https://linkedin.com/company/...">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="companyTwitter" class="form-label">Twitter Handle</label>
+                            <input type="text" class="form-control" id="companyTwitter" name="twitter_handle" placeholder="@company">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="createCompany()">Add Company</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function createCompany() {
+    const form = document.getElementById('createCompanyForm');
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData.entries());
+
+    fetch('{{ url_for("crm.create_company") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.id) {
+            window.location.href = `/crm/companies/${data.id}`;
+        } else if (data.error) {
+            alert(data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to create company');
+    });
+}
+
+function editCompany(companyId, event) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    // TODO: Implement edit modal
+    alert('Edit functionality coming soon!');
+}
+
+function createDeal(companyId, event) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    // TODO: Implement create deal modal
+    alert('Create deal functionality coming soon!');
+}
+
+function deleteCompany(companyId, event) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (confirm('Delete this company permanently? This will also delete all associated contacts and deals.')) {
+        fetch(`/crm/companies/${companyId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                window.location.reload();
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Failed to delete company');
+        });
+    }
+}
+</script>
+{% endblock %}

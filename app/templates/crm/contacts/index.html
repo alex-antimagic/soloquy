@@ -1,0 +1,319 @@
+{% extends "layouts/base.html" %}
+
+{% block extra_css %}
+<style>
+    .contact-card {
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .contact-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    .contact-avatar {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 1.25rem;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">Contacts</h2>
+            <p class="text-muted mb-0">Manage your individual contacts and leads</p>
+        </div>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createContactModal">
+            <i class="bi bi-person-plus"></i> New Contact
+        </button>
+    </div>
+
+    <!-- Search and Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" action="{{ url_for('crm.contacts') }}" class="row g-3">
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="text" class="form-control" name="search" placeholder="Search contacts..." value="{{ search }}">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" name="lifecycle_stage">
+                        <option value="">All Stages</option>
+                        <option value="subscriber" {% if lifecycle_stage == 'subscriber' %}selected{% endif %}>Subscriber</option>
+                        <option value="lead" {% if lifecycle_stage == 'lead' %}selected{% endif %}>Lead</option>
+                        <option value="marketing_qualified" {% if lifecycle_stage == 'marketing_qualified' %}selected{% endif %}>Marketing Qualified</option>
+                        <option value="sales_qualified" {% if lifecycle_stage == 'sales_qualified' %}selected{% endif %}>Sales Qualified</option>
+                        <option value="opportunity" {% if lifecycle_stage == 'opportunity' %}selected{% endif %}>Opportunity</option>
+                        <option value="customer" {% if lifecycle_stage == 'customer' %}selected{% endif %}>Customer</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select" name="company_id">
+                        <option value="">All Companies</option>
+                        {% for company in companies %}
+                        <option value="{{ company.id }}" {% if company_id == company.id|string %}selected{% endif %}>{{ company.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-1">
+                    <button type="submit" class="btn btn-outline-primary w-100">
+                        <i class="bi bi-funnel"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Contacts List -->
+    {% if contacts %}
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+        {% for contact in contacts %}
+        <div class="col">
+            <div class="card h-100 contact-card" style="cursor: pointer;" onclick="window.location.href='{{ url_for('crm.contact_detail', contact_id=contact.id) }}'">
+                <div class="card-body">
+                    <div class="d-flex align-items-start gap-3 mb-3">
+                        <div class="contact-avatar">
+                            {{ contact.first_name[0] }}{{ contact.last_name[0] }}
+                        </div>
+                        <div class="flex-grow-1">
+                            <h5 class="card-title mb-1">{{ contact.first_name }} {{ contact.last_name }}</h5>
+                            {% if contact.job_title %}
+                            <p class="text-muted small mb-1">{{ contact.job_title }}</p>
+                            {% endif %}
+                            {% if contact.company %}
+                            <p class="text-muted small mb-0">
+                                <i class="bi bi-building"></i> {{ contact.company.name }}
+                            </p>
+                            {% endif %}
+                        </div>
+                        <div class="dropdown" onclick="event.stopPropagation();">
+                            <button class="btn btn-sm btn-link text-muted p-0" data-bs-toggle="dropdown">
+                                <i class="bi bi-three-dots-vertical"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item" href="{{ url_for('crm.contact_detail', contact_id=contact.id) }}"><i class="bi bi-eye"></i> View Details</a></li>
+                                <li><a class="dropdown-item" href="#" onclick="editContact({{ contact.id }}, event)"><i class="bi bi-pencil"></i> Edit</a></li>
+                                <li><a class="dropdown-item" href="#" onclick="createDealForContact({{ contact.id }}, event)"><i class="bi bi-currency-dollar"></i> Create Deal</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-danger" href="#" onclick="deleteContact({{ contact.id }}, event)"><i class="bi bi-trash"></i> Delete</a></li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <span class="badge bg-{{ 'success' if contact.lifecycle_stage == 'customer' else 'info' if contact.lifecycle_stage == 'opportunity' else 'secondary' }}">
+                            {{ contact.lifecycle_stage or 'subscriber' }}
+                        </span>
+                        {% if contact.lead_score > 0 %}
+                        <span class="badge bg-warning">Score: {{ contact.lead_score }}</span>
+                        {% endif %}
+                    </div>
+
+                    {% if contact.email %}
+                    <p class="small mb-1">
+                        <i class="bi bi-envelope"></i>
+                        <a href="mailto:{{ contact.email }}" onclick="event.stopPropagation();">{{ contact.email }}</a>
+                    </p>
+                    {% endif %}
+                    {% if contact.phone %}
+                    <p class="small mb-1">
+                        <i class="bi bi-telephone"></i>
+                        <a href="tel:{{ contact.phone }}" onclick="event.stopPropagation();">{{ contact.phone }}</a>
+                    </p>
+                    {% endif %}
+
+                    {% if contact.owner %}
+                    <div class="mt-3 pt-3 border-top small text-muted">
+                        <i class="bi bi-person-badge"></i> {{ contact.owner.full_name }}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="card">
+        <div class="card-body text-center text-muted py-5">
+            <i class="bi bi-person fs-1 d-block mb-3"></i>
+            <h5>No contacts yet</h5>
+            <p class="mb-3">Create your first contact to start building your network</p>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createContactModal">
+                <i class="bi bi-person-plus"></i> Add Contact
+            </button>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Create Contact Modal -->
+<div class="modal fade" id="createContactModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add New Contact</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="createContactForm">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="contactFirstName" class="form-label">First Name *</label>
+                            <input type="text" class="form-control" id="contactFirstName" name="first_name" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="contactLastName" class="form-label">Last Name *</label>
+                            <input type="text" class="form-control" id="contactLastName" name="last_name" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="contactEmail" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="contactEmail" name="email">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="contactPhone" class="form-label">Phone</label>
+                            <input type="tel" class="form-control" id="contactPhone" name="phone">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="contactJobTitle" class="form-label">Job Title</label>
+                            <input type="text" class="form-control" id="contactJobTitle" name="job_title">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="contactCompany" class="form-label">Company</label>
+                            <select class="form-select" id="contactCompany" name="company_id">
+                                <option value="">Select company...</option>
+                                {% for company in companies %}
+                                <option value="{{ company.id }}">{{ company.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="contactLifecycleStage" class="form-label">Lifecycle Stage</label>
+                            <select class="form-select" id="contactLifecycleStage" name="lifecycle_stage">
+                                <option value="subscriber">Subscriber</option>
+                                <option value="lead">Lead</option>
+                                <option value="marketing_qualified">Marketing Qualified</option>
+                                <option value="sales_qualified">Sales Qualified</option>
+                                <option value="opportunity">Opportunity</option>
+                                <option value="customer">Customer</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="contactLeadScore" class="form-label">Lead Score</label>
+                            <input type="number" class="form-control" id="contactLeadScore" name="lead_score" value="0" min="0" max="100">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="contactDescription" class="form-label">Notes</label>
+                        <textarea class="form-control" id="contactDescription" name="description" rows="3"></textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="contactLinkedin" class="form-label">LinkedIn URL</label>
+                            <input type="url" class="form-control" id="contactLinkedin" name="linkedin_url">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="contactTwitter" class="form-label">Twitter Handle</label>
+                            <input type="text" class="form-control" id="contactTwitter" name="twitter_handle" placeholder="@username">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="createContact()">Add Contact</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function createContact() {
+    const form = document.getElementById('createContactForm');
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData.entries());
+
+    // Convert empty strings to null
+    Object.keys(data).forEach(key => {
+        if (data[key] === '') data[key] = null;
+    });
+
+    fetch('{{ url_for("crm.create_contact") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.id) {
+            window.location.href = `/crm/contacts/${data.id}`;
+        } else if (data.error) {
+            alert(data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to create contact');
+    });
+}
+
+function editContact(contactId, event) {
+    event.preventDefault();
+    event.stopPropagation();
+    alert('Edit functionality coming soon!');
+}
+
+function createDealForContact(contactId, event) {
+    event.preventDefault();
+    event.stopPropagation();
+    alert('Create deal functionality coming soon!');
+}
+
+function deleteContact(contactId, event) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (confirm('Delete this contact permanently? This cannot be undone.')) {
+        fetch(`/crm/contacts/${contactId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                window.location.reload();
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Failed to delete contact');
+        });
+    }
+}
+</script>
+{% endblock %}

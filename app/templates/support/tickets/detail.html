@@ -1,0 +1,298 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">{{ ticket.ticket_number }}: {{ ticket.subject }}</h2>
+            <p class="text-muted mb-0">
+                <span class="badge bg-{{ 'success' if ticket.status == 'resolved' else 'info' if ticket.status == 'open' else 'warning' if ticket.status == 'pending' else 'secondary' }}">
+                    {{ ticket.status.replace('_', ' ').title() }}
+                </span>
+                <span class="badge bg-{{ 'danger' if ticket.priority == 'urgent' else 'warning' if ticket.priority == 'high' else 'primary' if ticket.priority == 'medium' else 'secondary' }}">
+                    {{ ticket.priority.title() }}
+                </span>
+            </p>
+        </div>
+        <a href="{{ url_for('support.tickets') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Tickets
+        </a>
+    </div>
+
+    <div class="row">
+        <!-- Main Content -->
+        <div class="col-lg-8">
+            <!-- Ticket Description -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>{{ ticket.requester_display_name }}</strong>
+                            <small class="text-muted">• {{ ticket.created_at.strftime('%b %d, %Y at %I:%M %p') }}</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p style="white-space: pre-wrap;">{{ ticket.description }}</p>
+                </div>
+            </div>
+
+            <!-- Comments -->
+            {% for comment in comments %}
+            <div class="card mb-3 {% if not comment.is_public %}border-warning{% endif %}">
+                <div class="card-header {% if not comment.is_public %}bg-warning bg-opacity-10{% endif %}">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>{{ comment.author_display_name }}</strong>
+                            {% if not comment.is_public %}
+                            <span class="badge bg-warning">Internal Note</span>
+                            {% endif %}
+                            {% if comment.is_resolution %}
+                            <span class="badge bg-success">Resolution</span>
+                            {% endif %}
+                            <small class="text-muted">• {{ comment.created_at.strftime('%b %d, %Y at %I:%M %p') }}</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p style="white-space: pre-wrap;">{{ comment.body }}</p>
+                </div>
+            </div>
+            {% endfor %}
+
+            <!-- Add Comment Form -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Add Comment</h5>
+                </div>
+                <div class="card-body">
+                    <form id="addCommentForm">
+                        <div class="mb-3">
+                            <textarea class="form-control" name="body" rows="4" placeholder="Write your comment here..." required></textarea>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="is_public" id="isPublic" checked>
+                                <label class="form-check-label" for="isPublic">
+                                    Public reply (visible to customer)
+                                </label>
+                            </div>
+                            <div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="checkbox" name="is_resolution" id="isResolution">
+                                    <label class="form-check-label" for="isResolution">
+                                        Mark as resolved
+                                    </label>
+                                </div>
+                                <button type="button" class="btn btn-primary" onclick="addComment()">
+                                    <i class="bi bi-send"></i> Send
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Quick Actions -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="mb-0">Quick Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Status</label>
+                        <select class="form-select" id="statusSelect" onchange="changeStatus()">
+                            <option value="new" {% if ticket.status == 'new' %}selected{% endif %}>New</option>
+                            <option value="open" {% if ticket.status == 'open' %}selected{% endif %}>Open</option>
+                            <option value="pending" {% if ticket.status == 'pending' %}selected{% endif %}>Pending</option>
+                            <option value="on_hold" {% if ticket.status == 'on_hold' %}selected{% endif %}>On Hold</option>
+                            <option value="resolved" {% if ticket.status == 'resolved' %}selected{% endif %}>Resolved</option>
+                            <option value="closed" {% if ticket.status == 'closed' %}selected{% endif %}>Closed</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Priority</label>
+                        <select class="form-select" id="prioritySelect" onchange="changePriority()">
+                            <option value="low" {% if ticket.priority == 'low' %}selected{% endif %}>Low</option>
+                            <option value="medium" {% if ticket.priority == 'medium' %}selected{% endif %}>Medium</option>
+                            <option value="high" {% if ticket.priority == 'high' %}selected{% endif %}>High</option>
+                            <option value="urgent" {% if ticket.priority == 'urgent' %}selected{% endif %}>Urgent</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Assignee</label>
+                        <select class="form-select" id="assigneeSelect" onchange="assignTicket()">
+                            <option value="">Unassigned</option>
+                            {% for agent in agents %}
+                            <option value="{{ agent.id }}" {% if ticket.assignee_id == agent.id %}selected{% endif %}>{{ agent.full_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ticket Details -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="mb-0">Ticket Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-2">
+                        <small class="text-muted">Requester</small>
+                        <div><strong>{{ ticket.requester_display_name }}</strong></div>
+                        {% if ticket.requester_display_email %}
+                        <div><a href="mailto:{{ ticket.requester_display_email }}">{{ ticket.requester_display_email }}</a></div>
+                        {% endif %}
+                    </div>
+                    {% if ticket.company %}
+                    <div class="mb-2">
+                        <small class="text-muted">Company</small>
+                        <div><a href="{{ url_for('crm.company_detail', company_id=ticket.company_id) }}">{{ ticket.company.name }}</a></div>
+                    </div>
+                    {% endif %}
+                    {% if ticket.department %}
+                    <div class="mb-2">
+                        <small class="text-muted">Department</small>
+                        <div>{{ ticket.department.name }}</div>
+                    </div>
+                    {% endif %}
+                    {% if ticket.category %}
+                    <div class="mb-2">
+                        <small class="text-muted">Category</small>
+                        <div>{{ ticket.category }}</div>
+                    </div>
+                    {% endif %}
+                    <div class="mb-2">
+                        <small class="text-muted">Source</small>
+                        <div>{{ ticket.source.title() }}</div>
+                    </div>
+                    <div class="mb-2">
+                        <small class="text-muted">Created</small>
+                        <div>{{ ticket.created_at.strftime('%b %d, %Y at %I:%M %p') }}</div>
+                    </div>
+                    <div class="mb-2">
+                        <small class="text-muted">Last Updated</small>
+                        <div>{{ ticket.updated_at.strftime('%b %d, %Y at %I:%M %p') }}</div>
+                    </div>
+                    {% if ticket.resolved_at %}
+                    <div class="mb-2">
+                        <small class="text-muted">Resolved</small>
+                        <div>{{ ticket.resolved_at.strftime('%b %d, %Y at %I:%M %p') }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- SLA Info -->
+            {% if ticket.resolution_due_at %}
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">SLA</h5>
+                </div>
+                <div class="card-body">
+                    {% if ticket.is_overdue %}
+                    <div class="alert alert-danger mb-2">
+                        <i class="bi bi-exclamation-triangle"></i> Overdue
+                    </div>
+                    {% endif %}
+                    <div class="mb-2">
+                        <small class="text-muted">Resolution Due</small>
+                        <div>{{ ticket.resolution_due_at.strftime('%b %d, %Y at %I:%M %p') }}</div>
+                    </div>
+                    {% if ticket.first_response_at %}
+                    <div class="mb-2">
+                        <small class="text-muted">First Response</small>
+                        <div>{{ ticket.first_response_at.strftime('%b %d, %Y at %I:%M %p') }}</div>
+                    </div>
+                    {% elif ticket.first_response_due_at %}
+                    <div class="mb-2">
+                        <small class="text-muted">First Response Due</small>
+                        <div>{{ ticket.first_response_due_at.strftime('%b %d, %Y at %I:%M %p') }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const ticketId = {{ ticket.id }};
+
+function addComment() {
+    const form = document.getElementById('addCommentForm');
+    const data = {
+        body: form.body.value,
+        is_public: form.is_public.checked,
+        is_resolution: form.is_resolution.checked
+    };
+
+    fetch(`/support/tickets/${ticketId}/comment`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    }).then(r => r.json()).then(d => {
+        if (d.success) {
+            location.reload();
+        } else {
+            alert(d.error || 'Failed to add comment');
+        }
+    });
+}
+
+function changeStatus() {
+    const newStatus = document.getElementById('statusSelect').value;
+
+    fetch(`/support/tickets/${ticketId}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+    }).then(r => r.json()).then(d => {
+        if (d.success) {
+            location.reload();
+        } else {
+            alert(d.error || 'Failed to change status');
+        }
+    });
+}
+
+function changePriority() {
+    const newPriority = document.getElementById('prioritySelect').value;
+
+    fetch(`/support/tickets/${ticketId}/priority`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ priority: newPriority })
+    }).then(r => r.json()).then(d => {
+        if (d.success) {
+            location.reload();
+        } else {
+            alert(d.error || 'Failed to change priority');
+        }
+    });
+}
+
+function assignTicket() {
+    const assigneeId = document.getElementById('assigneeSelect').value;
+
+    fetch(`/support/tickets/${ticketId}/assign`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ assignee_id: assigneeId || null })
+    }).then(r => r.json()).then(d => {
+        if (d.success) {
+            location.reload();
+        } else {
+            alert(d.error || 'Failed to assign ticket');
+        }
+    });
+}
+</script>
+{% endblock %}

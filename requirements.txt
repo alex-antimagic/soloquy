@@ -1,0 +1,45 @@
+# Core Flask
+Flask==3.0.0
+Werkzeug==3.0.1
+
+# Database
+Flask-SQLAlchemy==3.1.1
+psycopg2-binary==2.9.9
+Flask-Migrate==4.0.5
+
+# Authentication
+Flask-Login==0.6.3
+Flask-Bcrypt==1.0.1
+
+# Forms
+Flask-WTF==1.2.1
+WTForms==3.1.1
+
+# Environment variables
+python-dotenv==1.0.0
+
+# AI Integration
+anthropic==0.72.0
+
+# Utilities
+email-validator==2.1.0
+requests==2.31.0
+
+# File Storage
+cloudinary==1.41.0
+
+# Security
+Flask-Limiter==3.5.0
+Flask-Talisman==1.1.0
+
+# Production WSGI Server
+gunicorn==21.2.0
+
+# Real-time Communication
+Flask-SocketIO==5.4.1
+python-socketio==5.11.4
+redis==5.2.1
+eventlet==0.37.0
+
+# Development
+python-dateutil==2.8.2

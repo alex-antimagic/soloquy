@@ -1,0 +1,662 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<div class="chat-container">
+    <!-- Chat Main Area -->
+    <div class="chat-main">
+        <div class="container-fluid h-100 d-flex flex-column">
+            <!-- Chat Header -->
+            <div class="border-bottom pb-3 mb-3">
+                <!-- Channel Members -->
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <div class="d-flex align-items-center" style="gap: 8px;">
+                        {% set members = channel.get_members() %}
+                        {% set agents = associated_agents %}
+                        {% set all_members = agents + members %}
+
+                        {% for member in all_members[:10] %}
+                            {% if member.__class__.__name__ == 'Agent' %}
+                                <img src="{{ member.avatar_url if member.avatar_url else 'https://ui-avatars.com/api/?name=' + member.name|urlencode + '&background=random' }}"
+                                     alt="{{ member.name }}"
+                                     class="rounded"
+                                     width="32"
+                                     height="32"
+                                     title="{{ member.name }} (AI Agent)"
+                                     style="border: 2px solid #0d6efd;">
+                            {% else %}
+                                <img src="{{ member.avatar_url if member.avatar_url else 'https://ui-avatars.com/api/?name=' + member.full_name|urlencode + '&background=random' }}"
+                                     alt="{{ member.full_name }}"
+                                     class="rounded"
+                                     width="32"
+                                     height="32"
+                                     title="{{ member.full_name }}">
+                            {% endif %}
+                        {% endfor %}
+                        {% if all_members|length > 10 %}
+                            <span class="text-muted small">+{{ all_members|length - 10 }} more</span>
+                        {% endif %}
+                    </div>
+                    {% if channel.created_by_id == current_user.id %}
+                        <button class="rounded"
+                                style="width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center; border: 2px dashed #6c757d; background-color: #f8f9fa; cursor: pointer;"
+                                data-bs-toggle="modal"
+                                data-bs-target="#addMemberModal"
+                                title="Add member or agent">
+                            <i class="bi bi-plus" style="color: #6c757d;"></i>
+                        </button>
+                    {% endif %}
+                </div>
+
+                <!-- Channel Description -->
+                <div class="d-flex align-items-center justify-content-between">
+                    <div class="flex-grow-1" id="channel-description-container">
+                        <p class="text-muted small mb-0" id="channel-description-display" style="cursor: pointer;" title="Click to edit description">
+                            {% if channel.description %}
+                                {{ channel.description }}
+                            {% else %}
+                                <span class="text-muted fst-italic">Add a description...</span>
+                            {% endif %}
+                            {% if channel.is_private %}
+                                <i class="bi bi-lock ms-2"></i>
+                            {% endif %}
+                        </p>
+                        <div id="channel-description-edit" style="display: none;">
+                            <input type="text" class="form-control form-control-sm" id="channel-description-input"
+                                   value="{{ channel.description or '' }}" placeholder="Channel description...">
+                            <div class="mt-1">
+                                <button class="btn btn-sm btn-primary" onclick="saveDescription()">Save</button>
+                                <button class="btn btn-sm btn-secondary" onclick="cancelEditDescription()">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Messages Area -->
+            <div class="flex-grow-1 overflow-auto mb-3" id="messages-container">
+                {% if messages %}
+                    {% for message in messages %}
+                        {% set is_from_me = message.sender_id == current_user.id %}
+                        <div class="message {{ 'message-right' if is_from_me else 'message-left' }}">
+                            <div class="message-avatar">
+                                {% if is_from_me %}
+                                    <i class="bi bi-person-square"></i>
+                                {% elif message.is_from_agent() and message.agent and message.agent.avatar_url %}
+                                    <img src="{{ message.agent.avatar_url }}" alt="{{ message.agent.name }}">
+                                    <span class="avatar-status online"></span>
+                                {% else %}
+                                    <i class="bi bi-person-square"></i>
+                                {% endif %}
+                            </div>
+                            <div class="message-bubble">
+                                <div class="message-header">
+                                    <span class="message-author">{{ message.get_sender_name() }}</span>
+                                    <span class="message-time">{{ message.created_at.strftime('%I:%M %p') }}</span>
+                                </div>
+                                <div class="message-content">
+                                    <div class="message-body">{{ message.content | format_message }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center text-muted py-5">
+                        <i class="bi bi-chat-dots fs-1 d-block mb-3"></i>
+                        <p>No messages in #{{ channel.name }} yet</p>
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Message Input -->
+            <div class="chat-input">
+                <form id="message-form">
+                    <div class="input-group">
+                        <input type="text"
+                               class="form-control"
+                               id="message-input"
+                               placeholder="Message #{{ channel.name }}..."
+                               autocomplete="off"
+                               required>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-send"></i> Send
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const messageForm = document.getElementById('message-form');
+    const messageInput = document.getElementById('message-input');
+    const messagesContainer = document.getElementById('messages-container');
+    const channelSlug = '{{ channel.slug }}';
+
+    // Notification sound
+    const notificationSound = new Audio('{{ url_for("static", filename="pop.mp3") }}');
+
+    // Store agent avatar URLs for lookup
+    const agentAvatars = {
+        {% if associated_agents %}
+            {% for agent in associated_agents %}
+                '{{ agent.name }}': '{{ agent.avatar_url if agent.avatar_url else "" }}'{% if not loop.last %},{% endif %}
+            {% endfor %}
+        {% endif %}
+    };
+
+    // Scroll to bottom of messages
+    function scrollToBottom() {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+    scrollToBottom();
+
+    // Real-time message updates via Server-Sent Events (SSE)
+    const currentUserId = {{ current_user.id }};
+    const conversationId = `channel_${channelSlug}`;
+
+    let socket = null;
+
+    function connectSocket() {
+        // Close any existing connection
+        if (socket) {
+            console.log('Closing existing Socket.IO connection');
+            socket.disconnect();
+            socket = null;
+        }
+
+        console.log('Opening new Socket.IO connection:', conversationId);
+        socket = io({
+            transports: ['websocket', 'polling']
+        });
+
+        socket.on('connect', () => {
+            console.log('Socket.IO connected');
+            // Join the conversation room
+            socket.emit('join_conversation', { conversation_id: conversationId });
+        });
+
+        socket.on('joined', (data) => {
+            console.log('Joined conversation:', data);
+        });
+
+        socket.on('new_message', (messageData) => {
+            console.log('Received new message:', messageData);
+
+            // Only add if message is from someone else (sender already sees their own message)
+            if (messageData.sender_id !== currentUserId) {
+                if (messageData.agent_id) {
+                    // Agent message
+                    addMessageToUI(messageData.content, messageData.agent_name, true);
+                } else {
+                    // User message
+                    addMessageToUI(messageData.content, messageData.sender, false);
+                }
+                // Play notification sound
+                notificationSound.play().catch(e => console.log('Audio play failed:', e));
+            }
+        });
+
+        socket.on('disconnect', () => {
+            console.log('Socket.IO disconnected');
+        });
+
+        socket.on('connect_error', (error) => {
+            console.error('Socket.IO connection error:', error);
+        });
+    }
+
+    // Start Socket.IO connection
+    connectSocket();
+
+    // Cleanup function to close connections
+    function cleanupConnections() {
+        console.log('Cleaning up Socket.IO connections');
+        if (socket) {
+            socket.emit('leave_conversation', { conversation_id: conversationId });
+            socket.disconnect();
+            socket = null;
+        }
+    }
+
+    // Multiple event listeners for maximum reliability
+    window.addEventListener('beforeunload', cleanupConnections);
+    window.addEventListener('pagehide', cleanupConnections);
+
+    // AGGRESSIVE: Close connections immediately when clicking any link
+    document.addEventListener('click', (e) => {
+        const link = e.target.closest('a');
+        if (link && link.href && !link.target) {
+            // Navigating to another page - close connections immediately
+            console.log('Link clicked, pre-emptively closing SSE');
+            cleanupConnections();
+        }
+    }, true); // Use capture phase to run before other handlers
+
+    // Also cleanup when page visibility changes (user switches tabs/windows)
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+            console.log('Page hidden, closing SSE');
+            cleanupConnections();
+        } else {
+            console.log('Page visible, reconnecting SSE');
+            connectSSE();
+        }
+    });
+
+    // Escape HTML to prevent XSS
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // Apply inline markdown-style formatting
+    function applyInlineFormatting(text) {
+        // Bold: **text** or __text__
+        text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        text = text.replace(/__(.+?)__/g, '<strong>$1</strong>');
+
+        // Italic: *text* or _text_
+        text = text.replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, '<em>$1</em>');
+        text = text.replace(/(?<!_)_(?!_)(.+?)(?<!_)_(?!_)/g, '<em>$1</em>');
+
+        // Code: `text`
+        text = text.replace(/`(.+?)`/g, '<code>$1</code>');
+
+        // Strikethrough: ~~text~~
+        text = text.replace(/~~(.+?)~~/g, '<del>$1</del>');
+
+        return text;
+    }
+
+    // Full message formatting (matches server-side format_message_content)
+    function formatMessageContent(content) {
+        if (!content) return '';
+
+        const lines = content.split('\n');
+        const formattedLines = [];
+        let inList = false;
+        let listType = null;
+
+        for (const line of lines) {
+            const stripped = line.trim();
+
+            // Check for bullet points
+            const bulletMatch = stripped.match(/^[-*•]\s+(.+)$/);
+            if (bulletMatch) {
+                if (!inList || listType !== 'ul') {
+                    if (inList) formattedLines.push(`</${listType}>`);
+                    formattedLines.push('<ul class="message-list">');
+                    inList = true;
+                    listType = 'ul';
+                }
+                formattedLines.push(`<li>${applyInlineFormatting(escapeHtml(bulletMatch[1]))}</li>`);
+                continue;
+            }
+
+            // Check for numbered lists
+            const numberedMatch = stripped.match(/^(\d+)\.\s+(.+)$/);
+            if (numberedMatch) {
+                if (!inList || listType !== 'ol') {
+                    if (inList) formattedLines.push(`</${listType}>`);
+                    formattedLines.push('<ol class="message-list">');
+                    inList = true;
+                    listType = 'ol';
+                }
+                formattedLines.push(`<li>${applyInlineFormatting(escapeHtml(numberedMatch[2]))}</li>`);
+                continue;
+            }
+
+            // Regular line
+            if (inList) {
+                formattedLines.push(`</${listType}>`);
+                inList = false;
+                listType = null;
+            }
+
+            if (stripped) {
+                formattedLines.push(`<p class="message-paragraph">${applyInlineFormatting(escapeHtml(stripped))}</p>`);
+            } else {
+                formattedLines.push('<br>');
+            }
+        }
+
+        // Close any open list
+        if (inList) {
+            formattedLines.push(`</${listType}>`);
+        }
+
+        return formattedLines.join('');
+    }
+
+    // Add message to UI
+    function addMessageToUI(content, author, isAgent = false) {
+        const currentUserName = '{{ current_user.full_name }}';
+        const isFromMe = author === currentUserName;
+
+        const messageDiv = document.createElement('div');
+        messageDiv.className = isFromMe ? 'message message-right' : 'message message-left';
+
+        let avatarHtml = '<i class="bi bi-person-square"></i>';
+        let statusHtml = '';
+
+        if (!isFromMe && isAgent && agentAvatars[author]) {
+            avatarHtml = `<img src="${agentAvatars[author]}" alt="${author}">`;
+            statusHtml = '<span class="avatar-status online"></span>';
+        }
+
+        messageDiv.innerHTML = `
+            <div class="message-avatar">${avatarHtml}${statusHtml}</div>
+            <div class="message-bubble">
+                <div class="message-header">
+                    <span class="message-author">${escapeHtml(author)}</span>
+                    <span class="message-time">Just now</span>
+                </div>
+                <div class="message-content">
+                    <div class="message-body">${formatMessageContent(content)}</div>
+                </div>
+            </div>
+        `;
+
+        messagesContainer.appendChild(messageDiv);
+        scrollToBottom();
+    }
+
+    // Add typing indicator for agent
+    function addTypingIndicator(agentName) {
+        const typingDiv = document.createElement('div');
+        typingDiv.className = 'message message-left typing-indicator';
+        typingDiv.id = `typing-${agentName.replace(/\s+/g, '-')}`;
+
+        let avatarHtml = '<i class="bi bi-person-square"></i>';
+        let statusHtml = '';
+        if (agentAvatars[agentName]) {
+            avatarHtml = `<img src="${agentAvatars[agentName]}" alt="${agentName}">`;
+            statusHtml = '<span class="avatar-status online"></span>';
+        }
+
+        typingDiv.innerHTML = `
+            <div class="message-avatar">
+                ${avatarHtml}${statusHtml}
+            </div>
+            <div class="message-bubble">
+                <div class="message-header">
+                    <span class="message-author">${escapeHtml(agentName)}</span>
+                    <span class="message-time text-muted">typing...</span>
+                </div>
+                <div class="message-content">
+                    <div class="typing-dots">
+                        <span class="typing-dot"></span>
+                        <span class="typing-dot"></span>
+                        <span class="typing-dot"></span>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        messagesContainer.appendChild(typingDiv);
+        scrollToBottom();
+        return typingDiv;
+    }
+
+    // Remove typing indicator
+    function removeTypingIndicator(agentName) {
+        const indicator = document.getElementById(`typing-${agentName.replace(/\s+/g, '-')}`);
+        if (indicator) {
+            indicator.remove();
+        }
+    }
+
+    // Send message
+    messageForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const content = messageInput.value.trim();
+        if (!content) return;
+
+        // Immediately add user message to UI
+        addMessageToUI(content, '{{ current_user.full_name }}', false);
+
+        // Clear input immediately
+        messageInput.value = '';
+
+        // Wait a random delay (500ms to 2000ms) before showing typing indicators
+        const randomDelay = Math.random() * 1500 + 500; // 500-2000ms
+        await new Promise(resolve => setTimeout(resolve, randomDelay));
+
+        // Show typing indicators for all channel agents
+        const channelAgentNames = Object.keys(agentAvatars);
+        channelAgentNames.forEach(agentName => {
+            addTypingIndicator(agentName);
+        });
+
+        try {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+            const response = await fetch(`/chat/channel/${channelSlug}/send`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({ content })
+            });
+
+            const data = await response.json();
+
+            // Remove all typing indicators
+            channelAgentNames.forEach(agentName => {
+                removeTypingIndicator(agentName);
+            });
+
+            if (data.success) {
+                // Show agent responses with a brief typing indicator
+                if (data.agent_responses && data.agent_responses.length > 0) {
+                    for (const agentResp of data.agent_responses) {
+                        addTypingIndicator(agentResp.agent_name);
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                        removeTypingIndicator(agentResp.agent_name);
+                        addMessageToUI(agentResp.content, agentResp.agent_name, true);
+                    }
+                }
+            } else {
+                alert('Failed to send message: ' + (data.error || 'Unknown error'));
+            }
+        } catch (error) {
+            console.error('Error sending message:', error);
+            // Remove all typing indicators on error
+            channelAgentNames.forEach(agentName => {
+                removeTypingIndicator(agentName);
+            });
+            alert('Failed to send message');
+        }
+    });
+
+    // Auto-focus input
+    messageInput.focus();
+
+    // Description editing
+    const descriptionDisplay = document.getElementById('channel-description-display');
+    const descriptionEdit = document.getElementById('channel-description-edit');
+    const descriptionInput = document.getElementById('channel-description-input');
+
+    descriptionDisplay.addEventListener('click', function() {
+        descriptionDisplay.style.display = 'none';
+        descriptionEdit.style.display = 'block';
+        descriptionInput.focus();
+    });
+
+    function cancelEditDescription() {
+        descriptionDisplay.style.display = 'block';
+        descriptionEdit.style.display = 'none';
+    }
+
+    async function saveDescription() {
+        const newDescription = descriptionInput.value.trim();
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+        try {
+            const response = await fetch(`/chat/channel/${channelSlug}/description`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({ description: newDescription })
+            });
+
+            if (response.ok) {
+                // Update the display
+                if (newDescription) {
+                    descriptionDisplay.innerHTML = newDescription + '{% if channel.is_private %} <i class="bi bi-lock ms-2"></i>{% endif %}';
+                } else {
+                    descriptionDisplay.innerHTML = '<span class="text-muted fst-italic">Add a description...</span>{% if channel.is_private %} <i class="bi bi-lock ms-2"></i>{% endif %}';
+                }
+                cancelEditDescription();
+            } else {
+                alert('Failed to update description. Please try again.');
+            }
+        } catch (error) {
+            console.error('Error updating description:', error);
+            alert('Failed to update description. Please try again.');
+        }
+    }
+
+    // Add member function
+    async function addMember(userId) {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+        try {
+            const response = await fetch(`/chat/channel/${channelSlug}/members/add`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({ user_id: userId })
+            });
+
+            if (response.ok) {
+                window.location.reload();
+            } else {
+                const data = await response.json();
+                alert(data.error || 'Failed to add member. Please try again.');
+            }
+        } catch (error) {
+            console.error('Error adding member:', error);
+            alert('Failed to add member. Please try again.');
+        }
+    }
+
+    // Add agent function
+    async function addAgent(agentId) {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+        try {
+            const response = await fetch(`/chat/channel/${channelSlug}/agents/add`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({ agent_id: agentId })
+            });
+
+            if (response.ok) {
+                window.location.reload();
+            } else {
+                const data = await response.json();
+                alert(data.error || 'Failed to add agent. Please try again.');
+            }
+        } catch (error) {
+            console.error('Error adding agent:', error);
+            alert('Failed to add agent. Please try again.');
+        }
+    }
+</script>
+
+<!-- Add Member Modal -->
+{% if channel.created_by_id == current_user.id %}
+<div class="modal fade" id="addMemberModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add Member to #{{ channel.name }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                {% set current_members = channel.get_members() %}
+                {% set current_agents = channel.get_associated_agents() %}
+                {% set all_users = current_tenant.get_members() %}
+                {% set available_users = [] %}
+                {% for user in all_users %}
+                    {% if user not in current_members %}
+                        {% set _ = available_users.append(user) %}
+                    {% endif %}
+                {% endfor %}
+
+                {# Get all agents from tenant's departments #}
+                {% set all_agents = [] %}
+                {% for dept in current_tenant.departments %}
+                    {% for agent in dept.get_agents() %}
+                        {% if agent not in all_agents %}
+                            {% set _ = all_agents.append(agent) %}
+                        {% endif %}
+                    {% endfor %}
+                {% endfor %}
+                {% set available_agents = [] %}
+                {% for agent in all_agents %}
+                    {% if agent not in current_agents %}
+                        {% set _ = available_agents.append(agent) %}
+                    {% endif %}
+                {% endfor %}
+
+                {% if available_agents %}
+                    <h6 class="mb-2">AI Agents</h6>
+                    <div class="list-group mb-3">
+                        {% for agent in available_agents %}
+                            <button type="button"
+                                    class="list-group-item list-group-item-action d-flex align-items-center"
+                                    onclick="addAgent({{ agent.id }}); bootstrap.Modal.getInstance(document.getElementById('addMemberModal')).hide();">
+                                <img src="{{ agent.avatar_url if agent.avatar_url else 'https://ui-avatars.com/api/?name=' + agent.name|urlencode + '&background=random' }}"
+                                     alt="{{ agent.name }}"
+                                     class="rounded me-2"
+                                     width="32"
+                                     height="32"
+                                     style="border: 2px solid #0d6efd;">
+                                <span>{{ agent.name }} <small class="text-muted">(AI Agent)</small></span>
+                            </button>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                {% if available_users %}
+                    <h6 class="mb-2">People</h6>
+                    <div class="list-group">
+                        {% for user in available_users %}
+                            <button type="button"
+                                    class="list-group-item list-group-item-action d-flex align-items-center"
+                                    onclick="addMember({{ user.id }}); bootstrap.Modal.getInstance(document.getElementById('addMemberModal')).hide();">
+                                <img src="{{ user.avatar_url if user.avatar_url else 'https://ui-avatars.com/api/?name=' + user.full_name|urlencode + '&background=random' }}"
+                                     alt="{{ user.full_name }}"
+                                     class="rounded me-2"
+                                     width="32"
+                                     height="32">
+                                <span>{{ user.full_name }}</span>
+                            </button>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                {% if not available_users and not available_agents %}
+                    <p class="text-muted">All workspace members and agents are already in this channel.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}

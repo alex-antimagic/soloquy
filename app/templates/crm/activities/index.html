@@ -1,0 +1,116 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">Activities</h2>
+            <p class="text-muted mb-0">Track all interactions and touchpoints</p>
+        </div>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createActivityModal">
+            <i class="bi bi-plus-circle"></i> Log Activity
+        </button>
+    </div>
+
+    {% if activities %}
+    <div class="card">
+        <div class="list-group list-group-flush">
+            {% for activity in activities %}
+            <div class="list-group-item">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <i class="bi bi-{{ 'telephone' if activity.activity_type == 'call' else 'envelope' if activity.activity_type == 'email' else 'calendar' if activity.activity_type == 'meeting' else 'file-text' }}"></i>
+                            <strong>{{ activity.subject or activity.activity_type.replace('_', ' ').title() }}</strong>
+                            <span class="badge bg-{{ 'success' if activity.completed else 'warning' }}">
+                                {{ 'Completed' if activity.completed else 'Pending' }}
+                            </span>
+                        </div>
+                        {% if activity.description %}
+                        <p class="text-muted small mb-2">{{ activity.description[:150] }}{% if activity.description|length > 150 %}...{% endif %}</p>
+                        {% endif %}
+                        <div class="small text-muted">
+                            {% if activity.company %}<i class="bi bi-building"></i> {{ activity.company.name }} • {% endif %}
+                            {% if activity.contact %}<i class="bi bi-person"></i> {{ activity.contact.first_name }} {{ activity.contact.last_name }} • {% endif %}
+                            {% if activity.created_by %}<i class="bi bi-person-badge"></i> {{ activity.created_by.full_name }} • {% endif %}
+                            <i class="bi bi-clock"></i> {{ activity.created_at.strftime('%b %d, %Y at %I:%M %p') }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% else %}
+    <div class="card">
+        <div class="card-body text-center py-5">
+            <i class="bi bi-clock-history fs-1 d-block mb-3"></i>
+            <h5>No activities yet</h5>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createActivityModal">
+                <i class="bi bi-plus-circle"></i> Log Activity
+            </button>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<div class="modal fade" id="createActivityModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Log Activity</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="createActivityForm">
+                    <div class="mb-3">
+                        <label class="form-label">Activity Type</label>
+                        <select class="form-select" name="activity_type">
+                            <option value="note">Note</option>
+                            <option value="call">Call</option>
+                            <option value="email">Email</option>
+                            <option value="meeting">Meeting</option>
+                            <option value="task">Task</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Subject</label>
+                        <input type="text" class="form-control" name="subject">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" name="description" rows="3"></textarea>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" name="completed" id="completed">
+                        <label class="form-check-label" for="completed">Mark as completed</label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="createActivity()">Log Activity</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function createActivity() {
+    const form = document.getElementById('createActivityForm');
+    const data = Object.fromEntries(new FormData(form));
+    data.completed = form.completed.checked;
+    
+    fetch('/crm/activities/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    }).then(r => r.json()).then(d => {
+        if (d.id) location.reload();
+        else alert(d.error || 'Failed');
+    });
+}
+</script>
+{% endblock %}

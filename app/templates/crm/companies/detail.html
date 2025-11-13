@@ -1,0 +1,366 @@
+{% extends "layouts/base.html" %}
+
+{% block extra_css %}
+<style>
+    .detail-section {
+        background-color: var(--bs-secondary-bg);
+        border-radius: 0.5rem;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+    }
+
+    .info-item {
+        padding: 0.75rem;
+        background-color: var(--bs-body-bg);
+        border-radius: 0.375rem;
+    }
+
+    .info-label {
+        font-size: 0.75rem;
+        color: var(--bs-secondary-color);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.25rem;
+    }
+
+    .info-value {
+        font-size: 1rem;
+        font-weight: 500;
+    }
+
+    .activity-timeline {
+        position: relative;
+        padding-left: 2rem;
+    }
+
+    .activity-timeline::before {
+        content: '';
+        position: absolute;
+        left: 0.5rem;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: var(--bs-border-color);
+    }
+
+    .activity-item {
+        position: relative;
+        margin-bottom: 1.5rem;
+        padding-left: 1rem;
+    }
+
+    .activity-item::before {
+        content: '';
+        position: absolute;
+        left: -1.5rem;
+        top: 0.5rem;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--bs-primary);
+        border: 2px solid var(--bs-body-bg);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-start mb-4">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-2">
+                    <li class="breadcrumb-item"><a href="{{ url_for('crm.index') }}">CRM</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('crm.companies') }}">Companies</a></li>
+                    <li class="breadcrumb-item active">{{ company.name }}</li>
+                </ol>
+            </nav>
+            <h2 class="mb-1">
+                <i class="bi bi-building text-primary"></i>
+                {{ company.name }}
+            </h2>
+            <div class="d-flex gap-2 align-items-center">
+                <span class="badge bg-{{ 'success' if company.lifecycle_stage == 'customer' else 'info' if company.lifecycle_stage == 'opportunity' else 'secondary' }}">
+                    {{ company.lifecycle_stage or 'lead' }}
+                </span>
+                {% if company.status %}
+                <span class="badge bg-{{ 'success' if company.status == 'active' else 'secondary' }}">
+                    {{ company.status }}
+                </span>
+                {% endif %}
+            </div>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-secondary" onclick="editCompany()">
+                <i class="bi bi-pencil"></i> Edit
+            </button>
+            <button class="btn btn-outline-primary" onclick="createActivity()">
+                <i class="bi bi-plus-circle"></i> Add Note
+            </button>
+            <button class="btn btn-primary" onclick="createDeal()">
+                <i class="bi bi-currency-dollar"></i> Create Deal
+            </button>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Main Content -->
+        <div class="col-lg-8">
+            <!-- Company Info Section -->
+            <div class="detail-section">
+                <h5 class="mb-3">Company Information</h5>
+                <div class="info-grid">
+                    {% if company.website %}
+                    <div class="info-item">
+                        <div class="info-label">Website</div>
+                        <div class="info-value">
+                            <a href="{{ company.website }}" target="_blank">
+                                <i class="bi bi-globe"></i> {{ company.website }}
+                            </a>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if company.industry %}
+                    <div class="info-item">
+                        <div class="info-label">Industry</div>
+                        <div class="info-value">{{ company.industry }}</div>
+                    </div>
+                    {% endif %}
+
+                    {% if company.company_size %}
+                    <div class="info-item">
+                        <div class="info-label">Company Size</div>
+                        <div class="info-value">{{ company.company_size }}</div>
+                    </div>
+                    {% endif %}
+
+                    {% if company.annual_revenue %}
+                    <div class="info-item">
+                        <div class="info-label">Annual Revenue</div>
+                        <div class="info-value">${{ "{:,.0f}".format(company.annual_revenue) }}</div>
+                    </div>
+                    {% endif %}
+
+                    {% if company.phone %}
+                    <div class="info-item">
+                        <div class="info-label">Phone</div>
+                        <div class="info-value">
+                            <a href="tel:{{ company.phone }}">{{ company.phone }}</a>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if company.owner %}
+                    <div class="info-item">
+                        <div class="info-label">Account Owner</div>
+                        <div class="info-value">
+                            <i class="bi bi-person-badge"></i> {{ company.owner.full_name }}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                {% if company.description %}
+                <div class="mt-3">
+                    <div class="info-label">Description</div>
+                    <p class="mb-0">{{ company.description }}</p>
+                </div>
+                {% endif %}
+
+                {% if company.address_street %}
+                <div class="mt-3">
+                    <div class="info-label">Address</div>
+                    <p class="mb-0">
+                        {{ company.address_street }}<br>
+                        {% if company.address_city %}{{ company.address_city }}{% endif %}{% if company.address_state %}, {{ company.address_state }}{% endif %} {% if company.address_postal_code %}{{ company.address_postal_code }}{% endif %}<br>
+                        {% if company.address_country %}{{ company.address_country }}{% endif %}
+                    </p>
+                </div>
+                {% endif %}
+
+                <div class="mt-3">
+                    <div class="d-flex gap-3">
+                        {% if company.linkedin_url %}
+                        <a href="{{ company.linkedin_url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-linkedin"></i> LinkedIn
+                        </a>
+                        {% endif %}
+                        {% if company.twitter_handle %}
+                        <a href="https://twitter.com/{{ company.twitter_handle.lstrip('@') }}" target="_blank" class="btn btn-sm btn-outline-info">
+                            <i class="bi bi-twitter"></i> Twitter
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contacts Section -->
+            <div class="detail-section">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0">Contacts ({{ contacts|length }})</h5>
+                    <button class="btn btn-sm btn-outline-primary" onclick="addContact()">
+                        <i class="bi bi-person-plus"></i> Add Contact
+                    </button>
+                </div>
+
+                {% if contacts %}
+                <div class="list-group">
+                    {% for contact in contacts %}
+                    <a href="{{ url_for('crm.contact_detail', contact_id=contact.id) }}" class="list-group-item list-group-item-action">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6 class="mb-1">{{ contact.first_name }} {{ contact.last_name }}</h6>
+                                {% if contact.job_title %}
+                                <p class="text-muted small mb-1">{{ contact.job_title }}</p>
+                                {% endif %}
+                                {% if contact.email %}
+                                <p class="text-muted small mb-0">
+                                    <i class="bi bi-envelope"></i> {{ contact.email }}
+                                </p>
+                                {% endif %}
+                            </div>
+                            <span class="badge bg-{{ 'success' if contact.lifecycle_stage == 'customer' else 'info' if contact.lifecycle_stage == 'lead' else 'secondary' }}">
+                                {{ contact.lifecycle_stage or 'subscriber' }}
+                            </span>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center text-muted py-4">
+                    <i class="bi bi-person fs-1"></i>
+                    <p class="mb-0">No contacts yet</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Deals Section -->
+            <div class="detail-section">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0">Deals ({{ deals|length }})</h5>
+                    <button class="btn btn-sm btn-outline-primary" onclick="createDeal()">
+                        <i class="bi bi-currency-dollar"></i> Create Deal
+                    </button>
+                </div>
+
+                {% if deals %}
+                <div class="list-group">
+                    {% for deal in deals %}
+                    <a href="{{ url_for('crm.deal_detail', deal_id=deal.id) }}" class="list-group-item list-group-item-action">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6 class="mb-1">{{ deal.name }}</h6>
+                                <p class="text-muted small mb-0">
+                                    Stage: {{ deal.stage.name }} | {{ deal.probability }}% probability
+                                </p>
+                            </div>
+                            <div class="text-end">
+                                <div class="fw-bold">${{ "{:,.2f}".format(deal.amount) }}</div>
+                                <span class="badge bg-{{ 'success' if deal.status == 'won' else 'danger' if deal.status == 'lost' else 'primary' }}">
+                                    {{ deal.status }}
+                                </span>
+                            </div>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center text-muted py-4">
+                    <i class="bi bi-currency-dollar fs-1"></i>
+                    <p class="mb-0">No deals yet</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Activity Timeline -->
+            <div class="detail-section">
+                <h5 class="mb-3">Recent Activity</h5>
+
+                {% if activities %}
+                <div class="activity-timeline">
+                    {% for activity in activities %}
+                    <div class="activity-item">
+                        <div class="d-flex justify-content-between align-items-start mb-1">
+                            <strong>{{ activity.subject or activity.activity_type.replace('_', ' ').title() }}</strong>
+                            <small class="text-muted">{{ activity.created_at.strftime('%b %d') }}</small>
+                        </div>
+                        {% if activity.description %}
+                        <p class="text-muted small mb-0">{{ activity.description }}</p>
+                        {% endif %}
+                        {% if activity.created_by %}
+                        <small class="text-muted">
+                            <i class="bi bi-person"></i> {{ activity.created_by.full_name }}
+                        </small>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center text-muted py-4">
+                    <i class="bi bi-clock-history fs-1"></i>
+                    <p class="mb-0">No activity yet</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Quick Stats -->
+            <div class="detail-section">
+                <h5 class="mb-3">Quick Stats</h5>
+                <div class="d-flex flex-column gap-2">
+                    <div class="d-flex justify-content-between align-items-center p-2 bg-body rounded">
+                        <span class="text-muted">Total Contacts</span>
+                        <strong>{{ contacts|length }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center p-2 bg-body rounded">
+                        <span class="text-muted">Open Deals</span>
+                        <strong>{{ deals|selectattr('status', 'equalto', 'open')|list|length }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center p-2 bg-body rounded">
+                        <span class="text-muted">Total Activities</span>
+                        <strong>{{ activities|length }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center p-2 bg-body rounded">
+                        <span class="text-muted">Created</span>
+                        <strong>{{ company.created_at.strftime('%b %d, %Y') }}</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function editCompany() {
+    // TODO: Implement edit modal
+    alert('Edit functionality coming soon!');
+}
+
+function createActivity() {
+    // TODO: Implement add activity modal
+    alert('Add note functionality coming soon!');
+}
+
+function createDeal() {
+    // TODO: Implement create deal modal
+    alert('Create deal functionality coming soon!');
+}
+
+function addContact() {
+    // TODO: Implement add contact modal
+    alert('Add contact functionality coming soon!');
+}
+</script>
+{% endblock %}

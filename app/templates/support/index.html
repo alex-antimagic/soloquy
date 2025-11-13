@@ -1,0 +1,151 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">Support Dashboard</h2>
+            <p class="text-muted mb-0">Overview of support tickets and metrics</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('support.tickets') }}" class="btn btn-outline-primary">
+                <i class="bi bi-list-ul"></i> All Tickets
+            </a>
+            <a href="{{ url_for('support.new_ticket') }}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> New Ticket
+            </a>
+        </div>
+    </div>
+
+    <!-- Metrics -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <p class="text-muted small mb-1">Open Tickets</p>
+                            <h3 class="mb-0">{{ metrics.open_count }}</h3>
+                        </div>
+                        <div class="bg-primary bg-opacity-10 p-3 rounded">
+                            <i class="bi bi-ticket-detailed fs-4 text-primary"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <p class="text-muted small mb-1">Unassigned</p>
+                            <h3 class="mb-0">{{ metrics.unassigned_count }}</h3>
+                        </div>
+                        <div class="bg-warning bg-opacity-10 p-3 rounded">
+                            <i class="bi bi-exclamation-triangle fs-4 text-warning"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <p class="text-muted small mb-1">Overdue</p>
+                            <h3 class="mb-0">{{ metrics.overdue_count }}</h3>
+                        </div>
+                        <div class="bg-danger bg-opacity-10 p-3 rounded">
+                            <i class="bi bi-clock-history fs-4 text-danger"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <p class="text-muted small mb-1">Avg Response Time</p>
+                            <h3 class="mb-0">{% if metrics.avg_response_time_hours %}{{ "%.1f"|format(metrics.avg_response_time_hours) }}h{% else %}--{% endif %}</h3>
+                        </div>
+                        <div class="bg-info bg-opacity-10 p-3 rounded">
+                            <i class="bi bi-speedometer2 fs-4 text-info"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- My Tickets -->
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">My Tickets</h5>
+                    <a href="{{ url_for('support.my_tickets') }}" class="btn btn-sm btn-outline-primary">View All</a>
+                </div>
+                <div class="card-body">
+                    {% if my_tickets %}
+                    <div class="list-group list-group-flush">
+                        {% for ticket in my_tickets %}
+                        <a href="{{ url_for('support.ticket_detail', ticket_id=ticket.id) }}" class="list-group-item list-group-item-action">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <strong>{{ ticket.ticket_number }}</strong> - {{ ticket.subject }}
+                                    <br><small class="text-muted">{{ ticket.requester_display_name }}</small>
+                                </div>
+                                <div class="text-end">
+                                    <span class="badge bg-{{ 'danger' if ticket.priority == 'urgent' else 'warning' if ticket.priority == 'high' else 'primary' if ticket.priority == 'medium' else 'secondary' }}">{{ ticket.priority }}</span>
+                                    <br><small class="text-muted">{{ ticket.created_at.strftime('%b %d') }}</small>
+                                </div>
+                            </div>
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center mb-0">No tickets assigned to you</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Unassigned Tickets -->
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Unassigned Tickets</h5>
+                    <a href="{{ url_for('support.unassigned_tickets') }}" class="btn btn-sm btn-outline-primary">View All</a>
+                </div>
+                <div class="card-body">
+                    {% if unassigned_tickets %}
+                    <div class="list-group list-group-flush">
+                        {% for ticket in unassigned_tickets %}
+                        <a href="{{ url_for('support.ticket_detail', ticket_id=ticket.id) }}" class="list-group-item list-group-item-action">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <strong>{{ ticket.ticket_number }}</strong> - {{ ticket.subject }}
+                                    <br><small class="text-muted">{{ ticket.requester_display_name }}</small>
+                                </div>
+                                <div class="text-end">
+                                    <span class="badge bg-{{ 'danger' if ticket.priority == 'urgent' else 'warning' if ticket.priority == 'high' else 'primary' if ticket.priority == 'medium' else 'secondary' }}">{{ ticket.priority }}</span>
+                                    <br><small class="text-muted">{{ ticket.created_at.strftime('%b %d') }}</small>
+                                </div>
+                            </div>
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center mb-0">No unassigned tickets</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

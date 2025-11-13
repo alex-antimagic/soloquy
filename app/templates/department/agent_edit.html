@@ -1,0 +1,203 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('department.index') }}">Departments</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('department.view', department_id=department.id) }}">{{ department.name }}</a></li>
+                    <li class="breadcrumb-item active">Edit Agent</li>
+                </ol>
+            </nav>
+            <h2>Edit Agent</h2>
+            <p class="text-muted">Configure {{ agent.name }}'s identity, behavior, and capabilities</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <form method="POST" action="{{ url_for('department.edit_agent', agent_id=agent.id) }}">
+                {{ form.hidden_tag() }}
+
+                <!-- Identity Section -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="bi bi-person-badge me-2"></i>Identity</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            {{ form.name.label(class="form-label") }}
+                            {{ form.name(class="form-control" + (" is-invalid" if form.name.errors else "")) }}
+                            {% if form.name.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.name.errors %}<div>{{ error }}</div>{% endfor %}
+                                </div>
+                            {% endif %}
+                            <small class="form-text text-muted">The agent's display name shown throughout the workspace</small>
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.description.label(class="form-label") }}
+                            {{ form.description(class="form-control" + (" is-invalid" if form.description.errors else ""), rows=3) }}
+                            {% if form.description.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.description.errors %}<div>{{ error }}</div>{% endfor %}
+                                </div>
+                            {% endif %}
+                            <small class="form-text text-muted">Brief description of the agent's role and expertise</small>
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.avatar_url.label(class="form-label") }}
+                            <div class="input-group">
+                                {{ form.avatar_url(class="form-control" + (" is-invalid" if form.avatar_url.errors else ""), placeholder="/static/images/avatars/evan.jpg") }}
+                                {% if agent.avatar_url %}
+                                <span class="input-group-text">
+                                    <img src="{{ agent.avatar_url }}"
+                                         alt="{{ agent.name }}"
+                                         style="width: 24px; height: 24px; border-radius: 4px;">
+                                </span>
+                                {% endif %}
+                            </div>
+                            {% if form.avatar_url.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.avatar_url.errors %}<div>{{ error }}</div>{% endfor %}
+                                </div>
+                            {% endif %}
+                            <small class="form-text text-muted">Full path to avatar image (e.g., /static/images/avatars/evan.jpg)</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Instructions Section -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="bi bi-file-text me-2"></i>Custom Instructions</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            {{ form.system_prompt.label(class="form-label") }}
+                            {{ form.system_prompt(class="form-control" + (" is-invalid" if form.system_prompt.errors else ""), rows=12, style="font-family: monospace;") }}
+                            {% if form.system_prompt.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.system_prompt.errors %}<div>{{ error }}</div>{% endfor %}
+                                </div>
+                            {% endif %}
+                            <small class="form-text text-muted">
+                                Custom instructions that define the agent's behavior, expertise, and response style.
+                                This is combined with workspace context automatically.
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Configuration Section -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="bi bi-sliders me-2"></i>Configuration</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            {{ form.model.label(class="form-label") }}
+                            {{ form.model(class="form-select" + (" is-invalid" if form.model.errors else "")) }}
+                            {% if form.model.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.model.errors %}<div>{{ error }}</div>{% endfor %}
+                                </div>
+                            {% endif %}
+                            <small class="form-text text-muted">Which Claude model to use for this agent</small>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                {{ form.temperature.label(class="form-label") }}
+                                {{ form.temperature(class="form-control" + (" is-invalid" if form.temperature.errors else ""), type="number", step="0.1", min="0", max="1") }}
+                                {% if form.temperature.errors %}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.temperature.errors %}<div>{{ error }}</div>{% endfor %}
+                                    </div>
+                                {% endif %}
+                                <small class="form-text text-muted">0 = focused, 1 = creative (default: 1.0)</small>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                {{ form.max_tokens.label(class="form-label") }}
+                                {{ form.max_tokens(class="form-control" + (" is-invalid" if form.max_tokens.errors else ""), type="number", step="256", min="256", max="8192") }}
+                                {% if form.max_tokens.errors %}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.max_tokens.errors %}<div>{{ error }}</div>{% endfor %}
+                                    </div>
+                                {% endif %}
+                                <small class="form-text text-muted">Maximum response length (default: 4096)</small>
+                            </div>
+                        </div>
+
+                        <div class="form-check">
+                            {{ form.is_active(class="form-check-input" + (" is-invalid" if form.is_active.errors else "")) }}
+                            {{ form.is_active.label(class="form-check-label") }}
+                            {% if form.is_active.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.is_active.errors %}<div>{{ error }}</div>{% endfor %}
+                                </div>
+                            {% endif %}
+                            <small class="form-text text-muted d-block">Disabled agents cannot be used in conversations</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="d-flex justify-content-between mb-4">
+                    <a href="{{ url_for('department.view', department_id=department.id) }}" class="btn btn-secondary">
+                        <i class="bi bi-arrow-left me-2"></i>Cancel
+                    </a>
+                    {{ form.submit(class="btn btn-primary") }}
+                </div>
+            </form>
+        </div>
+
+        <!-- Help Sidebar -->
+        <div class="col-lg-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-lightbulb me-2"></i>Tips</h6>
+                </div>
+                <div class="card-body">
+                    <h6>Writing Good Instructions</h6>
+                    <ul class="small">
+                        <li>Be specific about the agent's role and expertise</li>
+                        <li>Include tone and style guidelines</li>
+                        <li>Specify any constraints or limitations</li>
+                        <li>Provide examples of desired behavior</li>
+                    </ul>
+
+                    <h6 class="mt-3">Model Selection</h6>
+                    <ul class="small">
+                        <li><strong>Sonnet:</strong> Best balance of intelligence and speed</li>
+                        <li><strong>Haiku:</strong> Fastest, great for simple tasks</li>
+                        <li><strong>Opus:</strong> Most capable for complex reasoning</li>
+                    </ul>
+
+                    <h6 class="mt-3">Temperature Guide</h6>
+                    <ul class="small">
+                        <li><strong>0.0-0.3:</strong> Precise, consistent, factual</li>
+                        <li><strong>0.4-0.7:</strong> Balanced creativity</li>
+                        <li><strong>0.8-1.0:</strong> Creative, diverse responses</li>
+                    </ul>
+                </div>
+            </div>
+
+            {% if agent.created_at %}
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2 text-muted">Agent Info</h6>
+                    <p class="small mb-1"><strong>Created:</strong> {{ agent.created_at.strftime('%B %d, %Y') }}</p>
+                    <p class="small mb-0"><strong>Department:</strong> {{ department.name }}</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

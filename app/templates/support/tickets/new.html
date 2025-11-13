@@ -1,0 +1,244 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">Create New Ticket</h2>
+            <p class="text-muted mb-0">Log a new support ticket</p>
+        </div>
+        <a href="{{ url_for('support.tickets') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Tickets
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-body">
+                    <form id="createTicketForm">
+                        <!-- Requester -->
+                        <div class="mb-3">
+                            <label class="form-label">Requester *</label>
+                            <select class="form-select" name="requester_id" id="requesterSelect" onchange="updateRequesterFields()">
+                                <option value="">Select existing contact or enter manually below</option>
+                                {% for contact in contacts %}
+                                <option value="{{ contact.id }}" data-email="{{ contact.email }}" data-name="{{ contact.first_name }} {{ contact.last_name }}" data-company="{{ contact.company_id }}">
+                                    {{ contact.first_name }} {{ contact.last_name }} ({{ contact.email }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="row" id="manualRequesterFields">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Requester Name</label>
+                                    <input type="text" class="form-control" name="requester_name" id="requesterName" placeholder="Enter name if not in contacts">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Requester Email</label>
+                                    <input type="email" class="form-control" name="requester_email" id="requesterEmail" placeholder="Enter email if not in contacts">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Company -->
+                        <div class="mb-3">
+                            <label class="form-label">Company</label>
+                            <select class="form-select" name="company_id" id="companySelect">
+                                <option value="">Select company (optional)</option>
+                                {% for company in companies %}
+                                <option value="{{ company.id }}">{{ company.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Subject -->
+                        <div class="mb-3">
+                            <label class="form-label">Subject *</label>
+                            <input type="text" class="form-control" name="subject" required placeholder="Brief summary of the issue">
+                        </div>
+
+                        <!-- Description -->
+                        <div class="mb-3">
+                            <label class="form-label">Description *</label>
+                            <textarea class="form-control" name="description" rows="6" required placeholder="Detailed description of the issue"></textarea>
+                        </div>
+
+                        <div class="row">
+                            <!-- Priority -->
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Priority *</label>
+                                    <select class="form-select" name="priority" required>
+                                        <option value="low">Low</option>
+                                        <option value="medium" selected>Medium</option>
+                                        <option value="high">High</option>
+                                        <option value="urgent">Urgent</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Category -->
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Category</label>
+                                    <select class="form-select" name="category">
+                                        <option value="">Select category (optional)</option>
+                                        <option value="Technical Support">Technical Support</option>
+                                        <option value="Billing & Payments">Billing & Payments</option>
+                                        <option value="Feature Request">Feature Request</option>
+                                        <option value="Bug Report">Bug Report</option>
+                                        <option value="Account Management">Account Management</option>
+                                        <option value="General Inquiry">General Inquiry</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <!-- Assignee -->
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Assign To</label>
+                                    <select class="form-select" name="assignee_id">
+                                        <option value="">Unassigned</option>
+                                        {% for agent in agents %}
+                                        <option value="{{ agent.id }}">{{ agent.full_name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Department -->
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Department</label>
+                                    <select class="form-select" name="department_id">
+                                        <option value="">Select department (optional)</option>
+                                        {% for dept in departments %}
+                                        <option value="{{ dept.id }}">{{ dept.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tags -->
+                        <div class="mb-3">
+                            <label class="form-label">Tags</label>
+                            <input type="text" class="form-control" name="tags" placeholder="Comma-separated tags (e.g., bug, urgent, billing)">
+                            <small class="text-muted">Separate tags with commas</small>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-primary" onclick="createTicket()">
+                                <i class="bi bi-plus-circle"></i> Create Ticket
+                            </button>
+                            <a href="{{ url_for('support.tickets') }}" class="btn btn-outline-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Help Sidebar -->
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Tips</h5>
+                </div>
+                <div class="card-body">
+                    <h6>Priority Levels</h6>
+                    <ul class="small">
+                        <li><strong>Low:</strong> Minor issues, cosmetic problems</li>
+                        <li><strong>Medium:</strong> Standard issues (default)</li>
+                        <li><strong>High:</strong> Significant impact on operations</li>
+                        <li><strong>Urgent:</strong> Critical, business-impacting</li>
+                    </ul>
+
+                    <h6 class="mt-3">Best Practices</h6>
+                    <ul class="small">
+                        <li>Use clear, descriptive subjects</li>
+                        <li>Include all relevant details in description</li>
+                        <li>Select appropriate priority based on impact</li>
+                        <li>Link to company for context</li>
+                        <li>Assign to specialist when known</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function updateRequesterFields() {
+    const select = document.getElementById('requesterSelect');
+    const selectedOption = select.options[select.selectedIndex];
+
+    if (selectedOption.value) {
+        // Existing contact selected - populate company and disable manual fields
+        document.getElementById('requesterName').value = selectedOption.dataset.name || '';
+        document.getElementById('requesterEmail').value = selectedOption.dataset.email || '';
+        document.getElementById('requesterName').disabled = true;
+        document.getElementById('requesterEmail').disabled = true;
+
+        // Auto-select company if available
+        if (selectedOption.dataset.company) {
+            document.getElementById('companySelect').value = selectedOption.dataset.company;
+        }
+    } else {
+        // Manual entry - enable fields
+        document.getElementById('requesterName').value = '';
+        document.getElementById('requesterEmail').value = '';
+        document.getElementById('requesterName').disabled = false;
+        document.getElementById('requesterEmail').disabled = false;
+    }
+}
+
+function createTicket() {
+    const form = document.getElementById('createTicketForm');
+    const formData = new FormData(form);
+
+    // Build data object
+    const data = {};
+    formData.forEach((value, key) => {
+        if (value) {
+            // Convert empty strings to null for optional fields
+            data[key] = value || null;
+        }
+    });
+
+    // Validate required fields
+    if (!data.subject || !data.description) {
+        alert('Please fill in subject and description');
+        return;
+    }
+
+    // Validate requester (either selected from dropdown or manually entered)
+    if (!data.requester_id && (!data.requester_email || !data.requester_name)) {
+        alert('Please select a contact or enter requester name and email');
+        return;
+    }
+
+    // Create ticket
+    fetch('/support/tickets/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    }).then(r => r.json()).then(d => {
+        if (d.success) {
+            window.location.href = `/support/tickets/${d.id}`;
+        } else {
+            alert(d.error || 'Failed to create ticket');
+        }
+    });
+}
+</script>
+{% endblock %}

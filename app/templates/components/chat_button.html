@@ -1,0 +1,51 @@
+<!-- Floating Chat Button (Bottom Right) -->
+{% if agent %}
+<a href="{{ url_for('chat.agent_chat', agent_id=agent.id) }}"
+   class="floating-chat-button"
+   title="Chat with {{ agent.name }}">
+    <i class="bi bi-chat-dots"></i>
+    <span class="ms-2">Chat with {{ agent.name }}</span>
+</a>
+
+<style>
+.floating-chat-button {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    background: linear-gradient(135deg, #1164a3 0%, #0e5a8a 100%);
+    color: white;
+    padding: 1rem 1.5rem;
+    border-radius: 50px;
+    box-shadow: 0 4px 12px rgba(17, 100, 163, 0.4);
+    text-decoration: none;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    transition: all 0.3s ease;
+    z-index: 1000;
+}
+
+.floating-chat-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(17, 100, 163, 0.6);
+    color: white;
+}
+
+.floating-chat-button i {
+    font-size: 1.25rem;
+}
+
+@media (max-width: 768px) {
+    .floating-chat-button span {
+        display: none;
+    }
+    .floating-chat-button {
+        padding: 1rem;
+        border-radius: 50%;
+        width: 56px;
+        height: 56px;
+        justify-content: center;
+    }
+}
+</style>
+{% endif %}

@@ -1,0 +1,531 @@
+{% extends "layouts/base.html" %}
+
+{% block extra_css %}
+<style>
+    .kanban-container {
+        display: flex;
+        gap: 1rem;
+        overflow-x: auto;
+        padding-bottom: 1rem;
+        min-height: calc(100vh - 200px);
+    }
+
+    .kanban-column {
+        flex: 0 0 320px;
+        min-width: 320px;
+        background: var(--bs-body-bg);
+        border-radius: 8px;
+        border: 1px solid var(--bs-border-color);
+        display: flex;
+        flex-direction: column;
+        max-height: calc(100vh - 220px);
+    }
+
+    .kanban-column-header {
+        padding: 1rem;
+        border-bottom: 1px solid var(--bs-border-color);
+        background: rgba(255, 255, 255, 0.02);
+    }
+
+    .kanban-column-body {
+        flex: 1;
+        overflow-y: auto;
+        padding: 0.75rem;
+    }
+
+    .kanban-task-card {
+        background: var(--bs-card-bg);
+        border: 1px solid var(--bs-border-color);
+        border-radius: 6px;
+        padding: 0.875rem;
+        margin-bottom: 0.75rem;
+        cursor: grab;
+        transition: box-shadow 0.2s;
+    }
+
+    .kanban-task-card:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .kanban-task-card.dragging {
+        opacity: 0.5;
+        cursor: grabbing;
+    }
+
+    .kanban-column-body.drag-over {
+        background: rgba(59, 130, 246, 0.1);
+        border: 2px dashed #3B82F6;
+    }
+
+    .task-title {
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+        color: var(--bs-body-color);
+    }
+
+    .task-meta {
+        font-size: 0.8125rem;
+        color: var(--bs-secondary-color);
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+    }
+
+    .task-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.375rem;
+        margin-top: 0.5rem;
+    }
+
+    .task-tag {
+        font-size: 0.75rem;
+        padding: 0.125rem 0.5rem;
+        background: rgba(59, 130, 246, 0.2);
+        border-radius: 12px;
+        color: #60A5FA;
+    }
+
+    .add-task-btn {
+        width: 100%;
+        border: 1px dashed var(--bs-border-color);
+        background: transparent;
+        padding: 0.5rem;
+        margin: 0.75rem 0;
+        border-radius: 6px;
+        color: var(--bs-secondary-color);
+        transition: all 0.2s;
+    }
+
+    .add-task-btn:hover {
+        background: rgba(255, 255, 255, 0.05);
+        border-color: var(--bs-primary);
+        color: var(--bs-primary);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid h-100 d-flex flex-column">
+    <!-- Project Header -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="d-flex align-items-center gap-3">
+            <a href="{{ url_for('projects.index') }}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Projects
+            </a>
+            <div>
+                <h3 class="mb-0 d-flex align-items-center gap-2">
+                    {% if project.icon %}
+                    <span>{{ project.icon }}</span>
+                    {% endif %}
+                    {{ project.name }}
+                </h3>
+                {% if project.description %}
+                <p class="text-muted small mb-0 mt-1">{{ project.description }}</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="d-flex gap-2">
+            <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#projectSettingsModal">
+                <i class="bi bi-gear"></i> Settings
+            </button>
+            <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#createTaskModal">
+                <i class="bi bi-plus-circle"></i> Add Task
+            </button>
+            <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#addColumnModal">
+                <i class="bi bi-plus"></i> Add Column
+            </button>
+        </div>
+    </div>
+
+    <!-- Kanban Board -->
+    <div class="kanban-container flex-grow-1">
+        {% for column in columns %}
+        <div class="kanban-column" data-column-id="{{ column.id }}">
+            <div class="kanban-column-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center gap-2">
+                        <div style="width: 12px; height: 12px; border-radius: 3px; background-color: {{ column.color }};"></div>
+                        <h6 class="mb-0">{{ column.name }}</h6>
+                        <span class="badge bg-secondary">{{ tasks_by_column[column.id]|length }}</span>
+                        {% if column.wip_limit %}
+                        <span class="badge {% if tasks_by_column[column.id]|length >= column.wip_limit %}bg-danger{% else %}bg-info{% endif %}">
+                            {{ tasks_by_column[column.id]|length }}/{{ column.wip_limit }}
+                        </span>
+                        {% endif %}
+                    </div>
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-link text-muted p-0" data-bs-toggle="dropdown">
+                            <i class="bi bi-three-dots-vertical"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="#" onclick="editColumn({{ column.id }})"><i class="bi bi-pencil"></i> Edit Column</a></li>
+                            <li><a class="dropdown-item text-danger" href="#" onclick="deleteColumn({{ column.id }})"><i class="bi bi-trash"></i> Delete Column</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="kanban-column-body" data-column-id="{{ column.id }}">
+                {% for task in tasks_by_column[column.id] %}
+                <div class="kanban-task-card" data-task-id="{{ task.id }}" draggable="true">
+                    <div class="task-title">{{ task.title }}</div>
+
+                    {% if task.description %}
+                    <div class="text-muted small">{{ task.description[:100] }}{% if task.description|length > 100 %}...{% endif %}</div>
+                    {% endif %}
+
+                    {% if task.get_tag_list()|length > 0 %}
+                    <div class="task-tags">
+                        {% for tag in task.get_tag_list() %}
+                        <span class="task-tag">{{ tag }}</span>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <div class="task-meta">
+                        <span class="badge {{ task.get_priority_badge_class() }}">{{ task.priority }}</span>
+
+                        {% if task.assigned_to %}
+                        <span><i class="bi bi-person"></i> {{ task.assigned_to.full_name.split()[0] }}</span>
+                        {% endif %}
+
+                        {% if task.due_date %}
+                        <span class="{% if task.is_overdue() %}text-danger{% endif %}">
+                            <i class="bi bi-calendar"></i> {{ task.due_date.strftime('%m/%d') }}
+                        </span>
+                        {% endif %}
+
+                        {% if task.story_points %}
+                        <span><i class="bi bi-star"></i> {{ task.story_points }}</span>
+                        {% endif %}
+
+                        {% if task.get_subtasks()|length > 0 %}
+                        <span><i class="bi bi-list-task"></i> {{ task.get_subtasks()|length }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+
+                <button class="add-task-btn" onclick="openCreateTaskModal({{ column.id }})">
+                    <i class="bi bi-plus"></i> Add task
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+
+        <!-- Unassigned Tasks (if any) -->
+        {% if unassigned_tasks|length > 0 %}
+        <div class="kanban-column">
+            <div class="kanban-column-header">
+                <h6 class="mb-0">
+                    <i class="bi bi-question-circle"></i> Unassigned
+                    <span class="badge bg-secondary">{{ unassigned_tasks|length }}</span>
+                </h6>
+            </div>
+            <div class="kanban-column-body" data-column-id="unassigned">
+                {% for task in unassigned_tasks %}
+                <div class="kanban-task-card" data-task-id="{{ task.id }}" draggable="true">
+                    <div class="task-title">{{ task.title }}</div>
+                    <div class="task-meta">
+                        <span class="badge {{ task.get_priority_badge_class() }}">{{ task.priority }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Create Task Modal -->
+<div class="modal fade" id="createTaskModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Create New Task</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="createTaskForm">
+                    <input type="hidden" id="taskColumnId" name="column_id">
+                    <input type="hidden" name="project_id" value="{{ project.id }}">
+
+                    <div class="mb-3">
+                        <label for="taskTitle" class="form-label">Title *</label>
+                        <input type="text" class="form-control" id="taskTitle" name="title" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="taskDescription" class="form-label">Description</label>
+                        <textarea class="form-control" id="taskDescription" name="description" rows="3"></textarea>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="taskPriority" class="form-label">Priority</label>
+                            <select class="form-select" id="taskPriority" name="priority">
+                                <option value="low">Low</option>
+                                <option value="medium" selected>Medium</option>
+                                <option value="high">High</option>
+                                <option value="urgent">Urgent</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="taskDueDate" class="form-label">Due Date</label>
+                            <input type="date" class="form-control" id="taskDueDate" name="due_date">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="taskAssignment" class="form-label">Assign To</label>
+                        <select class="form-select" id="taskAssignment" name="assignment_type">
+                            <option value="" selected>Unassigned</option>
+                            <optgroup label="Team Members">
+                                {% for member in members %}
+                                <option value="user:{{ member.id }}">{{ member.full_name }}</option>
+                                {% endfor %}
+                            </optgroup>
+                            <optgroup label="AI Agents">
+                                {% for department in current_tenant.get_departments() %}
+                                    {% for agent in department.get_agents() %}
+                                    <option value="agent:{{ agent.id }}">{{ agent.name }} ({{ department.name }})</option>
+                                    {% endfor %}
+                                {% endfor %}
+                            </optgroup>
+                        </select>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="taskStoryPoints" class="form-label">Story Points</label>
+                            <input type="number" class="form-control" id="taskStoryPoints" name="story_points" min="0">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="taskSection" class="form-label">Section</label>
+                            <input type="text" class="form-control" id="taskSection" name="section" placeholder="Frontend, Backend, etc.">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="taskTags" class="form-label">Tags (comma-separated)</label>
+                        <input type="text" class="form-control" id="taskTags" name="tags" placeholder="bug, feature, urgent">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="createTask()">Create Task</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Column Modal -->
+<div class="modal fade" id="addColumnModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add Status Column</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addColumnForm">
+                    <div class="mb-3">
+                        <label for="columnName" class="form-label">Column Name *</label>
+                        <input type="text" class="form-control" id="columnName" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="columnColor" class="form-label">Color</label>
+                        <input type="color" class="form-control form-control-color w-100" id="columnColor" name="color" value="#6B7280">
+                    </div>
+                    <div class="mb-3">
+                        <label for="columnWipLimit" class="form-label">WIP Limit (optional)</label>
+                        <input type="number" class="form-control" id="columnWipLimit" name="wip_limit" min="1">
+                        <div class="form-text">Maximum number of tasks allowed in this column</div>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="columnIsDone" name="is_done_column">
+                        <label class="form-check-label" for="columnIsDone">
+                            Mark as "Done" column (auto-completes tasks)
+                        </label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="addColumn()">Add Column</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script>
+// Drag and Drop functionality
+const columns = document.querySelectorAll('.kanban-column-body');
+let draggedTask = null;
+
+columns.forEach(column => {
+    new Sortable(column, {
+        group: 'kanban',
+        animation: 150,
+        ghostClass: 'bg-primary-subtle',
+        dragClass: 'dragging',
+        onEnd: function(evt) {
+            const taskId = evt.item.dataset.taskId;
+            const newColumnId = evt.to.dataset.columnId;
+            const newPosition = evt.newIndex;
+
+            // Move task to new column
+            fetch(`/tasks/${taskId}/move`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    column_id: newColumnId,
+                    position: newPosition
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                    window.location.reload();
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                window.location.reload();
+            });
+        }
+    });
+});
+
+function openCreateTaskModal(columnId) {
+    document.getElementById('taskColumnId').value = columnId;
+    const modal = new bootstrap.Modal(document.getElementById('createTaskModal'));
+    modal.show();
+}
+
+function createTask() {
+    const form = document.getElementById('createTaskForm');
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData.entries());
+
+    // Parse assignment: "user:123" or "agent:456"
+    if (data.assignment_type) {
+        const [type, id] = data.assignment_type.split(':');
+        if (type === 'user') {
+            data.assigned_to_id = parseInt(id);
+        } else if (type === 'agent') {
+            data.assigned_to_agent_id = parseInt(id);
+        }
+    }
+    delete data.assignment_type; // Remove the temp field
+
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+    fetch('{{ url_for("tasks.create") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Task creation failed');
+        }
+        return response.json();
+    })
+    .then(taskData => {
+        console.log('Task created:', taskData);
+        // Move task to the specified column if provided
+        const columnId = document.getElementById('taskColumnId').value;
+        if (taskData.id && columnId) {
+            return fetch(`/tasks/${taskData.id}/move`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({
+                    column_id: parseInt(columnId)
+                })
+            }).then(() => taskData);
+        }
+        return Promise.resolve(taskData);
+    })
+    .then(() => {
+        // Close modal and reload page
+        const modal = bootstrap.Modal.getInstance(document.getElementById('createTaskModal'));
+        if (modal) modal.hide();
+        window.location.reload();
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to create task: ' + error.message);
+    });
+}
+
+function addColumn() {
+    const form = document.getElementById('addColumnForm');
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData.entries());
+
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+    fetch('{{ url_for("projects.create_column", project_id=project.id) }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.id) {
+            window.location.reload();
+        } else if (data.error) {
+            alert(data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to add column');
+    });
+}
+
+function deleteColumn(columnId) {
+    if (confirm('Delete this column? Tasks in this column will not be deleted.')) {
+        fetch(`{{ url_for("projects.delete_column", project_id=project.id, column_id=0) }}`.replace('/0', `/${columnId}`), {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                window.location.reload();
+            } else if (data.error) {
+                alert(data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Failed to delete column');
+        });
+    }
+}
+</script>
+{% endblock %}

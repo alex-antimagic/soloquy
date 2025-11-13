@@ -1,0 +1,180 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col">
+            <h2><i class="bi bi-person-gear me-2"></i>Account Settings</h2>
+            <p class="text-muted">Manage your personal account information and security</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Main Content -->
+        <div class="col-lg-8">
+            <!-- Profile Information -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-person me-2"></i>Profile Information</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('tenant.account_settings') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="action" value="update_profile">
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="first_name" class="form-label">First Name</label>
+                                <input type="text" class="form-control" id="first_name" name="first_name"
+                                       value="{{ current_user.first_name or '' }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="last_name" class="form-label">Last Name</label>
+                                <input type="text" class="form-control" id="last_name" name="last_name"
+                                       value="{{ current_user.last_name or '' }}">
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email Address</label>
+                            <input type="email" class="form-control" id="email" name="email"
+                                   value="{{ current_user.email }}" required>
+                            <div class="form-text">This email is used for login and notifications.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Display Name</label>
+                            <input type="text" class="form-control" value="{{ current_user.full_name }}" disabled>
+                            <div class="form-text">This is how your name appears to other users.</div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg me-2"></i>Save Profile
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Change Password -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-key me-2"></i>Change Password</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('tenant.account_settings') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="action" value="change_password">
+
+                        <div class="mb-3">
+                            <label for="current_password" class="form-label">Current Password</label>
+                            <input type="password" class="form-control" id="current_password"
+                                   name="current_password" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="new_password" class="form-label">New Password</label>
+                            <input type="password" class="form-control" id="new_password"
+                                   name="new_password" required minlength="6">
+                            <div class="form-text">Password must be at least 6 characters long.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="confirm_password" class="form-label">Confirm New Password</label>
+                            <input type="password" class="form-control" id="confirm_password"
+                                   name="confirm_password" required minlength="6">
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-shield-lock me-2"></i>Change Password
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Account Activity -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>Account Activity</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong>Account Created:</strong>
+                            <div class="text-muted">{{ current_user.created_at.strftime('%B %d, %Y') }}</div>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Last Updated:</strong>
+                            <div class="text-muted">{{ current_user.updated_at.strftime('%B %d, %Y at %I:%M %p') }}</div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <strong>Status:</strong>
+                            <div>
+                                {% if current_user.is_active %}
+                                    <span class="badge bg-success">Active</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Inactive</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Workspaces -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-buildings me-2"></i>Your Workspaces</h5>
+                </div>
+                <div class="list-group list-group-flush">
+                    {% for tenant in current_user.get_tenants() %}
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>{{ tenant.name }}</strong>
+                                    <div class="small text-muted">{{ current_user.get_role_in_tenant(tenant.id).title() }}</div>
+                                </div>
+                                {% if tenant.id == session.get('current_tenant_id') %}
+                                    <span class="badge bg-primary">Current</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="list-group-item text-muted">
+                            No workspaces yet
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Quick Links -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-link-45deg me-2"></i>Quick Links</h5>
+                </div>
+                <div class="list-group list-group-flush">
+                    <a href="{{ url_for('pages.privacy') }}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-shield-check me-2"></i>Privacy Policy
+                    </a>
+                    <a href="{{ url_for('pages.terms') }}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-file-text me-2"></i>Terms of Service
+                    </a>
+                    <a href="{{ url_for('pages.help') }}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-question-circle me-2"></i>Help & Support
+                    </a>
+                    {% if current_tenant %}
+                    <a href="{{ url_for('tenant.settings') }}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-gear me-2"></i>Workspace Settings
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

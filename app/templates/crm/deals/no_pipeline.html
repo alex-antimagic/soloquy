@@ -1,0 +1,42 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">Deals Pipeline</h2>
+            <p class="text-muted mb-0">Manage your sales opportunities</p>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body text-center py-5">
+            <i class="bi bi-kanban fs-1 d-block mb-3 text-muted"></i>
+            <h5>No Pipeline Found</h5>
+            <p class="text-muted mb-4">You need to create a deal pipeline before you can start managing deals.</p>
+            <button class="btn btn-primary" onclick="createDefaultPipeline()">
+                <i class="bi bi-plus-circle"></i> Create Default Pipeline
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+async function createDefaultPipeline() {
+    const response = await fetch('/crm/pipelines/create-default', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+        window.location.reload();
+    } else {
+        alert(data.error || 'Failed to create pipeline');
+    }
+}
+</script>
+{% endblock %}

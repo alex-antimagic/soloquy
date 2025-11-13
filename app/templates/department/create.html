@@ -1,0 +1,102 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="mb-4">
+                <h2>Create Department</h2>
+                <p class="text-muted">Add a new department to your workspace with an AI assistant</p>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('department.create') }}">
+                        {{ form.hidden_tag() }}
+
+                        <div class="mb-3">
+                            {{ form.name.label(class="form-label") }}
+                            {{ form.name(class="form-control" + (" is-invalid" if form.name.errors else ""), placeholder="e.g., Sales, Marketing, Legal") }}
+                            {% if form.name.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.name.errors %}<div>{{ error }}</div>{% endfor %}
+                                </div>
+                            {% endif %}
+                            <div class="form-text">The display name for your department</div>
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.slug.label(class="form-label") }}
+                            {{ form.slug(class="form-control" + (" is-invalid" if form.slug.errors else ""), placeholder="e.g., sales, marketing, legal") }}
+                            {% if form.slug.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.slug.errors %}<div>{{ error }}</div>{% endfor %}
+                                </div>
+                            {% endif %}
+                            <div class="form-text">URL-friendly identifier (lowercase, no spaces)</div>
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.description.label(class="form-label") }}
+                            {{ form.description(class="form-control" + (" is-invalid" if form.description.errors else ""), rows=3, placeholder="What does this department do?") }}
+                            {% if form.description.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.description.errors %}<div>{{ error }}</div>{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                {{ form.color.label(class="form-label") }}
+                                {{ form.color(class="form-control form-control-color" + (" is-invalid" if form.color.errors else ""), type="color") }}
+                                {% if form.color.errors %}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.color.errors %}<div>{{ error }}</div>{% endfor %}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">Department badge color</div>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                {{ form.icon.label(class="form-label") }}
+                                {{ form.icon(class="form-control" + (" is-invalid" if form.icon.errors else ""), placeholder="e.g., 💼 or briefcase") }}
+                                {% if form.icon.errors %}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.icon.errors %}<div>{{ error }}</div>
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">Emoji or icon name (optional)</div>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i>
+                            <strong>Auto-created:</strong> A default AI assistant will be created for this department.
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('department.index') }}" class="btn btn-secondary">Cancel</a>
+                            {{ form.submit(class="btn btn-primary") }}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Auto-generate slug from name
+    document.querySelector('#name').addEventListener('input', function(e) {
+        const slug = e.target.value
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '');
+        document.querySelector('#slug').value = slug;
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,357 @@
+{% extends "layouts/base.html" %}
+
+{% block extra_css %}
+<style>
+    .kanban-container {
+        display: flex;
+        gap: 1rem;
+        overflow-x: auto;
+        padding-bottom: 1rem;
+        min-height: calc(100vh - 200px);
+    }
+
+    .kanban-column {
+        flex: 0 0 320px;
+        min-width: 320px;
+        background: var(--bs-body-bg);
+        border-radius: 8px;
+        border: 1px solid var(--bs-border-color);
+        display: flex;
+        flex-direction: column;
+        max-height: calc(100vh - 220px);
+    }
+
+    .kanban-column-header {
+        padding: 1rem;
+        border-bottom: 1px solid var(--bs-border-color);
+        background: rgba(255, 255, 255, 0.02);
+    }
+
+    .kanban-column-body {
+        flex: 1;
+        overflow-y: auto;
+        padding: 0.75rem;
+    }
+
+    .deal-card {
+        background: var(--bs-card-bg);
+        border: 1px solid var(--bs-border-color);
+        border-radius: 6px;
+        padding: 0.875rem;
+        margin-bottom: 0.75rem;
+        cursor: grab;
+        transition: box-shadow 0.2s;
+    }
+
+    .deal-card:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .deal-card.dragging {
+        opacity: 0.5;
+        cursor: grabbing;
+    }
+
+    .kanban-column-body.drag-over {
+        background: rgba(59, 130, 246, 0.1);
+        border-radius: 8px;
+    }
+
+    .add-deal-btn {
+        width: 100%;
+        border: 1px dashed var(--bs-border-color);
+        background: transparent;
+        padding: 0.5rem;
+        margin: 0.75rem 0;
+        border-radius: 6px;
+        color: var(--bs-secondary-color);
+        transition: all 0.2s;
+    }
+
+    .add-deal-btn:hover {
+        border-color: var(--bs-primary);
+        color: var(--bs-primary);
+        background: rgba(59, 130, 246, 0.05);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">{% if pipeline.icon %}{{ pipeline.icon }}{% endif %} {{ pipeline.name }}</h2>
+            <p class="text-muted mb-0">Drag and drop deals to move them through the pipeline</p>
+        </div>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createDealModal">
+            <i class="bi bi-plus-circle"></i> New Deal
+        </button>
+    </div>
+
+    <!-- Kanban Board -->
+    <div class="kanban-container">
+        {% for stage in stages %}
+        <div class="kanban-column" data-stage-id="{{ stage.id }}">
+            <div class="kanban-column-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-1" style="color: {{ stage.color }}">{{ stage.name }}</h6>
+                        <small class="text-muted">{{ stage.probability }}% probability</small>
+                    </div>
+                    <span class="badge bg-secondary">{{ deals_by_stage[stage.id]|length }}</span>
+                </div>
+                {% if stage.expected_duration_days %}
+                <small class="text-muted">~{{ stage.expected_duration_days }} days</small>
+                {% endif %}
+            </div>
+            <div class="kanban-column-body" data-stage-id="{{ stage.id }}">
+                {% for deal in deals_by_stage[stage.id] %}
+                <div class="deal-card" draggable="true" data-deal-id="{{ deal.id }}" onclick="window.location.href='{{ url_for('crm.deal_detail', deal_id=deal.id) }}'" style="cursor: pointer;">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <strong class="flex-grow-1">{{ deal.name }}</strong>
+                        <span class="badge bg-{{ 'success' if deal.status == 'won' else 'danger' if deal.status == 'lost' else 'primary' }}">
+                            {{ deal.status }}
+                        </span>
+                    </div>
+
+                    {% if deal.company %}
+                    <p class="small text-muted mb-2">
+                        <i class="bi bi-building"></i> {{ deal.company.name }}
+                    </p>
+                    {% endif %}
+
+                    {% if deal.description %}
+                    <p class="small text-muted mb-2">{{ deal.description[:80] }}{% if deal.description|length > 80 %}...{% endif %}</p>
+                    {% endif %}
+
+                    <div class="d-flex justify-content-between align-items-center mt-2">
+                        <span class="fw-bold text-success">
+                            ${{ "{:,.0f}".format(deal.amount) if deal.amount else '0' }}
+                        </span>
+                        <div class="d-flex gap-2 align-items-center small text-muted">
+                            {% if deal.owner %}
+                            <span><i class="bi bi-person"></i> {{ deal.owner.full_name.split()[0] }}</span>
+                            {% endif %}
+                            {% if deal.close_date %}
+                            <span><i class="bi bi-calendar"></i> {{ deal.close_date.strftime('%b %d') }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+
+                <button class="add-deal-btn" data-stage-id="{{ stage.id }}" onclick="openCreateDealModal({{ stage.id }})">
+                    <i class="bi bi-plus"></i> Add Deal
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Create Deal Modal -->
+<div class="modal fade" id="createDealModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Create New Deal</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="createDealForm">
+                    <div class="row">
+                        <div class="col-md-8 mb-3">
+                            <label class="form-label">Deal Name *</label>
+                            <input type="text" class="form-control" name="name" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Amount</label>
+                            <input type="number" class="form-control" name="amount" step="0.01" placeholder="0.00">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Company</label>
+                            <select class="form-select" name="company_id">
+                                <option value="">Select company...</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Expected Close Date</label>
+                            <input type="date" class="form-control" name="close_date">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" name="description" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="createDeal()">Create Deal</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Drag and Drop functionality
+let draggedDeal = null;
+let draggedFromStage = null;
+
+// Initialize drag events for all deal cards
+function initializeDragAndDrop() {
+    document.querySelectorAll('.deal-card').forEach(card => {
+        card.addEventListener('dragstart', function(e) {
+            draggedDeal = this;
+            draggedFromStage = this.closest('.kanban-column-body');
+            this.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/html', this.innerHTML);
+
+            // Stop propagation to prevent navigation
+            e.stopPropagation();
+        });
+
+        card.addEventListener('dragend', function(e) {
+            this.classList.remove('dragging');
+            document.querySelectorAll('.kanban-column-body').forEach(col => {
+                col.classList.remove('drag-over');
+            });
+        });
+
+        // Prevent click during drag
+        card.addEventListener('click', function(e) {
+            if (this.classList.contains('dragging')) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+        });
+    });
+
+    // Setup drop zones
+    document.querySelectorAll('.kanban-column-body').forEach(column => {
+        column.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            this.classList.add('drag-over');
+        });
+
+        column.addEventListener('dragleave', function(e) {
+            if (e.target === this) {
+                this.classList.remove('drag-over');
+            }
+        });
+
+        column.addEventListener('drop', async function(e) {
+            e.preventDefault();
+            this.classList.remove('drag-over');
+
+            if (!draggedDeal) return;
+
+            const dealId = draggedDeal.getAttribute('data-deal-id');
+            const newStageId = this.getAttribute('data-stage-id');
+            const oldStageId = draggedFromStage.getAttribute('data-stage-id');
+
+            // Don't do anything if dropped in same column
+            if (newStageId === oldStageId) {
+                draggedDeal = null;
+                draggedFromStage = null;
+                return;
+            }
+
+            try {
+                const response = await fetch(`/crm/deals/${dealId}/move`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        stage_id: parseInt(newStageId),
+                        position: 0
+                    })
+                });
+
+                if (response.ok) {
+                    // Move the card visually
+                    const addButton = this.querySelector('.add-deal-btn');
+                    if (addButton) {
+                        this.insertBefore(draggedDeal, addButton);
+                    } else {
+                        this.appendChild(draggedDeal);
+                    }
+
+                    // Update badges
+                    updateStageCounts();
+
+                    // Re-initialize drag events for the moved card
+                    initializeDragAndDrop();
+                } else {
+                    const error = await response.json();
+                    alert(error.error || 'Failed to move deal');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to move deal. Please try again.');
+            }
+
+            draggedDeal = null;
+            draggedFromStage = null;
+        });
+    });
+}
+
+function updateStageCounts() {
+    document.querySelectorAll('.kanban-column').forEach(column => {
+        const stageId = column.querySelector('.kanban-column-body').getAttribute('data-stage-id');
+        const dealCount = column.querySelectorAll('.deal-card').length;
+        const badge = column.querySelector('.badge');
+        if (badge) {
+            badge.textContent = dealCount;
+        }
+    });
+}
+
+function openCreateDealModal(stageId) {
+    const modal = new bootstrap.Modal(document.getElementById('createDealModal'));
+    modal.show();
+}
+
+function createDeal() {
+    const form = document.getElementById('createDealForm');
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData.entries());
+
+    // Convert empty strings to null
+    Object.keys(data).forEach(key => {
+        if (data[key] === '') data[key] = null;
+    });
+
+    fetch('/crm/deals/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.id) {
+            location.reload();
+        } else {
+            alert(data.error || 'Failed to create deal');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to create deal');
+    });
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    initializeDragAndDrop();
+});
+</script>
+{% endblock %}

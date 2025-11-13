@@ -1,0 +1,102 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card shadow-sm">
+                <div class="card-body p-5">
+                    <h1 class="mb-4">Privacy Policy</h1>
+                    <p class="text-muted mb-4">Last Updated: November 7, 2024</p>
+
+                    <div class="content">
+                        <h2 class="h4 mt-4 mb-3">1. Information We Collect</h2>
+                        <p>Soloquy collects information to provide and improve our services. This includes:</p>
+                        <ul>
+                            <li><strong>Account Information:</strong> Email address, name, and password (securely hashed)</li>
+                            <li><strong>Workspace Data:</strong> Messages, tasks, projects, and other content you create</li>
+                            <li><strong>Usage Information:</strong> How you interact with our platform, including features used and session data</li>
+                            <li><strong>AI Interactions:</strong> Messages sent to and received from AI agents for improving agent responses</li>
+                        </ul>
+
+                        <h2 class="h4 mt-4 mb-3">2. How We Use Your Information</h2>
+                        <p>We use the collected information to:</p>
+                        <ul>
+                            <li>Provide, maintain, and improve Soloquy's services</li>
+                            <li>Enable AI agent functionality and enhance response quality</li>
+                            <li>Communicate with you about service updates and support</li>
+                            <li>Protect against fraud, abuse, and security threats</li>
+                            <li>Comply with legal obligations and enforce our Terms of Service</li>
+                        </ul>
+
+                        <h2 class="h4 mt-4 mb-3">3. Data Sharing and Third Parties</h2>
+                        <p>We do not sell your personal information. We may share data with:</p>
+                        <ul>
+                            <li><strong>AI Service Providers:</strong> Messages sent to AI agents are processed by Anthropic's Claude API</li>
+                            <li><strong>Service Providers:</strong> Companies that help us operate our platform (hosting, analytics, support)</li>
+                            <li><strong>Legal Requirements:</strong> When required by law or to protect our rights and users</li>
+                        </ul>
+
+                        <h2 class="h4 mt-4 mb-3">4. Data Security</h2>
+                        <p>We implement industry-standard security measures to protect your data:</p>
+                        <ul>
+                            <li>All passwords are securely hashed using bcrypt</li>
+                            <li>Data is transmitted over encrypted HTTPS connections</li>
+                            <li>Multi-tenant data isolation ensures workspace privacy</li>
+                            <li>Regular security audits and updates</li>
+                        </ul>
+
+                        <h2 class="h4 mt-4 mb-3">5. Data Retention</h2>
+                        <p>We retain your data for as long as your account is active or as needed to provide services.
+                        When you delete your account, we will remove your personal data within 30 days, except where
+                        retention is required by law.</p>
+
+                        <h2 class="h4 mt-4 mb-3">6. Your Rights</h2>
+                        <p>You have the right to:</p>
+                        <ul>
+                            <li>Access and export your personal data</li>
+                            <li>Correct inaccurate information</li>
+                            <li>Delete your account and associated data</li>
+                            <li>Object to certain data processing activities</li>
+                            <li>Withdraw consent for optional data collection</li>
+                        </ul>
+
+                        <h2 class="h4 mt-4 mb-3">7. Cookies and Tracking</h2>
+                        <p>We use cookies and similar technologies to:</p>
+                        <ul>
+                            <li>Maintain your session and keep you logged in</li>
+                            <li>Remember your preferences and settings</li>
+                            <li>Analyze usage patterns to improve our service</li>
+                        </ul>
+
+                        <h2 class="h4 mt-4 mb-3">8. Children's Privacy</h2>
+                        <p>Soloquy is not intended for users under 13 years of age. We do not knowingly collect
+                        information from children. If we become aware of such collection, we will delete the data promptly.</p>
+
+                        <h2 class="h4 mt-4 mb-3">9. International Data Transfers</h2>
+                        <p>Your data may be transferred to and processed in countries other than your own. We ensure
+                        appropriate safeguards are in place for such transfers.</p>
+
+                        <h2 class="h4 mt-4 mb-3">10. Changes to This Policy</h2>
+                        <p>We may update this Privacy Policy periodically. We will notify you of significant changes
+                        via email or through the platform. Continued use after changes constitutes acceptance.</p>
+
+                        <h2 class="h4 mt-4 mb-3">11. Contact Us</h2>
+                        <p>If you have questions about this Privacy Policy or your data, please contact us at:</p>
+                        <ul>
+                            <li>Email: privacy@soloquy.com</li>
+                            <li>Support: Use the Help page or in-app support system</li>
+                        </ul>
+                    </div>
+
+                    <div class="mt-5 pt-4 border-top">
+                        <a href="{{ url_for('tenant.home') }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left"></i> Back to Dashboard
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

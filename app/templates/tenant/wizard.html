@@ -1,0 +1,1123 @@
+{% extends "layouts/base.html" %}
+
+{% block body %}
+<div class="wizard-container">
+    <div class="wizard-card">
+        <div class="wizard-header">
+            <h2>Create Your Workspace</h2>
+            <p class="text-muted">Let's get you set up in just a few steps</p>
+        </div>
+
+        <!-- Progress Stepper -->
+        <div class="wizard-stepper">
+            <div class="stepper-item active" data-step="1">
+                <div class="stepper-circle">1</div>
+                <div class="stepper-label">Plan</div>
+            </div>
+            <div class="stepper-line"></div>
+            <div class="stepper-item" data-step="2">
+                <div class="stepper-circle">2</div>
+                <div class="stepper-label">Template</div>
+            </div>
+            <div class="stepper-line"></div>
+            <div class="stepper-item" data-step="3">
+                <div class="stepper-circle">3</div>
+                <div class="stepper-label">Details</div>
+            </div>
+            <div class="stepper-line"></div>
+            <div class="stepper-item" data-step="4">
+                <div class="stepper-circle">4</div>
+                <div class="stepper-label">Customize</div>
+            </div>
+            <div class="stepper-line"></div>
+            <div class="stepper-item" data-step="5">
+                <div class="stepper-circle">5</div>
+                <div class="stepper-label">Invite</div>
+            </div>
+            <div class="stepper-line"></div>
+            <div class="stepper-item" data-step="6">
+                <div class="stepper-circle">6</div>
+                <div class="stepper-label">Review</div>
+            </div>
+        </div>
+
+        <!-- Wizard Steps -->
+        <div class="wizard-steps">
+            <!-- Step 1: Choose Plan -->
+            <div class="wizard-step active" data-step="1">
+                <h3 class="step-title">Choose Your Plan</h3>
+                <p class="step-description">Select the plan that works best for you</p>
+
+                <div class="plan-cards">
+                    <div class="plan-card" data-plan="free">
+                        <div class="plan-badge">Most Popular</div>
+                        <h4>Free</h4>
+                        <div class="plan-price">
+                            <span class="price">$0</span>
+                            <span class="period">/month</span>
+                        </div>
+                        <ul class="plan-features">
+                            <li><i class="bi bi-check-circle-fill"></i> 1 Workspace</li>
+                            <li><i class="bi bi-check-circle-fill"></i> All Features</li>
+                            <li><i class="bi bi-check-circle-fill"></i> AI Assistants</li>
+                            <li><i class="bi bi-check-circle-fill"></i> Unlimited Tasks</li>
+                            <li><i class="bi bi-check-circle-fill"></i> Community Support</li>
+                        </ul>
+                        <button type="button" class="btn btn-outline-primary btn-lg w-100 select-plan" data-plan="free">
+                            Select Free
+                        </button>
+                    </div>
+
+                    <div class="plan-card featured" data-plan="pro">
+                        <div class="plan-badge pro">Recommended for Teams</div>
+                        <h4>Pro</h4>
+                        <div class="plan-price">
+                            <span class="price">$29</span>
+                            <span class="period">/month</span>
+                        </div>
+                        <ul class="plan-features">
+                            <li><i class="bi bi-check-circle-fill"></i> Unlimited Workspaces</li>
+                            <li><i class="bi bi-check-circle-fill"></i> All Features</li>
+                            <li><i class="bi bi-check-circle-fill"></i> Priority Support</li>
+                            <li><i class="bi bi-check-circle-fill"></i> Advanced Analytics</li>
+                            <li><i class="bi bi-check-circle-fill"></i> Custom Branding</li>
+                        </ul>
+                        <button type="button" class="btn btn-primary btn-lg w-100 select-plan" data-plan="pro">
+                            Select Pro
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2: Template Selection -->
+            <div class="wizard-step" data-step="2">
+                <h3 class="step-title">Choose a Template</h3>
+                <p class="step-description">Pick the workspace type that fits your needs</p>
+
+                <div class="template-cards">
+                    <div class="template-card" data-template="business">
+                        <div class="template-card-body">
+                            <div class="template-icon">🏢</div>
+                            <h4>Business</h4>
+                            <p class="template-desc">Full-featured workspace for teams and organizations</p>
+                            <ul class="template-includes">
+                                <li>9 Specialized Departments</li>
+                                <li>9 AI Agents</li>
+                                <li>All 6 Applets</li>
+                            </ul>
+                        </div>
+                        <div class="template-card-footer">
+                            <button type="button" class="btn btn-outline-primary w-100 select-template" data-template="business">
+                                Select Business
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="template-card" data-template="family">
+                        <div class="template-card-body">
+                            <div class="template-icon">🏠</div>
+                            <h4>Personal/Family</h4>
+                            <p class="template-desc">Simple workspace for personal task management</p>
+                            <ul class="template-includes">
+                                <li>1 General Department</li>
+                                <li>1 AI Assistant</li>
+                                <li>Tasks & Chat</li>
+                            </ul>
+                        </div>
+                        <div class="template-card-footer">
+                            <button type="button" class="btn btn-outline-primary w-100 select-template" data-template="family">
+                                Select Personal
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="template-card" data-template="custom">
+                        <div class="template-card-body">
+                            <div class="template-icon">⚙️</div>
+                            <h4>Custom</h4>
+                            <p class="template-desc">Choose exactly what you need</p>
+                            <ul class="template-includes">
+                                <li>Select Departments</li>
+                                <li>Choose Applets</li>
+                                <li>Full Control</li>
+                            </ul>
+                        </div>
+                        <div class="template-card-footer">
+                            <button type="button" class="btn btn-outline-primary w-100 select-template" data-template="custom">
+                                Select Custom
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 3: Workspace Details -->
+            <div class="wizard-step" data-step="3">
+                <h3 class="step-title">Workspace Details</h3>
+                <p class="step-description" id="step3-description">Tell us about your workspace</p>
+
+                <form id="detailsForm" class="wizard-form">
+                    <div class="mb-4">
+                        <label for="workspaceName" class="form-label">Workspace Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control form-control-lg" id="workspaceName" placeholder="e.g., My Company, Family Tasks" required>
+                        <div class="form-text">This is how your workspace will appear throughout Soloquy</div>
+                    </div>
+
+                    <div class="mb-4" id="slugField">
+                        <label for="workspaceSlug" class="form-label">Workspace Slug <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control form-control-lg" id="workspaceSlug" placeholder="my-company" required>
+                        <div class="form-text">URL-friendly identifier (lowercase, hyphens only)</div>
+                    </div>
+
+                    <div class="mb-4" id="businessFields" style="display: none;">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" rows="3" placeholder="What does your organization do?"></textarea>
+                    </div>
+
+                    <div class="mb-4" id="companySizeField" style="display: none;">
+                        <label for="companySize" class="form-label">Company Size</label>
+                        <select class="form-select" id="companySize">
+                            <option value="">Select size...</option>
+                            <option value="1-10">1-10 employees</option>
+                            <option value="11-50">11-50 employees</option>
+                            <option value="51-200">51-200 employees</option>
+                            <option value="201-500">201-500 employees</option>
+                            <option value="501+">501+ employees</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Step 4: Customize -->
+            <div class="wizard-step" data-step="4">
+                <h3 class="step-title">Customize Your Workspace</h3>
+                <p class="step-description" id="step4-description">Optional: Add business intelligence</p>
+
+                <div id="businessCustomize" style="display: none;">
+                    <div class="mb-4">
+                        <label for="websiteUrl" class="form-label">Website URL</label>
+                        <input type="url" class="form-control form-control-lg" id="websiteUrl" placeholder="https://yourcompany.com">
+                        <div class="form-text">We'll analyze your website to personalize your AI assistants</div>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <strong>AI Business Intelligence:</strong> Our AI will scrape your website to understand your business and customize agent responses accordingly.
+                    </div>
+                </div>
+
+                <div id="customDepartments" style="display: none;">
+                    <h5>Select Departments</h5>
+                    <p class="text-muted small mb-3">Each department comes with a specialized AI agent</p>
+
+                    <div class="custom-checkboxes">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="executive" id="dept-executive" checked>
+                            <label class="form-check-label" for="dept-executive">
+                                <strong>Executive</strong> - Strategic planning & leadership
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="finance" id="dept-finance" checked>
+                            <label class="form-check-label" for="dept-finance">
+                                <strong>Finance</strong> - Budget & financial analysis
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="marketing" id="dept-marketing" checked>
+                            <label class="form-check-label" for="dept-marketing">
+                                <strong>Marketing</strong> - Campaigns & content strategy
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="sales" id="dept-sales" checked>
+                            <label class="form-check-label" for="dept-sales">
+                                <strong>Sales</strong> - Lead generation & closing
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="support" id="dept-support" checked>
+                            <label class="form-check-label" for="dept-support">
+                                <strong>Support</strong> - Customer service & tickets
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="product" id="dept-product" checked>
+                            <label class="form-check-label" for="dept-product">
+                                <strong>Product</strong> - Development & roadmap
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="legal" id="dept-legal">
+                            <label class="form-check-label" for="dept-legal">
+                                <strong>Legal</strong> - Compliance & contracts
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="hrpeople" id="dept-hrpeople">
+                            <label class="form-check-label" for="dept-hrpeople">
+                                <strong>HR/People</strong> - Recruiting & culture
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="itengineering" id="dept-itengineering" checked>
+                            <label class="form-check-label" for="dept-itengineering">
+                                <strong>IT/Engineering</strong> - Tech & infrastructure
+                            </label>
+                        </div>
+                    </div>
+
+                    <h5 class="mt-4">Select Applets</h5>
+                    <p class="text-muted small mb-3">Choose which tools you want enabled</p>
+
+                    <div class="custom-checkboxes">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="crm" id="applet-crm" checked>
+                            <label class="form-check-label" for="applet-crm">
+                                <strong>CRM</strong> - Manage companies, contacts, deals, and leads
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="projects" id="applet-projects" checked>
+                            <label class="form-check-label" for="applet-projects">
+                                <strong>Projects</strong> - Task management and Kanban boards
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="support" id="applet-support" checked>
+                            <label class="form-check-label" for="applet-support">
+                                <strong>Support</strong> - Customer support ticketing system
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="tasks" id="applet-tasks" checked>
+                            <label class="form-check-label" for="applet-tasks">
+                                <strong>Tasks</strong> - Personal and team task management
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="chat" id="applet-chat" checked>
+                            <label class="form-check-label" for="applet-chat">
+                                <strong>Chat</strong> - Team messaging and AI agent conversations
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="integrations" id="applet-integrations" checked>
+                            <label class="form-check-label" for="applet-integrations">
+                                <strong>Integrations</strong> - Connect third-party tools and services
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="familyCustomize" style="display: none;">
+                    <div class="alert alert-success">
+                        <i class="bi bi-check-circle me-2"></i>
+                        Your personal workspace is ready to go! You'll have one AI assistant and task management tools.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 5: Invite Team -->
+            <div class="wizard-step" data-step="5">
+                <h3 class="step-title">Invite Your Team</h3>
+                <p class="step-description">Add team members to collaborate (optional)</p>
+
+                <div class="mb-4">
+                    <div id="inviteList">
+                        <div class="invite-item">
+                            <input type="email" class="form-control" placeholder="colleague@company.com">
+                            <select class="form-select">
+                                <option value="member">Member</option>
+                                <option value="admin">Admin</option>
+                            </select>
+                            <button type="button" class="btn btn-sm btn-outline-danger remove-invite" style="display: none;">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-outline-primary btn-sm mt-2" id="addInvite">
+                        <i class="bi bi-plus-circle me-1"></i> Add Another
+                    </button>
+                </div>
+
+                <div class="alert alert-info">
+                    <i class="bi bi-envelope me-2"></i>
+                    Invitation emails will be sent after your workspace is created
+                </div>
+
+                <button type="button" class="btn btn-link" id="skipInvites">
+                    Skip this step - I'll invite people later
+                </button>
+            </div>
+
+            <!-- Step 6: Review & Launch -->
+            <div class="wizard-step" data-step="6">
+                <h3 class="step-title">Review & Launch</h3>
+                <p class="step-description">Everything looks good? Let's create your workspace!</p>
+
+                <div class="review-section">
+                    <div class="review-item">
+                        <h5>Plan</h5>
+                        <p id="review-plan"></p>
+                    </div>
+                    <div class="review-item">
+                        <h5>Template</h5>
+                        <p id="review-template"></p>
+                    </div>
+                    <div class="review-item">
+                        <h5>Workspace</h5>
+                        <p id="review-workspace"></p>
+                    </div>
+                    <div class="review-item" id="review-customizations" style="display: none;">
+                        <h5>Customizations</h5>
+                        <p id="review-custom-details"></p>
+                    </div>
+                    <div class="review-item" id="review-invitations" style="display: none;">
+                        <h5>Team Invitations</h5>
+                        <p id="review-invite-list"></p>
+                    </div>
+                </div>
+
+                <div class="alert alert-success mt-4">
+                    <i class="bi bi-rocket-takeoff me-2"></i>
+                    <strong>Ready for liftoff!</strong> Click the button below to create your workspace.
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation Buttons -->
+        <div class="wizard-nav">
+            <button type="button" class="btn btn-outline-secondary" id="prevBtn" style="display: none;">
+                <i class="bi bi-arrow-left me-1"></i> Back
+            </button>
+            <button type="button" class="btn btn-primary" id="nextBtn">
+                Next <i class="bi bi-arrow-right ms-1"></i>
+            </button>
+            <button type="button" class="btn btn-success btn-lg" id="submitBtn" style="display: none;">
+                <i class="bi bi-rocket-takeoff me-2"></i> Create Workspace
+            </button>
+        </div>
+    </div>
+
+    <!-- Launch Animation Modal -->
+    <div class="modal fade" id="launchModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content text-center p-5">
+                <div class="launch-animation">
+                    <div class="rocket">🚀</div>
+                </div>
+                <h3 class="mt-4">Launching Your Workspace...</h3>
+                <p class="text-muted">Setting up your departments, AI agents, and tools</p>
+                <div class="spinner-border text-primary mt-3" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.wizard-container {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+}
+
+.wizard-card {
+    background: var(--bs-dark);
+    border-radius: 20px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    max-width: 1000px;
+    width: 100%;
+    padding: 40px;
+}
+
+.wizard-header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.wizard-header h2 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+/* Stepper */
+.wizard-stepper {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 40px;
+    padding: 0 20px;
+}
+
+.stepper-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 0 0 auto;
+}
+
+.stepper-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--bs-secondary);
+    color: var(--bs-dark);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    transition: all 0.3s;
+}
+
+.stepper-item.active .stepper-circle {
+    background: var(--bs-primary);
+    color: white;
+    transform: scale(1.1);
+}
+
+.stepper-item.completed .stepper-circle {
+    background: var(--bs-success);
+    color: white;
+}
+
+.stepper-label {
+    font-size: 0.75rem;
+    margin-top: 8px;
+    color: var(--bs-secondary);
+    transition: color 0.3s;
+}
+
+.stepper-item.active .stepper-label {
+    color: var(--bs-primary);
+    font-weight: 600;
+}
+
+.stepper-line {
+    flex: 1;
+    height: 2px;
+    background: var(--bs-secondary);
+    margin: 0 10px;
+}
+
+/* Steps */
+.wizard-steps {
+    min-height: 500px;
+    position: relative;
+}
+
+.wizard-step {
+    display: none;
+    animation: fadeIn 0.5s;
+}
+
+.wizard-step.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateX(20px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+.step-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin-bottom: 12px;
+}
+
+.step-description {
+    color: var(--bs-secondary);
+    margin-bottom: 30px;
+}
+
+/* Plan Cards */
+.plan-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 24px;
+}
+
+.plan-card {
+    background: var(--bs-body-bg);
+    border: 2px solid var(--bs-border-color);
+    border-radius: 16px;
+    padding: 32px;
+    cursor: pointer;
+    transition: all 0.3s;
+    position: relative;
+}
+
+.plan-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+
+.plan-card.featured {
+    border-color: var(--bs-primary);
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+}
+
+.plan-card.selected {
+    border-color: var(--bs-success);
+    background: rgba(25, 135, 84, 0.1);
+}
+
+.plan-badge {
+    position: absolute;
+    top: -12px;
+    right: 20px;
+    background: var(--bs-warning);
+    color: var(--bs-dark);
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.plan-badge.pro {
+    background: var(--bs-primary);
+    color: white;
+}
+
+.plan-card h4 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 16px;
+}
+
+.plan-price {
+    margin-bottom: 24px;
+}
+
+.plan-price .price {
+    font-size: 3rem;
+    font-weight: 700;
+}
+
+.plan-price .period {
+    color: var(--bs-secondary);
+    font-size: 1rem;
+}
+
+.plan-features {
+    list-style: none;
+    padding: 0;
+    margin: 24px 0;
+}
+
+.plan-features li {
+    padding: 8px 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.plan-features i {
+    color: var(--bs-success);
+}
+
+/* Template Cards */
+.template-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 24px;
+    align-items: stretch;
+}
+
+.template-card {
+    background: var(--bs-body-bg);
+    border: 2px solid var(--bs-border-color);
+    border-radius: 16px;
+    padding: 0;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.template-card-body {
+    flex: 1;
+    padding: 32px 32px 24px 32px;
+}
+
+.template-card-footer {
+    padding: 0 32px 32px 32px;
+    margin-top: auto;
+}
+
+.template-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+
+.template-card.selected {
+    border-color: var(--bs-success);
+    background: rgba(25, 135, 84, 0.1);
+}
+
+.template-icon {
+    font-size: 4rem;
+    margin-bottom: 16px;
+}
+
+.template-card h4 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 12px;
+}
+
+.template-desc {
+    color: var(--bs-secondary);
+    margin-bottom: 20px;
+}
+
+.template-includes {
+    list-style: none;
+    padding: 0;
+    margin: 20px 0;
+    text-align: left;
+}
+
+.template-includes li {
+    padding: 6px 0;
+    color: var(--bs-secondary);
+}
+
+.template-includes li:before {
+    content: "✓ ";
+    color: var(--bs-success);
+    font-weight: bold;
+    margin-right: 8px;
+}
+
+/* Forms */
+.wizard-form {
+    max-width: 600px;
+}
+
+.custom-checkboxes {
+    display: grid;
+    gap: 12px;
+}
+
+.form-check-label {
+    cursor: pointer;
+}
+
+/* Invites */
+.invite-item {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.invite-item input {
+    flex: 2;
+}
+
+.invite-item select {
+    flex: 1;
+}
+
+/* Review */
+.review-section {
+    background: var(--bs-body-bg);
+    border-radius: 12px;
+    padding: 24px;
+}
+
+.review-item {
+    padding: 16px 0;
+    border-bottom: 1px solid var(--bs-border-color);
+}
+
+.review-item:last-child {
+    border-bottom: none;
+}
+
+.review-item h5 {
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    color: var(--bs-secondary);
+    margin-bottom: 8px;
+}
+
+.review-item p {
+    font-size: 1.125rem;
+    margin: 0;
+}
+
+/* Navigation */
+.wizard-nav {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 40px;
+    padding-top: 30px;
+    border-top: 1px solid var(--bs-border-color);
+}
+
+/* Launch Animation */
+.launch-animation {
+    font-size: 4rem;
+    animation: bounce 1s infinite;
+}
+
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-20px); }
+}
+
+.launch-animation .stars {
+    font-size: 2rem;
+    animation: sparkle 1.5s infinite;
+}
+
+@keyframes sparkle {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .wizard-stepper {
+        overflow-x: auto;
+        justify-content: flex-start;
+    }
+
+    .stepper-label {
+        display: none;
+    }
+
+    .plan-cards, .template-cards {
+        grid-template-columns: 1fr;
+    }
+
+    .wizard-card {
+        padding: 24px;
+    }
+}
+</style>
+
+<script>
+// Wizard state
+const wizardState = {
+    currentStep: 1,
+    totalSteps: 6,
+    data: {
+        plan: 'free',
+        template: null,
+        name: '',
+        slug: '',
+        description: '',
+        companySize: '',
+        websiteUrl: '',
+        departments: [],
+        applets: [],
+        invitations: []
+    }
+};
+
+document.addEventListener('DOMContentLoaded', function() {
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const submitBtn = document.getElementById('submitBtn');
+
+    // Plan selection
+    document.querySelectorAll('.select-plan').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const plan = this.dataset.plan;
+            wizardState.data.plan = plan;
+
+            // Update UI
+            document.querySelectorAll('.plan-card').forEach(card => card.classList.remove('selected'));
+            this.closest('.plan-card').classList.add('selected');
+
+            // Auto-advance to next step
+            setTimeout(() => goToStep(2), 300);
+        });
+    });
+
+    // Template selection
+    document.querySelectorAll('.select-template').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const template = this.dataset.template;
+            wizardState.data.template = template;
+
+            // Update UI
+            document.querySelectorAll('.template-card').forEach(card => card.classList.remove('selected'));
+            this.closest('.template-card').classList.add('selected');
+
+            // Configure form based on template
+            configureDetailsForm(template);
+            configureCustomizeStep(template);
+
+            // Auto-advance
+            setTimeout(() => goToStep(3), 300);
+        });
+    });
+
+    // Workspace name auto-generate slug
+    document.getElementById('workspaceName').addEventListener('input', function() {
+        const name = this.value;
+        const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+        document.getElementById('workspaceSlug').value = slug;
+    });
+
+    // Add invitation row
+    document.getElementById('addInvite').addEventListener('click', function() {
+        const inviteList = document.getElementById('inviteList');
+        const newInvite = document.querySelector('.invite-item').cloneNode(true);
+        newInvite.querySelector('input').value = '';
+        newInvite.querySelector('.remove-invite').style.display = 'inline-block';
+        inviteList.appendChild(newInvite);
+    });
+
+    // Remove invitation
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.remove-invite')) {
+            e.target.closest('.invite-item').remove();
+        }
+    });
+
+    // Skip invites
+    document.getElementById('skipInvites').addEventListener('click', function() {
+        goToStep(6);
+    });
+
+    // Navigation
+    prevBtn.addEventListener('click', () => goToStep(wizardState.currentStep - 1));
+    nextBtn.addEventListener('click', () => {
+        if (validateStep(wizardState.currentStep)) {
+            collectStepData(wizardState.currentStep);
+            goToStep(wizardState.currentStep + 1);
+        }
+    });
+
+    submitBtn.addEventListener('click', submitWizard);
+});
+
+function goToStep(step) {
+    if (step < 1 || step > wizardState.totalSteps) return;
+
+    // Update step visibility
+    document.querySelectorAll('.wizard-step').forEach(el => el.classList.remove('active'));
+    document.querySelector(`[data-step="${step}"].wizard-step`).classList.add('active');
+
+    // Update stepper
+    document.querySelectorAll('.stepper-item').forEach((item, index) => {
+        item.classList.remove('active', 'completed');
+        if (index + 1 < step) item.classList.add('completed');
+        if (index + 1 === step) item.classList.add('active');
+    });
+
+    // Update buttons
+    document.getElementById('prevBtn').style.display = step === 1 ? 'none' : 'inline-block';
+    document.getElementById('nextBtn').style.display = step === wizardState.totalSteps ? 'none' : 'inline-block';
+    document.getElementById('submitBtn').style.display = step === wizardState.totalSteps ? 'inline-block' : 'none';
+
+    // Update review on last step
+    if (step === wizardState.totalSteps) {
+        updateReview();
+    }
+
+    wizardState.currentStep = step;
+}
+
+function configureDetailsForm(template) {
+    const businessFields = document.getElementById('businessFields');
+    const slugField = document.getElementById('slugField');
+    const companySizeField = document.getElementById('companySizeField');
+    const description = document.getElementById('step3-description');
+
+    if (template === 'family') {
+        description.textContent = 'What would you like to call your personal workspace?';
+        slugField.style.display = 'none';
+        businessFields.style.display = 'none';
+        companySizeField.style.display = 'none';
+    } else if (template === 'business') {
+        description.textContent = 'Tell us about your organization';
+        slugField.style.display = 'block';
+        businessFields.style.display = 'block';
+        companySizeField.style.display = 'block';
+    } else {
+        description.textContent = 'Tell us about your workspace';
+        slugField.style.display = 'block';
+        businessFields.style.display = 'block';
+        companySizeField.style.display = 'none';
+    }
+}
+
+function configureCustomizeStep(template) {
+    const businessCustomize = document.getElementById('businessCustomize');
+    const customDepartments = document.getElementById('customDepartments');
+    const familyCustomize = document.getElementById('familyCustomize');
+    const description = document.getElementById('step4-description');
+
+    businessCustomize.style.display = 'none';
+    customDepartments.style.display = 'none';
+    familyCustomize.style.display = 'none';
+
+    if (template === 'business') {
+        description.textContent = 'Optional: Add business intelligence';
+        businessCustomize.style.display = 'block';
+    } else if (template === 'custom') {
+        description.textContent = 'Select departments and applets';
+        customDepartments.style.display = 'block';
+    } else {
+        description.textContent = 'Your workspace is ready!';
+        familyCustomize.style.display = 'block';
+    }
+}
+
+function validateStep(step) {
+    if (step === 1) {
+        if (!wizardState.data.plan) {
+            alert('Please select a plan');
+            return false;
+        }
+    }
+    if (step === 2) {
+        if (!wizardState.data.template) {
+            alert('Please select a template');
+            return false;
+        }
+    }
+    if (step === 3) {
+        const name = document.getElementById('workspaceName').value.trim();
+        if (!name) {
+            alert('Please enter a workspace name');
+            return false;
+        }
+        if (wizardState.data.template !== 'family') {
+            const slug = document.getElementById('workspaceSlug').value.trim();
+            if (!slug) {
+                alert('Please enter a workspace slug');
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+function collectStepData(step) {
+    if (step === 3) {
+        wizardState.data.name = document.getElementById('workspaceName').value.trim();
+        wizardState.data.slug = document.getElementById('workspaceSlug').value.trim() ||
+                                wizardState.data.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+        wizardState.data.description = document.getElementById('description').value.trim();
+        wizardState.data.companySize = document.getElementById('companySize').value;
+    }
+    if (step === 4) {
+        wizardState.data.websiteUrl = document.getElementById('websiteUrl').value.trim();
+
+        // Collect custom departments if custom template
+        if (wizardState.data.template === 'custom') {
+            wizardState.data.departments = Array.from(
+                document.querySelectorAll('#customDepartments .form-check-input:checked')
+            ).map(cb => cb.value);
+
+            wizardState.data.applets = Array.from(
+                document.querySelectorAll('#customDepartments .form-check-input[id^="applet-"]:checked')
+            ).map(cb => cb.value);
+        }
+    }
+    if (step === 5) {
+        wizardState.data.invitations = Array.from(document.querySelectorAll('.invite-item'))
+            .map(item => ({
+                email: item.querySelector('input[type="email"]').value.trim(),
+                role: item.querySelector('select').value
+            }))
+            .filter(inv => inv.email);
+    }
+}
+
+function updateReview() {
+    document.getElementById('review-plan').textContent =
+        wizardState.data.plan === 'free' ? 'Free Plan - 1 Workspace' : 'Pro Plan - Unlimited Workspaces';
+
+    document.getElementById('review-template').textContent =
+        wizardState.data.template.charAt(0).toUpperCase() + wizardState.data.template.slice(1);
+
+    document.getElementById('review-workspace').textContent =
+        `${wizardState.data.name} (${wizardState.data.slug})`;
+
+    // Customizations
+    const customSection = document.getElementById('review-customizations');
+    if (wizardState.data.websiteUrl || wizardState.data.departments.length > 0) {
+        let details = [];
+        if (wizardState.data.websiteUrl) details.push(`Website: ${wizardState.data.websiteUrl}`);
+        if (wizardState.data.departments.length > 0) details.push(`${wizardState.data.departments.length} Departments`);
+        if (wizardState.data.applets.length > 0) details.push(`${wizardState.data.applets.length} Applets`);
+
+        document.getElementById('review-custom-details').textContent = details.join(' • ');
+        customSection.style.display = 'block';
+    } else {
+        customSection.style.display = 'none';
+    }
+
+    // Invitations
+    const inviteSection = document.getElementById('review-invitations');
+    if (wizardState.data.invitations.length > 0) {
+        document.getElementById('review-invite-list').textContent =
+            `${wizardState.data.invitations.length} team member(s) will be invited`;
+        inviteSection.style.display = 'block';
+    } else {
+        inviteSection.style.display = 'none';
+    }
+}
+
+async function submitWizard() {
+    // Show launch modal
+    const modal = new bootstrap.Modal(document.getElementById('launchModal'));
+    modal.show();
+
+    // Wait for modal to fully render before proceeding
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    // Collect final data
+    collectStepData(5);
+
+    try {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        const response = await fetch('/tenant/wizard', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify(wizardState.data)
+        });
+
+        if (response.ok) {
+            const result = await response.json();
+
+            // Keep modal visible for at least 1 second before redirect
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
+            // Redirect to dashboard
+            window.location.href = result.redirect_url || '/tenant/';
+        } else {
+            const error = await response.json();
+            modal.hide();
+            alert('Error creating workspace: ' + (error.error || 'Please try again'));
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        modal.hide();
+        alert('Failed to create workspace. Please try again.');
+    }
+}
+</script>
+
+<!-- Bootstrap JS (required for modal) -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+{% endblock %}

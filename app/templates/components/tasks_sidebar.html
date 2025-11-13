@@ -1,0 +1,405 @@
+<!-- Tasks Sidebar Component -->
+<div class="tasks-sidebar" id="tasks-sidebar">
+    <!-- Header -->
+    <div class="tasks-sidebar-header">
+        <div class="d-flex align-items-center justify-content-between">
+            <h6 class="mb-0">Tasks</h6>
+            <button class="btn btn-sm btn-link text-primary p-0" data-bs-toggle="modal" data-bs-target="#quickAddTaskModal" title="Add task">
+                <i class="bi bi-plus-circle"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- My Tasks Section -->
+    <div class="tasks-section">
+        <div class="tasks-section-header">
+            <span class="tasks-section-title">My Tasks</span>
+        </div>
+
+        <div class="tasks-list">
+            {% if user_tasks %}
+                {% for task in user_tasks %}
+                    <div class="task-item {% if task.status == 'completed' %}task-completed{% endif %}" data-task-id="{{ task.id }}" onclick="window.location.href='{{ url_for('tasks.view', task_id=task.id) }}'" style="cursor: pointer;">
+                        <div class="task-checkbox" onclick="event.stopPropagation();">
+                            <input type="checkbox"
+                                   class="form-check-input task-complete-checkbox"
+                                   {% if task.status == 'completed' %}checked{% endif %}
+                                   data-task-id="{{ task.id }}">
+                        </div>
+                        <div class="task-content">
+                            <div class="task-title">{{ task.title }}</div>
+                            <div class="task-meta">
+                                {% if task.due_date %}
+                                    <span class="task-due {% if task.is_overdue() %}text-danger{% endif %}">
+                                        <i class="bi bi-calendar3"></i>
+                                        {{ task.due_date.strftime('%b %d') }}
+                                    </span>
+                                {% endif %}
+                                {% if task.department %}
+                                    <span class="task-department">
+                                        <span class="dept-badge" style="background-color: {{ task.department.color }};"></span>
+                                        {{ task.department.name }}
+                                    </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="task-actions">
+                            <select class="form-select form-select-sm priority-select" data-task-id="{{ task.id }}">
+                                <option value="low" {% if task.priority == 'low' %}selected{% endif %}>Low</option>
+                                <option value="medium" {% if task.priority == 'medium' %}selected{% endif %}>Medium</option>
+                                <option value="high" {% if task.priority == 'high' %}selected{% endif %}>High</option>
+                                <option value="urgent" {% if task.priority == 'urgent' %}selected{% endif %}>Urgent</option>
+                            </select>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="tasks-empty">
+                    <i class="bi bi-check2-circle"></i>
+                    <p class="small text-muted mb-0">No tasks yet</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Agent Tasks Section -->
+    {% if agent_tasks %}
+    <div class="tasks-section">
+        <div class="tasks-section-header">
+            <span class="tasks-section-title">
+                {% if context_agent %}
+                    {{ context_agent.name }}'s Tasks
+                {% else %}
+                    Agent Tasks
+                {% endif %}
+            </span>
+        </div>
+
+        <div class="tasks-list">
+            {% for task in agent_tasks %}
+                <div class="task-item {% if task.status == 'completed' %}task-completed{% endif %}" data-task-id="{{ task.id }}" onclick="window.location.href='{{ url_for('tasks.view', task_id=task.id) }}'" style="cursor: pointer;">
+                    <div class="task-checkbox" onclick="event.stopPropagation();">
+                        <input type="checkbox"
+                               class="form-check-input task-complete-checkbox"
+                               {% if task.status == 'completed' %}checked{% endif %}
+                               data-task-id="{{ task.id }}">
+                    </div>
+                    <div class="task-content">
+                        <div class="task-title">{{ task.title }}</div>
+                        <div class="task-meta">
+                            {% if task.due_date %}
+                                <span class="task-due {% if task.is_overdue() %}text-danger{% endif %}">
+                                    <i class="bi bi-calendar3"></i>
+                                    {{ task.due_date.strftime('%b %d') }}
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="task-actions">
+                        <select class="form-select form-select-sm priority-select" data-task-id="{{ task.id }}">
+                            <option value="low" {% if task.priority == 'low' %}selected{% endif %}>Low</option>
+                            <option value="medium" {% if task.priority == 'medium' %}selected{% endif %}>Medium</option>
+                            <option value="high" {% if task.priority == 'high' %}selected{% endif %}>High</option>
+                            <option value="urgent" {% if task.priority == 'urgent' %}selected{% endif %}>Urgent</option>
+                        </select>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Department/Context Tasks Section -->
+    {% if context_tasks %}
+    <div class="tasks-section">
+        <div class="tasks-section-header">
+            <span class="tasks-section-title">
+                {% if context_department %}
+                    {{ context_department.name }} Tasks
+                {% else %}
+                    Team Tasks
+                {% endif %}
+            </span>
+        </div>
+
+        <div class="tasks-list">
+            {% for task in context_tasks %}
+                <div class="task-item {% if task.status == 'completed' %}task-completed{% endif %}" data-task-id="{{ task.id }}" onclick="window.location.href='{{ url_for('tasks.view', task_id=task.id) }}'" style="cursor: pointer;">
+                    <div class="task-checkbox" onclick="event.stopPropagation();">
+                        <input type="checkbox"
+                               class="form-check-input task-complete-checkbox"
+                               {% if task.status == 'completed' %}checked{% endif %}
+                               data-task-id="{{ task.id }}">
+                    </div>
+                    <div class="task-content">
+                        <div class="task-title">{{ task.title }}</div>
+                        <div class="task-meta">
+                            {% if task.assigned_to and task.assigned_to.id != current_user.id %}
+                                <span class="task-assignee">
+                                    <i class="bi bi-person"></i>
+                                    {{ task.assigned_to.full_name }}
+                                </span>
+                            {% endif %}
+                            {% if task.due_date %}
+                                <span class="task-due {% if task.is_overdue() %}text-danger{% endif %}">
+                                    <i class="bi bi-calendar3"></i>
+                                    {{ task.due_date.strftime('%b %d') }}
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="task-actions">
+                        <select class="form-select form-select-sm priority-select" data-task-id="{{ task.id }}">
+                            <option value="low" {% if task.priority == 'low' %}selected{% endif %}>Low</option>
+                            <option value="medium" {% if task.priority == 'medium' %}selected{% endif %}>Medium</option>
+                            <option value="high" {% if task.priority == 'high' %}selected{% endif %}>High</option>
+                            <option value="urgent" {% if task.priority == 'urgent' %}selected{% endif %}>Urgent</option>
+                        </select>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Members Section (for channels) -->
+    {% if context_channel %}
+    <div class="tasks-section">
+        <div class="tasks-section-header">
+            <span class="tasks-section-title">Members</span>
+        </div>
+
+        <div class="members-list">
+            <!-- AI Agents -->
+            {% if context_channel.department %}
+                {% for agent in context_channel.department.get_agents() %}
+                    <a href="{{ url_for('chat.agent_chat', agent_id=agent.id) }}" class="member-item">
+                        {% if agent.avatar_url %}
+                            <img src="{{ agent.avatar_url }}" alt="{{ agent.name }}" class="member-avatar rounded" width="32" height="32">
+                        {% else %}
+                            <span class="user-status online"></span>
+                        {% endif %}
+                        <div class="member-info">
+                            <div class="member-name">{{ agent.name }}</div>
+                            <div class="member-role text-muted small">{{ context_channel.department.name }}</div>
+                        </div>
+                    </a>
+                {% endfor %}
+            {% endif %}
+
+            <!-- Human Members -->
+            {% if current_tenant %}
+                {% for member in current_tenant.get_members()[:10] %}
+                    <a href="{{ url_for('chat.user_chat', user_id=member.id) }}" class="member-item">
+                        <span class="user-status {{ 'online' if member.is_online else 'offline' }}"></span>
+                        <div class="member-info">
+                            <div class="member-name">{{ member.full_name }}</div>
+                            <div class="member-role text-muted small">
+                                {{ member.get_role_in_tenant(current_tenant.id).title() if member.get_role_in_tenant(current_tenant.id) else 'Member' }}
+                            </div>
+                        </div>
+                    </a>
+                {% endfor %}
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- View All Tasks Link -->
+    <div class="tasks-footer">
+        <a href="{{ url_for('tasks.index') }}" class="btn btn-sm btn-outline-primary w-100">
+            View All Tasks
+        </a>
+    </div>
+</div>
+
+<!-- Quick Add Task Modal -->
+<div class="modal fade" id="quickAddTaskModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Quick Add Task</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="quick-add-task-form">
+                    <div class="mb-3">
+                        <label for="task-title" class="form-label">Task Title</label>
+                        <input type="text" class="form-control" id="task-title" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="task-priority" class="form-label">Priority</label>
+                        <select class="form-select" id="task-priority">
+                            <option value="low">Low</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="high">High</option>
+                            <option value="urgent">Urgent</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="task-due-date" class="form-label">Due Date (Optional)</label>
+                        <input type="date" class="form-control" id="task-due-date">
+                    </div>
+                    <div class="mb-3">
+                        <label for="task-assign-to" class="form-label">Assign To</label>
+                        <select class="form-select" id="task-assign-to">
+                            <option value="user:{{ current_user.id }}" {% if not context_agent %}selected{% endif %}>Me ({{ current_user.full_name }})</option>
+                            {% if context_agent %}
+                            <option value="agent:{{ context_agent.id }}" selected>{{ context_agent.name }} (AI Agent)</option>
+                            {% endif %}
+                            {% if current_tenant %}
+                                {% for member in current_tenant.get_members() %}
+                                    {% if member.id != current_user.id %}
+                                    <option value="user:{{ member.id }}">{{ member.full_name }}</option>
+                                    {% endif %}
+                                {% endfor %}
+                            {% endif %}
+                        </select>
+                    </div>
+                    {% if context_department %}
+                    <input type="hidden" id="task-department-id" value="{{ context_department.id }}">
+                    {% endif %}
+                    {% if context_agent %}
+                    <input type="hidden" id="task-context-agent-id" value="{{ context_agent.id }}">
+                    {% endif %}
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="save-quick-task">Add Task</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript for Task Sidebar Interactions -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle task completion checkbox
+    document.querySelectorAll('.task-complete-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', async function() {
+            const taskId = this.getAttribute('data-task-id');
+            const taskItem = this.closest('.task-item');
+
+            try {
+                const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+                const response = await fetch(`/tasks/${taskId}/complete`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    // Toggle completed class
+                    if (data.status === 'completed') {
+                        taskItem.classList.add('task-completed');
+                    } else {
+                        taskItem.classList.remove('task-completed');
+                    }
+                } else {
+                    // Revert checkbox on error
+                    this.checked = !this.checked;
+                    alert('Failed to update task. Please try again.');
+                }
+            } catch (error) {
+                console.error('Error updating task:', error);
+                this.checked = !this.checked;
+                alert('Failed to update task. Please try again.');
+            }
+        });
+    });
+
+    // Handle priority change
+    document.querySelectorAll('.priority-select').forEach(select => {
+        select.addEventListener('change', async function() {
+            const taskId = this.getAttribute('data-task-id');
+            const newPriority = this.value;
+
+            try {
+                const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+                const response = await fetch(`/tasks/${taskId}/priority`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify({ priority: newPriority })
+                });
+
+                if (!response.ok) {
+                    alert('Failed to update priority. Please try again.');
+                }
+            } catch (error) {
+                console.error('Error updating priority:', error);
+                alert('Failed to update priority. Please try again.');
+            }
+        });
+    });
+
+    // Handle quick add task
+    const quickAddForm = document.getElementById('quick-add-task-form');
+    const saveQuickTaskBtn = document.getElementById('save-quick-task');
+
+    if (saveQuickTaskBtn) {
+        saveQuickTaskBtn.addEventListener('click', async function() {
+            const title = document.getElementById('task-title').value;
+            const priority = document.getElementById('task-priority').value;
+            const dueDate = document.getElementById('task-due-date').value;
+            const departmentIdInput = document.getElementById('task-department-id');
+            const departmentId = departmentIdInput ? departmentIdInput.value : null;
+            const assignTo = document.getElementById('task-assign-to').value;
+
+            if (!title.trim()) {
+                alert('Please enter a task title');
+                return;
+            }
+
+            // Parse assignment (user:123 or agent:456)
+            let assignedToId = null;
+            let assignedToAgentId = null;
+            if (assignTo) {
+                const [type, id] = assignTo.split(':');
+                if (type === 'user') {
+                    assignedToId = parseInt(id);
+                } else if (type === 'agent') {
+                    assignedToAgentId = parseInt(id);
+                }
+            }
+
+            try {
+                const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+                const response = await fetch('/tasks/create', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify({
+                        title: title,
+                        priority: priority,
+                        due_date: dueDate || null,
+                        department_id: departmentId,
+                        assigned_to_id: assignedToId,
+                        assigned_to_agent_id: assignedToAgentId
+                    })
+                });
+
+                if (response.ok) {
+                    // Close modal and reload page to show new task
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('quickAddTaskModal'));
+                    modal.hide();
+                    location.reload();
+                } else {
+                    alert('Failed to create task. Please try again.');
+                }
+            } catch (error) {
+                console.error('Error creating task:', error);
+                alert('Failed to create task. Please try again.');
+            }
+        });
+    }
+});
+</script>

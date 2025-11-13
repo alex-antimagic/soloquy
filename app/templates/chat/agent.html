@@ -1,0 +1,619 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<div class="chat-container">
+    <!-- Chat Main Area -->
+    <div class="chat-main">
+        <div class="container-fluid h-100 d-flex flex-column">
+            <!-- Chat Header -->
+            <div class="border-bottom pb-3 mb-3">
+                <h4 class="mb-1">{{ agent.name }}</h4>
+                <p class="text-muted small mb-0">
+                    <span class="user-status online"></span>
+                    {{ agent.department.name }} Department
+                </p>
+            </div>
+
+            <!-- Messages Area -->
+            <div class="flex-grow-1 overflow-auto mb-3" id="messages-container">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="message">
+                    <div class="message-avatar">
+                        {% if message.is_from_agent() and message.agent and message.agent.avatar_url %}
+                            <img src="{{ message.agent.avatar_url }}" alt="{{ message.agent.name }}" class="rounded" width="36" height="36">
+                            <span class="avatar-status online"></span>
+                        {% else %}
+                            <i class="bi bi-person-square fs-2"></i>
+                        {% endif %}
+                    </div>
+                    <div class="message-content">
+                        <div class="message-header">
+                            <span class="message-author">{{ message.get_sender_name() }}</span>
+                            <span class="message-time">{{ message.created_at.strftime('%I:%M %p') }}</span>
+                        </div>
+                        <div class="message-body">{{ message.content | format_message }}</div>
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="text-center text-muted py-5">
+                <i class="bi bi-chat-dots fs-1 d-block mb-3"></i>
+                <p>Start a conversation with {{ agent.name }}</p>
+                <p class="small">{{ agent.description }}</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Message Input -->
+    <div class="chat-input">
+        <form id="message-form">
+            <div class="input-group">
+                <input type="text"
+                       class="form-control"
+                       id="message-input"
+                       placeholder="Message {{ agent.name }}..."
+                       autocomplete="off"
+                       required>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-send"></i> Send
+                </button>
+            </div>
+        </form>
+    </div>
+        </div>
+    </div>
+
+    <!-- Tasks Sidebar -->
+    {% include 'components/tasks_sidebar.html' %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const messageForm = document.getElementById('message-form');
+    const messageInput = document.getElementById('message-input');
+    const messagesContainer = document.getElementById('messages-container');
+
+    // Notification sound
+    const notificationSound = new Audio('{{ url_for("static", filename="pop.mp3") }}');
+
+    // Scroll to bottom of messages
+    function scrollToBottom() {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+    scrollToBottom();
+
+    // Real-time message updates via Socket.IO
+    const currentUserId = {{ current_user.id }};
+    const agentId = {{ agent.id }};
+    const conversationId = `agent_${agentId}_user_${currentUserId}`;
+
+    let socket = null;
+
+    function connectSocket() {
+        if (socket) {
+            socket.disconnect();
+        }
+
+        socket = io({
+            transports: ['websocket', 'polling']
+        });
+
+        socket.on('connect', () => {
+            console.log('Socket.IO connected');
+            // Join the conversation room
+            socket.emit('join_conversation', { conversation_id: conversationId });
+        });
+
+        socket.on('joined', (data) => {
+            console.log('Joined conversation:', data);
+        });
+
+        socket.on('new_message', (messageData) => {
+            console.log('Received new message:', messageData);
+
+            // Only add if message is from the agent (user already sees their own message)
+            if (messageData.agent_id) {
+                addAgentMessageToUI(messageData);
+                // Play notification sound
+                notificationSound.play().catch(e => console.log('Audio play failed:', e));
+            }
+        });
+
+        socket.on('typing', (typingData) => {
+            console.log('Agent typing:', typingData);
+
+            if (typingData.is_typing) {
+                showTypingIndicator(typingData.user_name);
+            } else {
+                hideTypingIndicator();
+            }
+        });
+
+        socket.on('disconnect', () => {
+            console.log('Socket.IO disconnected');
+        });
+
+        socket.on('connect_error', (error) => {
+            console.error('Socket.IO connection error:', error);
+        });
+    }
+
+    // Start Socket.IO connection
+    connectSocket();
+
+    // Cleanup function to close connections
+    function cleanupConnections() {
+        console.log('Cleaning up Socket.IO connections');
+        if (socket) {
+            socket.emit('leave_conversation', { conversation_id: conversationId });
+            socket.disconnect();
+            socket = null;
+        }
+    }
+
+    // Close Socket.IO connection when page unloads
+    window.addEventListener('beforeunload', cleanupConnections);
+    window.addEventListener('pagehide', cleanupConnections);
+
+    // Close connections when clicking any link
+    document.addEventListener('click', (e) => {
+        const link = e.target.closest('a');
+        if (link && link.href && !link.target) {
+            console.log('Link clicked, closing Socket.IO connection');
+            cleanupConnections();
+        }
+    }, true);
+
+    // Escape HTML to prevent XSS
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // Apply inline markdown-style formatting
+    function applyInlineFormatting(text) {
+        // Bold: **text** or __text__
+        text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        text = text.replace(/__(.+?)__/g, '<strong>$1</strong>');
+
+        // Italic: *text* or _text_
+        text = text.replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, '<em>$1</em>');
+        text = text.replace(/(?<!_)_(?!_)(.+?)(?<!_)_(?!_)/g, '<em>$1</em>');
+
+        // Code: `text`
+        text = text.replace(/`(.+?)`/g, '<code>$1</code>');
+
+        // Strikethrough: ~~text~~
+        text = text.replace(/~~(.+?)~~/g, '<del>$1</del>');
+
+        return text;
+    }
+
+    // Full message formatting (matches server-side format_message_content)
+    function formatMessageContent(content) {
+        if (!content) return '';
+
+        const lines = content.split('\n');
+        const formattedLines = [];
+        let inList = false;
+        let listType = null;
+
+        for (const line of lines) {
+            const stripped = line.trim();
+
+            // Check for bullet points
+            const bulletMatch = stripped.match(/^[-*•]\s+(.+)$/);
+            if (bulletMatch) {
+                if (!inList || listType !== 'ul') {
+                    if (inList) formattedLines.push(`</${listType}>`);
+                    formattedLines.push('<ul class="message-list">');
+                    inList = true;
+                    listType = 'ul';
+                }
+                formattedLines.push(`<li>${applyInlineFormatting(escapeHtml(bulletMatch[1]))}</li>`);
+                continue;
+            }
+
+            // Check for numbered lists
+            const numberedMatch = stripped.match(/^(\d+)\.\s+(.+)$/);
+            if (numberedMatch) {
+                if (!inList || listType !== 'ol') {
+                    if (inList) formattedLines.push(`</${listType}>`);
+                    formattedLines.push('<ol class="message-list">');
+                    inList = true;
+                    listType = 'ol';
+                }
+                formattedLines.push(`<li>${applyInlineFormatting(escapeHtml(numberedMatch[2]))}</li>`);
+                continue;
+            }
+
+            // Regular line
+            if (inList) {
+                formattedLines.push(`</${listType}>`);
+                inList = false;
+                listType = null;
+            }
+
+            if (stripped) {
+                formattedLines.push(`<p class="message-paragraph">${applyInlineFormatting(escapeHtml(stripped))}</p>`);
+            } else {
+                formattedLines.push('<br>');
+            }
+        }
+
+        // Close any open list
+        if (inList) {
+            formattedLines.push(`</${listType}>`);
+        }
+
+        return formattedLines.join('');
+    }
+
+    // Add message to UI
+    function addMessageToUI(message, isAgent = false) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'message';
+
+        const agentAvatarUrl = '{{ agent.avatar_url }}';
+        let avatar = '<i class="bi bi-person-square fs-2"></i>';
+        let statusHtml = '';
+        if (isAgent && agentAvatarUrl) {
+            avatar = `<img src="${agentAvatarUrl}" alt="{{ agent.name }}" class="rounded" width="36" height="36">`;
+            statusHtml = '<span class="avatar-status online"></span>';
+        }
+        const time = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+
+        // Build task cards if agent mentioned any tasks
+        let taskCardsHtml = '';
+        if (isAgent && message.mentioned_tasks && message.mentioned_tasks.length > 0) {
+            taskCardsHtml = '<div class="mt-2">';
+            message.mentioned_tasks.forEach(task => {
+                const priorityClass = task.priority === 'high' ? 'danger' : task.priority === 'medium' ? 'primary' : 'secondary';
+                const statusClass = task.status === 'completed' ? 'success' : task.status === 'in_progress' ? 'info' : 'secondary';
+                const overdueTag = task.is_overdue ? '<span class="badge bg-danger ms-1">Overdue</span>' : '';
+
+                taskCardsHtml += `
+                    <div class="card border-start border-${priorityClass} border-3 mb-2" style="background-color: var(--bs-secondary-bg);">
+                        <div class="card-body py-2 px-3">
+                            <div class="d-flex justify-content-between align-items-start mb-1">
+                                <div class="flex-grow-1">
+                                    <small class="text-muted d-block mb-1">
+                                        <i class="bi bi-check2-square"></i> Referenced Task
+                                    </small>
+                                    <strong>${escapeHtml(task.title)}</strong>
+                                    <span class="badge bg-${statusClass} ms-2">${task.status}</span>
+                                    ${overdueTag}
+                                    ${task.due_date ? `<span class="text-muted small ms-2"><i class="bi bi-calendar"></i> ${new Date(task.due_date).toLocaleDateString()}</span>` : ''}
+                                </div>
+                            </div>
+                            ${task.description ? `<p class="text-muted small mb-2">${escapeHtml(task.description)}</p>` : ''}
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-sm btn-success" onclick="completeTask(${task.id})">
+                                    <i class="bi bi-check"></i> Complete
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary" onclick="viewTask(${task.id})">
+                                    <i class="bi bi-eye"></i> View
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            taskCardsHtml += '</div>';
+        }
+
+        messageDiv.innerHTML = `
+            <div class="message-avatar">${avatar}${statusHtml}</div>
+            <div class="message-content">
+                <div class="message-header">
+                    <span class="message-author">${escapeHtml(message.sender)}</span>
+                    <span class="message-time">${time}</span>
+                </div>
+                <div class="message-body">${formatMessageContent(message.content)}</div>
+                ${taskCardsHtml}
+            </div>
+        `;
+
+        messagesContainer.appendChild(messageDiv);
+        scrollToBottom();
+        return messageDiv;
+    }
+
+    // Add agent message from SSE
+    function addAgentMessageToUI(messageData) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'message';
+
+        const agentAvatarUrl = '{{ agent.avatar_url }}';
+        const avatar = agentAvatarUrl
+            ? `<img src="${agentAvatarUrl}" alt="{{ agent.name }}" class="rounded" width="36" height="36">`
+            : '<i class="bi bi-person-square fs-2"></i>';
+        const statusHtml = agentAvatarUrl ? '<span class="avatar-status online"></span>' : '';
+        const time = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+
+        // Build task cards if agent mentioned any tasks
+        let taskCardsHtml = '';
+        if (messageData.mentioned_tasks && messageData.mentioned_tasks.length > 0) {
+            taskCardsHtml = '<div class="mt-2">';
+            messageData.mentioned_tasks.forEach(task => {
+                const priorityClass = task.priority === 'high' ? 'danger' : task.priority === 'medium' ? 'primary' : 'secondary';
+                const statusClass = task.status === 'completed' ? 'success' : task.status === 'in_progress' ? 'info' : 'secondary';
+                const overdueTag = task.is_overdue ? '<span class="badge bg-danger ms-1">Overdue</span>' : '';
+
+                taskCardsHtml += `
+                    <div class="card border-start border-${priorityClass} border-3 mb-2" style="background-color: var(--bs-secondary-bg);">
+                        <div class="card-body py-2 px-3">
+                            <div class="d-flex justify-content-between align-items-start mb-1">
+                                <div class="flex-grow-1">
+                                    <small class="text-muted d-block mb-1">
+                                        <i class="bi bi-check2-square"></i> Referenced Task
+                                    </small>
+                                    <strong>${escapeHtml(task.title)}</strong>
+                                    <span class="badge bg-${statusClass} ms-2">${task.status}</span>
+                                    ${overdueTag}
+                                    ${task.due_date ? `<span class="text-muted small ms-2"><i class="bi bi-calendar"></i> ${new Date(task.due_date).toLocaleDateString()}</span>` : ''}
+                                </div>
+                            </div>
+                            ${task.description ? `<p class="text-muted small mb-2">${escapeHtml(task.description)}</p>` : ''}
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-sm btn-success" onclick="completeTask(${task.id})">
+                                    <i class="bi bi-check"></i> Complete
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary" onclick="viewTask(${task.id})">
+                                    <i class="bi bi-eye"></i> View
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            taskCardsHtml += '</div>';
+        }
+
+        messageDiv.innerHTML = `
+            <div class="message-avatar">${avatar}${statusHtml}</div>
+            <div class="message-content">
+                <div class="message-header">
+                    <span class="message-author">${escapeHtml(messageData.sender)}</span>
+                    <span class="message-time">${time}</span>
+                </div>
+                <div class="message-body">${formatMessageContent(messageData.content)}</div>
+                ${taskCardsHtml}
+            </div>
+        `;
+
+        messagesContainer.appendChild(messageDiv);
+        scrollToBottom();
+        return messageDiv;
+    }
+
+    // Add typing indicator
+    function addTypingIndicator(agentName) {
+        const typingDiv = document.createElement('div');
+        typingDiv.className = 'message typing-indicator';
+        typingDiv.id = 'typing-indicator';
+
+        const agentAvatarUrl = '{{ agent.avatar_url }}';
+        const avatarHtml = agentAvatarUrl
+            ? `<img src="${agentAvatarUrl}" alt="{{ agent.name }}" class="rounded" width="36" height="36">`
+            : '<i class="bi bi-person-square fs-2"></i>';
+        const statusHtml = agentAvatarUrl ? '<span class="avatar-status online"></span>' : '';
+
+        typingDiv.innerHTML = `
+            <div class="message-avatar">
+                ${avatarHtml}${statusHtml}
+            </div>
+            <div class="message-content">
+                <div class="message-header">
+                    <span class="message-author">${escapeHtml(agentName)}</span>
+                </div>
+                <div class="typing-dots">
+                    <span class="typing-dot"></span>
+                    <span class="typing-dot"></span>
+                    <span class="typing-dot"></span>
+                </div>
+            </div>
+        `;
+
+        messagesContainer.appendChild(typingDiv);
+        scrollToBottom();
+        return typingDiv;
+    }
+
+    // Remove typing indicator
+    function removeTypingIndicator() {
+        const indicator = document.getElementById('typing-indicator');
+        if (indicator) {
+            indicator.remove();
+        }
+    }
+
+    // User typing indicator management (separate from agent's thinking indicator)
+    let userTypingTimeout = null;
+
+    function showTypingIndicator(userName) {
+        // Remove existing user typing indicator if any
+        hideTypingIndicator();
+
+        const typingDiv = document.createElement('div');
+        typingDiv.className = 'message user-typing-indicator';
+        typingDiv.id = 'user-typing-indicator';
+
+        typingDiv.innerHTML = `
+            <div class="message-avatar">
+                <i class="bi bi-person-square fs-2"></i>
+            </div>
+            <div class="message-content">
+                <div class="message-header">
+                    <span class="message-author text-muted">${escapeHtml(userName)} is typing...</span>
+                </div>
+                <div class="typing-dots">
+                    <span class="typing-dot"></span>
+                    <span class="typing-dot"></span>
+                    <span class="typing-dot"></span>
+                </div>
+            </div>
+        `;
+
+        messagesContainer.appendChild(typingDiv);
+        scrollToBottom();
+
+        // Auto-hide after 3 seconds
+        if (userTypingTimeout) clearTimeout(userTypingTimeout);
+        userTypingTimeout = setTimeout(hideTypingIndicator, 3000);
+    }
+
+    function hideTypingIndicator() {
+        const indicator = document.getElementById('user-typing-indicator');
+        if (indicator) {
+            indicator.remove();
+        }
+        if (userTypingTimeout) {
+            clearTimeout(userTypingTimeout);
+            userTypingTimeout = null;
+        }
+    }
+
+    // Debounced typing indicator
+    let typingDebounce = null;
+    let isCurrentlyTyping = false;
+
+    async function sendTypingStatus(isTyping) {
+        try {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+            await fetch('/chat/typing', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({
+                    conversation_id: conversationId,
+                    is_typing: isTyping
+                })
+            });
+        } catch (error) {
+            console.error('Error sending typing status:', error);
+        }
+    }
+
+    messageInput.addEventListener('input', () => {
+        // User started typing - send typing=true if not already sent
+        if (!isCurrentlyTyping) {
+            isCurrentlyTyping = true;
+            sendTypingStatus(true);
+        }
+
+        // Reset debounce timer - after 1 second of no typing, send typing=false
+        if (typingDebounce) clearTimeout(typingDebounce);
+        typingDebounce = setTimeout(() => {
+            isCurrentlyTyping = false;
+            sendTypingStatus(false);
+        }, 1000);
+    });
+
+    // Handle message submission
+    messageForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const content = messageInput.value.trim();
+        if (!content) return;
+
+        // Clear typing status
+        if (typingDebounce) clearTimeout(typingDebounce);
+        if (isCurrentlyTyping) {
+            isCurrentlyTyping = false;
+            sendTypingStatus(false);
+        }
+
+        // Immediately show user message
+        const userMessage = {
+            sender: '{{ current_user.full_name }}',
+            content: content
+        };
+        addMessageToUI(userMessage, false);
+
+        // Clear input immediately
+        messageInput.value = '';
+
+        // Wait a random delay (500ms to 2000ms) before showing typing indicator
+        const randomDelay = Math.random() * 1500 + 500; // 500-2000ms
+        await new Promise(resolve => setTimeout(resolve, randomDelay));
+
+        // Show typing indicator
+        const agentName = '{{ agent.name }}';
+        addTypingIndicator(agentName);
+
+        try {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+            const response = await fetch('/chat/send', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({
+                    content: content,
+                    department_id: {{ agent.department_id }},
+                    agent_id: {{ agent.id }}
+                })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+
+                // Simulate typing delay for realism
+                await new Promise(resolve => setTimeout(resolve, 800));
+
+                // Remove typing indicator
+                removeTypingIndicator();
+
+                // NOTE: Don't add agent response here - SSE will handle it
+                // The agent response comes via SSE broadcast to avoid duplicate messages
+            } else {
+                removeTypingIndicator();
+                throw new Error('Failed to send message');
+            }
+        } catch (error) {
+            removeTypingIndicator();
+            console.error('Error sending message:', error);
+            alert('Failed to send message. Please try again.');
+        }
+
+        // Keep input focused
+        messageInput.focus();
+    });
+
+    // Quick action: Complete task
+    async function completeTask(taskId) {
+        try {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+            const response = await fetch(`/tasks/${taskId}/complete`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                }
+            });
+
+            if (response.ok) {
+                // Reload the page to update task lists and agent context
+                window.location.reload();
+            } else {
+                alert('Failed to complete task. Please try again.');
+            }
+        } catch (error) {
+            console.error('Error completing task:', error);
+            alert('Failed to complete task. Please try again.');
+        }
+    }
+
+    // Quick action: View task
+    function viewTask(taskId) {
+        window.location.href = `/tasks/${taskId}`;
+    }
+</script>
+{% endblock %}

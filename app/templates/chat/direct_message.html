@@ -1,0 +1,528 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<div class="chat-container">
+    <!-- Chat Main Area -->
+    <div class="chat-main">
+        <div class="container-fluid h-100 d-flex flex-column">
+            <!-- Chat Header -->
+            <div class="border-bottom pb-3 mb-3">
+                <h4 class="mb-1">{{ recipient_name }}</h4>
+                <p class="text-muted small mb-0">
+                    <span class="user-status {{ 'online' if recipient_is_online else 'offline' }}"></span>
+                    {{ recipient_subtitle }}
+                </p>
+            </div>
+
+            <!-- Messages Area -->
+            <div class="flex-grow-1 overflow-auto mb-3" id="messages-container">
+                {% if messages %}
+                    {% for message in messages %}
+                        {% set is_from_me = message.sender_id == current_user.id %}
+                        <div class="message {{ 'message-right' if is_from_me else 'message-left' }}">
+                            <div class="message-avatar">
+                                {% if is_from_me %}
+                                    <i class="bi bi-person-square"></i>
+                                {% elif is_agent and message.agent and message.agent.avatar_url %}
+                                    <img src="{{ message.agent.avatar_url }}" alt="{{ message.agent.name }}">
+                                    <span class="avatar-status online"></span>
+                                {% else %}
+                                    <i class="bi bi-person-square"></i>
+                                    {% if not is_agent %}
+                                        <span class="avatar-status {{ 'online' if recipient_is_online else 'offline' }}"></span>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                            <div class="message-bubble">
+                                <div class="message-header">
+                                    <span class="message-author">{{ message.get_sender_name() }}</span>
+                                    <span class="message-time">{{ message.created_at.strftime('%I:%M %p') }}</span>
+                                </div>
+                                <div class="message-content">
+                                    <div class="message-body">{{ message.content | format_message }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center text-muted py-5">
+                        <i class="bi bi-chat-dots fs-1 d-block mb-3"></i>
+                        <p>Start a conversation with {{ recipient_name }}</p>
+                        {% if is_agent and agent_description %}
+                            <p class="small">{{ agent_description }}</p>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Message Input -->
+            <div class="chat-input">
+                <form id="message-form">
+                    <div class="input-group">
+                        <input type="text"
+                               class="form-control"
+                               id="message-input"
+                               placeholder="Message {{ recipient_name }}..."
+                               autocomplete="off"
+                               required>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-send"></i> Send
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tasks Sidebar -->
+    {% include 'components/tasks_sidebar.html' %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const messageForm = document.getElementById('message-form');
+    const messageInput = document.getElementById('message-input');
+    const messagesContainer = document.getElementById('messages-container');
+
+    // Conversation context
+    const isAgent = {{ 'true' if is_agent else 'false' }};
+    const currentUserId = {{ current_user.id }};
+    const recipientId = {{ recipient_id }};
+    const recipientName = '{{ recipient_name }}';
+    {% if is_agent %}
+    const departmentId = {{ department_id }};
+    const agentAvatarUrl = '{{ agent_avatar_url if agent_avatar_url else '' }}';
+    {% endif %}
+
+    // Notification sound
+    const notificationSound = new Audio('{{ url_for("static", filename="pop.mp3") }}');
+
+    // Scroll to bottom of messages
+    function scrollToBottom() {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+    scrollToBottom();
+
+    // Real-time message updates via Server-Sent Events (SSE)
+    let conversationId, conversationType;
+    {% if is_agent %}
+    conversationId = `agent_${recipientId}_user_${currentUserId}`;
+    conversationType = 'agent';
+    {% else %}
+    const userIds = [currentUserId, recipientId].sort();
+    conversationId = `user_${userIds[0]}_${userIds[1]}`;
+    conversationType = 'user';
+    {% endif %}
+
+    let socket = null;
+
+    function connectSocket() {
+        // Close any existing connection
+        if (socket) {
+            console.log('Closing existing Socket.IO connection');
+            socket.disconnect();
+            socket = null;
+        }
+
+        console.log('Opening new Socket.IO connection:', conversationId);
+        socket = io({
+            transports: ['websocket', 'polling']
+        });
+
+        socket.on('connect', () => {
+            console.log('Socket.IO connected');
+            // Join the conversation room
+            socket.emit('join_conversation', { conversation_id: conversationId });
+        });
+
+        socket.on('joined', (data) => {
+            console.log('Joined conversation:', data);
+        });
+
+        socket.on('new_message', (messageData) => {
+            console.log('Received new message:', messageData);
+
+            // Only add if message is from the other person
+            {% if is_agent %}
+            if (messageData.agent_id) {
+                addMessageToUI(messageData, false);
+                notificationSound.play().catch(e => console.log('Audio play failed:', e));
+            }
+            {% else %}
+            if (messageData.sender_id !== currentUserId) {
+                addMessageToUI(messageData, false);
+                notificationSound.play().catch(e => console.log('Audio play failed:', e));
+            }
+            {% endif %}
+        });
+
+        socket.on('typing', (typingData) => {
+            console.log('Typing:', typingData);
+
+            if (typingData.is_typing) {
+                showTypingIndicator(typingData.user_name);
+            } else {
+                hideTypingIndicator();
+            }
+        });
+
+        {% if not is_agent %}
+        socket.on('presence', (presenceData) => {
+            console.log('Presence update:', presenceData);
+
+            if (presenceData.user_id === recipientId) {
+                updateUserStatus(presenceData.status);
+            }
+        });
+        {% endif %}
+
+        socket.on('disconnect', () => {
+            console.log('Socket.IO disconnected');
+        });
+
+        socket.on('connect_error', (error) => {
+            console.error('Socket.IO connection error:', error);
+        });
+    }
+
+    connectSocket();
+
+    // Cleanup function to close connections
+    function cleanupConnections() {
+        console.log('Cleaning up Socket.IO connections');
+        if (socket) {
+            socket.emit('leave_conversation', { conversation_id: conversationId });
+            socket.disconnect();
+            socket = null;
+        }
+    }
+
+    // Multiple event listeners for maximum reliability
+    window.addEventListener('beforeunload', cleanupConnections);
+    window.addEventListener('pagehide', cleanupConnections);
+
+    // AGGRESSIVE: Close connections immediately when clicking any link
+    document.addEventListener('click', (e) => {
+        const link = e.target.closest('a');
+        if (link && link.href && !link.target) {
+            // Navigating to another page - close connections immediately
+            console.log('Link clicked, pre-emptively closing SSE');
+            cleanupConnections();
+        }
+    }, true); // Use capture phase to run before other handlers
+
+    // Also cleanup when page visibility changes (user switches tabs/windows)
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+            console.log('Page hidden, closing SSE');
+            cleanupConnections();
+        } else {
+            console.log('Page visible, reconnecting SSE');
+            connectSSE();
+        }
+    });
+
+    // Escape HTML to prevent XSS
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // Apply inline markdown-style formatting
+    function applyInlineFormatting(text) {
+        text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        text = text.replace(/__(.+?)__/g, '<strong>$1</strong>');
+        text = text.replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, '<em>$1</em>');
+        text = text.replace(/(?<!_)_(?!_)(.+?)(?<!_)_(?!_)/g, '<em>$1</em>');
+        text = text.replace(/`(.+?)`/g, '<code>$1</code>');
+        text = text.replace(/~~(.+?)~~/g, '<del>$1</del>');
+        return text;
+    }
+
+    function formatMessageContent(content) {
+        if (!content) return '';
+
+        const lines = content.split('\n');
+        const formattedLines = [];
+        let inList = false;
+        let listType = null;
+
+        for (const line of lines) {
+            const stripped = line.trim();
+
+            const bulletMatch = stripped.match(/^[-*•]\s+(.+)$/);
+            if (bulletMatch) {
+                if (!inList || listType !== 'ul') {
+                    if (inList) formattedLines.push(`</${listType}>`);
+                    formattedLines.push('<ul class="message-list">');
+                    inList = true;
+                    listType = 'ul';
+                }
+                formattedLines.push(`<li>${applyInlineFormatting(escapeHtml(bulletMatch[1]))}</li>`);
+                continue;
+            }
+
+            const numberedMatch = stripped.match(/^(\d+)\.\s+(.+)$/);
+            if (numberedMatch) {
+                if (!inList || listType !== 'ol') {
+                    if (inList) formattedLines.push(`</${listType}>`);
+                    formattedLines.push('<ol class="message-list">');
+                    inList = true;
+                    listType = 'ol';
+                }
+                formattedLines.push(`<li>${applyInlineFormatting(escapeHtml(numberedMatch[2]))}</li>`);
+                continue;
+            }
+
+            if (inList) {
+                formattedLines.push(`</${listType}>`);
+                inList = false;
+                listType = null;
+            }
+
+            if (stripped) {
+                formattedLines.push(`<p class="message-paragraph">${applyInlineFormatting(escapeHtml(stripped))}</p>`);
+            } else {
+                formattedLines.push('<br>');
+            }
+        }
+
+        if (inList) {
+            formattedLines.push(`</${listType}>`);
+        }
+
+        return formattedLines.join('');
+    }
+
+    function addMessageToUI(message, isFromMe = false) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = isFromMe ? 'message message-right' : 'message message-left';
+
+        let avatar = '<i class="bi bi-person-square"></i>';
+        let statusHtml = '';
+
+        {% if is_agent %}
+        if (!isFromMe && agentAvatarUrl) {
+            avatar = `<img src="${agentAvatarUrl}" alt="${recipientName}">`;
+            statusHtml = '<span class="avatar-status online"></span>';
+        }
+        {% endif %}
+
+        const time = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+
+        messageDiv.innerHTML = `
+            <div class="message-avatar">${avatar}${statusHtml}</div>
+            <div class="message-bubble">
+                <div class="message-header">
+                    <span class="message-author">${escapeHtml(message.sender)}</span>
+                    <span class="message-time">${time}</span>
+                </div>
+                <div class="message-content">
+                    <div class="message-body">${formatMessageContent(message.content)}</div>
+                </div>
+            </div>
+        `;
+
+        messagesContainer.appendChild(messageDiv);
+        scrollToBottom();
+        return messageDiv;
+    }
+
+    let typingTimeout = null;
+
+    function showTypingIndicator(userName) {
+        hideTypingIndicator();
+
+        const typingDiv = document.createElement('div');
+        typingDiv.className = 'message message-left typing-indicator';
+        typingDiv.id = 'typing-indicator';
+
+        let avatar = '<i class="bi bi-person-square"></i>';
+        {% if is_agent %}
+        if (agentAvatarUrl) {
+            avatar = `<img src="${agentAvatarUrl}" alt="${recipientName}">`;
+        }
+        {% endif %}
+
+        typingDiv.innerHTML = `
+            <div class="message-avatar">${avatar}</div>
+            <div class="message-bubble">
+                <div class="message-header">
+                    <span class="message-author">${escapeHtml(userName)}</span>
+                    <span class="message-time text-muted">typing...</span>
+                </div>
+                <div class="message-content">
+                    <div class="typing-dots">
+                        <span class="typing-dot"></span>
+                        <span class="typing-dot"></span>
+                        <span class="typing-dot"></span>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        messagesContainer.appendChild(typingDiv);
+        scrollToBottom();
+
+        if (typingTimeout) clearTimeout(typingTimeout);
+        typingTimeout = setTimeout(hideTypingIndicator, 3000);
+    }
+
+    function hideTypingIndicator() {
+        const indicator = document.getElementById('typing-indicator');
+        if (indicator) {
+            indicator.remove();
+        }
+        if (typingTimeout) {
+            clearTimeout(typingTimeout);
+            typingTimeout = null;
+        }
+    }
+
+    {% if not is_agent %}
+    function updateUserStatus(status) {
+        const statusIndicator = document.querySelector('.user-status');
+        if (statusIndicator) {
+            statusIndicator.className = `user-status ${status}`;
+        }
+    }
+    {% endif %}
+
+    let typingDebounce = null;
+    let isCurrentlyTyping = false;
+
+    async function sendTypingStatus(isTyping) {
+        try {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+            await fetch('/chat/typing', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({
+                    conversation_id: conversationId,
+                    is_typing: isTyping
+                })
+            });
+        } catch (error) {
+            console.error('Error sending typing status:', error);
+        }
+    }
+
+    messageInput.addEventListener('input', () => {
+        if (!isCurrentlyTyping) {
+            isCurrentlyTyping = true;
+            sendTypingStatus(true);
+        }
+
+        if (typingDebounce) clearTimeout(typingDebounce);
+        typingDebounce = setTimeout(() => {
+            isCurrentlyTyping = false;
+            sendTypingStatus(false);
+        }, 1000);
+    });
+
+    messageForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const content = messageInput.value.trim();
+        if (!content) return;
+
+        if (typingDebounce) clearTimeout(typingDebounce);
+        if (isCurrentlyTyping) {
+            isCurrentlyTyping = false;
+            sendTypingStatus(false);
+        }
+
+        const userMessage = {
+            sender: '{{ current_user.full_name }}',
+            content: content
+        };
+        addMessageToUI(userMessage, true);
+
+        messageInput.value = '';
+
+        {% if is_agent %}
+        const randomDelay = Math.random() * 1500 + 500;
+        await new Promise(resolve => setTimeout(resolve, randomDelay));
+        showTypingIndicator(recipientName);
+        {% endif %}
+
+        try {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+            const response = await fetch('/chat/send', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({
+                    content: content,
+                    {% if is_agent %}
+                    department_id: departmentId,
+                    agent_id: recipientId
+                    {% else %}
+                    recipient_id: recipientId
+                    {% endif %}
+                })
+            });
+
+            if (response.ok) {
+                {% if is_agent %}
+                const data = await response.json();
+                await new Promise(resolve => setTimeout(resolve, 800));
+                hideTypingIndicator();
+
+                if (data.agent_response) {
+                    addMessageToUI(data.agent_response, false);
+                }
+                {% endif %}
+            } else {
+                {% if is_agent %}
+                hideTypingIndicator();
+                {% endif %}
+                throw new Error('Failed to send message');
+            }
+        } catch (error) {
+            {% if is_agent %}
+            hideTypingIndicator();
+            {% endif %}
+            console.error('Error sending message:', error);
+            alert('Failed to send message. Please try again.');
+        }
+
+        messageInput.focus();
+    });
+
+    {% if is_agent %}
+    async function completeTask(taskId) {
+        try {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+            const response = await fetch(`/tasks/${taskId}/complete`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                }
+            });
+
+            if (response.ok) {
+                window.location.reload();
+            } else {
+                alert('Failed to complete task. Please try again.');
+            }
+        } catch (error) {
+            console.error('Error completing task:', error);
+            alert('Failed to complete task. Please try again.');
+        }
+    }
+
+    function viewTask(taskId) {
+        window.location.href = `/tasks/${taskId}`;
+    }
+    {% endif %}
+</script>
+{% endblock %}

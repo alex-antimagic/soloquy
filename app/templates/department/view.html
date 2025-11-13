@@ -1,0 +1,246 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Department Header -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="d-flex align-items-center mb-2">
+                <span class="dept-badge me-3" style="background-color: {{ department.color }}; width: 48px; height: 48px; font-size: 24px; display: flex; align-items: center; justify-content: center;">
+                    {{ department.icon if department.icon else '' }}
+                </span>
+                <div>
+                    <h2 class="mb-0">{{ department.name }}</h2>
+                    <p class="text-muted mb-0">{{ department.description }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('department.edit', department_id=department.id) }}" class="btn btn-outline-secondary">
+                <i class="bi bi-pencil"></i> Edit Department
+            </a>
+        </div>
+    </div>
+
+    <!-- Metrics Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <i class="bi bi-chat-dots fs-2 text-primary"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h6 class="mb-0 text-muted">Total Messages</h6>
+                            <h3 class="mb-0">{{ total_messages }}</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <i class="bi bi-people fs-2 text-success"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h6 class="mb-0 text-muted">Active Members</h6>
+                            <h3 class="mb-0">{{ active_members|length }}</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <i class="bi bi-robot fs-2 text-info"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h6 class="mb-0 text-muted">AI Interactions</h6>
+                            <h3 class="mb-0">{{ ai_interactions }}</h3>
+                            <small class="text-muted">Last 7 days</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <i class="bi bi-graph-up fs-2 text-warning"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h6 class="mb-0 text-muted">Weekly Activity</h6>
+                            <h3 class="mb-0">{{ weekly_activity }}</h3>
+                            <small class="text-muted">messages</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Content Tabs -->
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <ul class="nav nav-tabs card-header-tabs">
+                        <li class="nav-item">
+                            <a class="nav-link active" href="#recent" data-bs-toggle="tab">Recent Activity</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#members" data-bs-toggle="tab">Team Members</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#agents" data-bs-toggle="tab">AI Agents</a>
+                        </li>
+                    </ul>
+                </div>
+                <div class="card-body">
+                    <div class="tab-content">
+                        <!-- Recent Activity Tab -->
+                        <div class="tab-pane fade show active" id="recent">
+                            <h5>Recent Messages</h5>
+                            {% if recent_messages %}
+                                <div class="list-group list-group-flush">
+                                    {% for message in recent_messages %}
+                                        <div class="list-group-item">
+                                            <div class="d-flex w-100 justify-content-between">
+                                                <h6 class="mb-1">{{ message.get_sender_name() }}</h6>
+                                                <small class="text-muted">{{ message.created_at.strftime('%I:%M %p') }}</small>
+                                            </div>
+                                            <p class="mb-1">{{ message.content[:100] }}{% if message.content|length > 100 %}...{% endif %}</p>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <p class="text-muted">No recent activity in this department.</p>
+                            {% endif %}
+                        </div>
+
+                        <!-- Team Members Tab -->
+                        <div class="tab-pane fade" id="members">
+                            <h5>Active Members</h5>
+                            {% if active_members %}
+                                <div class="list-group list-group-flush">
+                                    {% for member in active_members %}
+                                        <div class="list-group-item">
+                                            <div class="d-flex align-items-center">
+                                                <span class="user-status {{ 'online' if member.is_online else 'offline' }} me-2"></span>
+                                                <strong>{{ member.full_name }}</strong>
+                                                <span class="text-muted ms-2">{{ member.email }}</span>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <p class="text-muted">No active members yet.</p>
+                            {% endif %}
+                        </div>
+
+                        <!-- AI Agents Tab -->
+                        <div class="tab-pane fade" id="agents">
+                            <h5>Department AI Agents</h5>
+                            {% for dept_agent in department.get_agents() %}
+                                <div class="card mb-3">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <div>
+                                                <h6 class="card-title mb-1">{{ dept_agent.name }}
+                                                    {% if dept_agent.is_primary %}
+                                                        <span class="badge bg-primary ms-2" style="font-size: 0.7rem;">PRIMARY</span>
+                                                    {% endif %}
+                                                    {% if not dept_agent.is_active %}
+                                                        <span class="badge bg-secondary ms-2" style="font-size: 0.7rem;">DISABLED</span>
+                                                    {% endif %}
+                                                </h6>
+                                                <p class="card-text text-muted small mb-0">{{ dept_agent.description }}</p>
+                                            </div>
+                                            {% if current_user.get_role_in_tenant(current_tenant.id) in ['owner', 'admin'] %}
+                                            <a href="{{ url_for('department.edit_agent', agent_id=dept_agent.id) }}"
+                                               class="btn btn-sm btn-outline-secondary"
+                                               title="Edit Agent">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                            {% endif %}
+                                        </div>
+                                        <div class="mt-2">
+                                            <small class="text-muted me-3">
+                                                <i class="bi bi-cpu"></i> {{ dept_agent.model.replace('claude-', '').replace('-20241022', '').replace('-20240229', '').title() }}
+                                            </small>
+                                            <small class="text-muted">
+                                                <i class="bi bi-thermometer-half"></i> Temp: {{ dept_agent.temperature }}
+                                            </small>
+                                        </div>
+                                        <div class="mt-3">
+                                            <a href="{{ url_for('chat.agent_chat', agent_id=dept_agent.id) }}" class="btn btn-sm btn-primary">
+                                                <i class="bi bi-chat-dots"></i> Chat
+                                            </a>
+                                            {% if current_user.get_role_in_tenant(current_tenant.id) in ['owner', 'admin'] %}
+                                            <a href="{{ url_for('department.edit_agent', agent_id=dept_agent.id) }}" class="btn btn-sm btn-outline-secondary">
+                                                <i class="bi bi-gear"></i> Configure
+                                            </a>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-md-4">
+            <!-- Quick Actions -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h6 class="mb-0">Quick Actions</h6>
+                </div>
+                <div class="list-group list-group-flush">
+                    {% if agent %}
+                        <a href="{{ url_for('chat.agent_chat', agent_id=agent.id) }}" class="list-group-item list-group-item-action">
+                            <i class="bi bi-chat-dots"></i> Chat with {{ agent.name }}
+                        </a>
+                    {% endif %}
+                    <a href="{{ url_for('department.edit', department_id=department.id) }}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-gear"></i> Department Settings
+                    </a>
+                </div>
+            </div>
+
+            <!-- Department Info -->
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">Department Info</h6>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-5">Created:</dt>
+                        <dd class="col-sm-7">{{ department.created_at.strftime('%b %d, %Y') }}</dd>
+
+                        <dt class="col-sm-5">Slug:</dt>
+                        <dd class="col-sm-7">#{{ department.slug }}</dd>
+
+                        <dt class="col-sm-5">AI Agents:</dt>
+                        <dd class="col-sm-7">{{ department.get_agents()|length }}</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

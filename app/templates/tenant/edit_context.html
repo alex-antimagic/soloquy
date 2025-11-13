@@ -1,0 +1,214 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('tenant.settings') }}">Settings</a></li>
+                    <li class="breadcrumb-item active">Workspace Context</li>
+                </ol>
+            </nav>
+            <h2><i class="bi bi-file-text me-2"></i>Workspace Context</h2>
+            <p class="text-muted">Provide context about your {{ 'business' if current_tenant.company_size else 'workspace' }} to help AI agents understand your needs</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <form method="POST" action="{{ url_for('tenant.edit_context') }}">
+                {{ form.hidden_tag() }}
+
+                <!-- Context Editor Card -->
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="bi bi-pencil-square me-2"></i>Custom Context</h5>
+                        {% if current_tenant.custom_context %}
+                        <span class="badge bg-success">Context Provided</span>
+                        {% else %}
+                        <span class="badge bg-secondary">No Context Yet</span>
+                        {% endif %}
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            {{ form.custom_context.label(class="form-label") }}
+                            {{ form.custom_context(class="form-control" + (" is-invalid" if form.custom_context.errors else ""), rows=20, style="font-family: monospace; font-size: 14px;") }}
+                            {% if form.custom_context.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.custom_context.errors %}<div>{{ error }}</div>{% endfor %}
+                                </div>
+                            {% endif %}
+                            <small class="form-text text-muted">
+                                Supports Markdown formatting. This context will be automatically included in all agent conversations.
+                            </small>
+                        </div>
+
+                        <!-- Character Counter -->
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">
+                                <i class="bi bi-info-circle me-1"></i>
+                                <span id="charCount">0</span> characters
+                            </small>
+                            <small class="text-muted">
+                                Max: 10,000 characters
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Auto-Scraped Context (Read-Only) -->
+                {% if current_tenant.business_context %}
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="bi bi-globe me-2"></i>Auto-Scraped Context</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted small mb-2">
+                            This information was automatically gathered from your website and is read-only.
+                            It's automatically combined with your custom context.
+                        </p>
+                        <div class="auto-context-display p-3 rounded bg-light" style="max-height: 300px; overflow-y: auto;">
+                            <pre class="mb-0" style="white-space: pre-wrap; font-size: 13px;">{{ current_tenant.business_context }}</pre>
+                        </div>
+                        {% if current_tenant.context_scraped_at %}
+                        <small class="text-muted mt-2 d-block">
+                            <i class="bi bi-clock me-1"></i>
+                            Last updated: {{ current_tenant.context_scraped_at.strftime('%B %d, %Y at %I:%M %p') }}
+                        </small>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Action Buttons -->
+                <div class="d-flex justify-content-between mb-4">
+                    <a href="{{ url_for('tenant.settings') }}" class="btn btn-secondary">
+                        <i class="bi bi-arrow-left me-2"></i>Back to Settings
+                    </a>
+                    <div>
+                        <button type="button" class="btn btn-outline-danger me-2" id="clearBtn" {% if not current_tenant.custom_context %}disabled{% endif %}>
+                            <i class="bi bi-trash me-2"></i>Clear Context
+                        </button>
+                        {{ form.submit(class="btn btn-primary") }}
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Help Sidebar -->
+        <div class="col-lg-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-lightbulb me-2"></i>What to Include</h6>
+                </div>
+                <div class="card-body">
+                    <h6>For Businesses</h6>
+                    <ul class="small">
+                        <li>Company mission and values</li>
+                        <li>Products and services offered</li>
+                        <li>Target customers and markets</li>
+                        <li>Key team members and roles</li>
+                        <li>Current projects and goals</li>
+                        <li>Industry terminology and jargon</li>
+                        <li>Processes and workflows</li>
+                    </ul>
+
+                    <h6 class="mt-3">For Personal/Family</h6>
+                    <ul class="small">
+                        <li>Family members and relationships</li>
+                        <li>Important dates and events</li>
+                        <li>Hobbies and interests</li>
+                        <li>Goals and aspirations</li>
+                        <li>Preferences and routines</li>
+                        <li>Contact information</li>
+                    </ul>
+
+                    <h6 class="mt-3">Formatting Tips</h6>
+                    <ul class="small">
+                        <li>Use # for headings</li>
+                        <li>Use * or - for bullet points</li>
+                        <li>Use **bold** for emphasis</li>
+                        <li>Keep it organized and scannable</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-shield-check me-2"></i>Privacy & Security</h6>
+                </div>
+                <div class="card-body">
+                    <p class="small mb-2">
+                        Your context is:
+                    </p>
+                    <ul class="small">
+                        <li>Stored securely in your workspace</li>
+                        <li>Only accessible to workspace members</li>
+                        <li>Used to enhance AI agent responses</li>
+                        <li>Never shared with third parties</li>
+                        <li>Can be edited or deleted anytime</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .auto-context-display {
+        border: 1px solid #dee2e6;
+    }
+
+    [data-bs-theme="dark"] .auto-context-display {
+        background-color: rgba(255, 255, 255, 0.05) !important;
+        border-color: #374151;
+    }
+
+    #custom_context {
+        resize: vertical;
+        min-height: 400px;
+    }
+</style>
+
+<script>
+    // Character counter
+    const textarea = document.getElementById('custom_context');
+    const charCount = document.getElementById('charCount');
+
+    function updateCharCount() {
+        const count = textarea.value.length;
+        charCount.textContent = count.toLocaleString();
+
+        // Change color if approaching limit
+        if (count > 9000) {
+            charCount.classList.add('text-danger');
+            charCount.classList.remove('text-muted');
+        } else if (count > 8000) {
+            charCount.classList.add('text-warning');
+            charCount.classList.remove('text-muted', 'text-danger');
+        } else {
+            charCount.classList.add('text-muted');
+            charCount.classList.remove('text-warning', 'text-danger');
+        }
+    }
+
+    textarea.addEventListener('input', updateCharCount);
+    updateCharCount(); // Initial count
+
+    // Clear button
+    document.getElementById('clearBtn')?.addEventListener('click', function() {
+        if (confirm('Are you sure you want to clear all custom context? This cannot be undone.')) {
+            textarea.value = '';
+            updateCharCount();
+            document.getElementById('clearBtn').disabled = true;
+        }
+    });
+
+    // Enable clear button when typing
+    textarea.addEventListener('input', function() {
+        document.getElementById('clearBtn').disabled = this.value.length === 0;
+    });
+</script>
+{% endblock %}

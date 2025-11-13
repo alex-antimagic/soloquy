@@ -1,0 +1,145 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">Manage Applets</h4>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">Enable or disable applets for your workspace. Disabling an applet hides it from your navigation but preserves all your data.</p>
+
+                    <div class="applets-list">
+                        {% for applet_key, applet_info in applet_status.items() %}
+                        <div class="applet-card {% if applet_info.enabled %}enabled{% else %}disabled{% endif %}" data-applet="{{ applet_key }}">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-grow-1">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <i class="bi bi-{{ applet_info.icon }} me-2" style="font-size: 1.5rem;"></i>
+                                        <h5 class="mb-0">{{ applet_info.name }}</h5>
+                                    </div>
+                                    <p class="text-muted mb-0">{{ applet_info.description }}</p>
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input applet-toggle" type="checkbox"
+                                           id="applet_{{ applet_key }}"
+                                           data-applet="{{ applet_key }}"
+                                           {% if applet_info.enabled %}checked{% endif %}>
+                                    <label class="form-check-label" for="applet_{{ applet_key }}">
+                                        {% if applet_info.enabled %}
+                                        <span class="badge bg-success ms-3">Enabled</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary ms-3">Disabled</span>
+                                        {% endif %}
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="mt-4">
+                        <a href="{{ url_for('tenant.settings') }}" class="btn btn-secondary">Back to Settings</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .applet-card {
+        border: 2px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 15px;
+        transition: all 0.2s;
+        background-color: transparent;
+    }
+
+    .applet-card:hover {
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .form-switch .form-check-input {
+        width: 3em;
+        height: 1.5em;
+        cursor: pointer;
+    }
+
+    /* Green toggle when enabled */
+    .form-switch .form-check-input:checked {
+        background-color: #10b981;
+        border-color: #10b981;
+    }
+
+    /* Red toggle when disabled */
+    .form-switch .form-check-input:not(:checked) {
+        background-color: #ef4444;
+        border-color: #ef4444;
+    }
+</style>
+
+<script>
+    // Handle applet toggle
+    const toggles = document.querySelectorAll('.applet-toggle');
+
+    toggles.forEach(toggle => {
+        toggle.addEventListener('change', async function() {
+            const appletKey = this.getAttribute('data-applet');
+            const enabled = this.checked;
+            const badge = this.nextElementSibling.querySelector('.badge');
+
+            try {
+                const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+                const response = await fetch(`/tenant/settings/applets/${appletKey}/${enabled ? 'enable' : 'disable'}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    }
+                });
+
+                if (response.ok) {
+                    // Update badge
+                    if (enabled) {
+                        badge.className = 'badge bg-success ms-3';
+                        badge.textContent = 'Enabled';
+                    } else {
+                        badge.className = 'badge bg-secondary ms-3';
+                        badge.textContent = 'Disabled';
+                    }
+
+                    // Show success message
+                    const alertDiv = document.createElement('div');
+                    alertDiv.className = 'alert alert-success alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3';
+                    alertDiv.style.zIndex = '9999';
+                    alertDiv.innerHTML = `
+                        ${appletKey.toUpperCase()} ${enabled ? 'enabled' : 'disabled'} successfully! <strong>Refresh the page</strong> to see changes.
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    `;
+                    document.body.appendChild(alertDiv);
+
+                    // Auto-dismiss after 5 seconds
+                    setTimeout(() => {
+                        alertDiv.remove();
+                    }, 5000);
+                } else {
+                    const data = await response.json();
+                    alert(`Error: ${data.error || 'Failed to update applet'}`);
+                    // Revert toggle
+                    this.checked = !enabled;
+                }
+            } catch (error) {
+                console.error('Error updating applet:', error);
+                alert('Failed to update applet. Please try again.');
+                // Revert toggle
+                this.checked = !enabled;
+            }
+        });
+    });
+</script>
+
+{% endblock %}

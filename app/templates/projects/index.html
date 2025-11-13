@@ -1,0 +1,558 @@
+{% extends "layouts/base.html" %}
+
+{% block extra_css %}
+<!-- FullCalendar CSS -->
+<link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.css' rel='stylesheet' />
+<style>
+    .metric-icon {
+        width: 60px;
+        height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50% !important;
+    }
+    #calendar {
+        background: transparent;
+        padding: 1.5rem;
+        border-radius: 0.5rem;
+        min-height: 700px;
+    }
+    .fc-event {
+        cursor: pointer;
+    }
+    .fc {
+        max-width: 100%;
+    }
+    .fc-toolbar {
+        margin-bottom: 1.5rem;
+    }
+    .fc-toolbar h2 {
+        font-size: 1.5rem;
+        color: #e0e0e0;
+    }
+    .fc-daygrid-day {
+        min-height: 100px;
+    }
+    .fc-daygrid-day-frame {
+        min-height: 100px;
+    }
+
+    /* Dark theme for calendar */
+    .fc-theme-standard td,
+    .fc-theme-standard th {
+        border-color: rgba(255, 255, 255, 0.1);
+    }
+    .fc-scrollgrid {
+        border-color: rgba(255, 255, 255, 0.1);
+    }
+    .fc-col-header-cell {
+        background: rgba(255, 255, 255, 0.05);
+    }
+    .fc-daygrid-day {
+        background: transparent;
+    }
+    .fc-daygrid-day.fc-day-today {
+        background: rgba(59, 130, 246, 0.1) !important;
+    }
+    .fc-daygrid-day-number {
+        color: #e0e0e0;
+    }
+    .fc-col-header-cell-cushion {
+        color: #9ca3af;
+    }
+    .fc-button {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: rgba(255, 255, 255, 0.2);
+        color: #e0e0e0;
+    }
+    .fc-button:hover {
+        background: rgba(255, 255, 255, 0.15);
+        border-color: rgba(255, 255, 255, 0.3);
+    }
+    .fc-button-active {
+        background: rgba(59, 130, 246, 0.3) !important;
+        border-color: rgba(59, 130, 246, 0.5) !important;
+    }
+    .fc-daygrid-day-events {
+        margin-top: 0.25rem;
+    }
+    .fc-h-event {
+        border: none;
+        opacity: 0.9;
+    }
+    .fc-h-event:hover {
+        opacity: 1;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">Tasks / Projects</h2>
+            <p class="text-muted mb-0">Organize work across kanban boards</p>
+        </div>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createProjectModal">
+            <i class="bi bi-plus-circle"></i> New Project
+        </button>
+    </div>
+
+    <!-- View Tabs -->
+    <ul class="nav nav-tabs mb-4" id="viewTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="dashboard-tab" data-bs-toggle="tab" data-bs-target="#dashboard-view" type="button" role="tab">
+                <i class="bi bi-grid"></i> Dashboard
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="calendar-tab" data-bs-toggle="tab" data-bs-target="#calendar-view" type="button" role="tab">
+                <i class="bi bi-calendar3"></i> Calendar
+            </button>
+        </li>
+    </ul>
+
+    <!-- Tab Content -->
+    <div class="tab-content" id="viewTabContent">
+        <!-- Dashboard View -->
+        <div class="tab-pane fade show active" id="dashboard-view" role="tabpanel">
+
+    <!-- Metrics Dashboard -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <p class="text-muted small mb-1">Total Tasks</p>
+                            <h3 class="mb-0">{{ total_tasks }}</h3>
+                        </div>
+                        <div class="metric-icon bg-primary bg-opacity-10">
+                            <i class="bi bi-check2-square fs-4 text-primary"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <p class="text-muted small mb-1">In Progress</p>
+                            <h3 class="mb-0">{{ in_progress_tasks }}</h3>
+                        </div>
+                        <div class="metric-icon bg-info bg-opacity-10">
+                            <i class="bi bi-hourglass-split fs-4 text-info"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <p class="text-muted small mb-1">Completed</p>
+                            <h3 class="mb-0">{{ completed_tasks }}</h3>
+                        </div>
+                        <div class="metric-icon bg-success bg-opacity-10">
+                            <i class="bi bi-check-circle fs-4 text-success"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <p class="text-muted small mb-1">Active Projects</p>
+                            <h3 class="mb-0">{{ active_projects|length }}</h3>
+                        </div>
+                        <div class="metric-icon bg-warning bg-opacity-10">
+                            <i class="bi bi-kanban fs-4 text-warning"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Tasks & Active Projects Side by Side -->
+    <div class="row g-4 mb-4">
+        <!-- Recent Tasks (Left Half) -->
+        <div class="col-md-6">
+            <h5 class="mb-3">Recent Tasks</h5>
+            {% if recent_tasks %}
+            <div class="card" style="max-height: 600px; overflow-y: auto;">
+                <div class="list-group list-group-flush">
+                    {% for task in recent_tasks %}
+                    <a href="{{ url_for('tasks.view', task_id=task.id) }}" class="list-group-item list-group-item-action">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <div class="d-flex align-items-center gap-2 mb-1">
+                                    <h6 class="mb-0">{{ task.title }}</h6>
+                                    <span class="badge {{ task.get_priority_badge_class() }}">{{ task.priority }}</span>
+                                    <span class="badge {{ task.get_status_badge_class() }}">{{ task.status }}</span>
+                                </div>
+                                {% if task.description %}
+                                <p class="text-muted small mb-2">{{ task.description[:80] }}{% if task.description|length > 80 %}...{% endif %}</p>
+                                {% endif %}
+                                <div class="d-flex gap-3 small text-muted">
+                                    {% if task.project %}
+                                    <span><i class="bi bi-kanban"></i> <a href="{{ url_for('projects.view', project_id=task.project_id) }}">{{ task.project.name }}</a></span>
+                                    {% endif %}
+                                    {% if task.assigned_to %}
+                                    <span><i class="bi bi-person"></i> {{ task.assigned_to.full_name }}</span>
+                                    {% elif task.assigned_to_agent %}
+                                    <span>{{ task.assigned_to_agent.name }}</span>
+                                    {% endif %}
+                                    {% if task.due_date %}
+                                    <span class="{% if task.is_overdue() %}text-danger{% endif %}"><i class="bi bi-calendar"></i> {{ task.due_date.strftime('%b %d') }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+            {% else %}
+            <div class="card">
+                <div class="card-body text-center text-muted py-5">
+                    <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                    <p class="mb-0">No tasks yet</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Active Projects (Right Half) -->
+        <div class="col-md-6">
+            <h5 class="mb-3">Active Projects</h5>
+            {% if active_projects %}
+            <div class="row row-cols-1 row-cols-lg-2 g-3" style="max-height: 600px; overflow-y: auto;">
+            {% for project in active_projects %}
+            <div class="col">
+                <div class="card h-100 project-card" onclick="window.location.href='{{ url_for('projects.view', project_id=project.id) }}'" style="cursor: pointer; border-left: 4px solid {{ project.color }};">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div class="d-flex align-items-center gap-2">
+                                {% if project.icon %}
+                                <span class="fs-4">{{ project.icon }}</span>
+                                {% else %}
+                                <i class="bi bi-kanban fs-4" style="color: {{ project.color }};"></i>
+                                {% endif %}
+                                <h5 class="card-title mb-0">{{ project.name }}</h5>
+                            </div>
+                            <div class="dropdown" onclick="event.stopPropagation();">
+                                <button class="btn btn-sm btn-link text-muted p-0" data-bs-toggle="dropdown">
+                                    <i class="bi bi-three-dots-vertical"></i>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><a class="dropdown-item" href="{{ url_for('projects.view', project_id=project.id) }}"><i class="bi bi-eye"></i> View Board</a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="editProject({{ project.id }}, event)"><i class="bi bi-pencil"></i> Edit</a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="archiveProject({{ project.id }}, event)"><i class="bi bi-archive"></i> Archive</a></li>
+                                    {% if project.owner_id == current_user.id %}
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item text-danger" href="#" onclick="deleteProject({{ project.id }}, event)"><i class="bi bi-trash"></i> Delete</a></li>
+                                    {% endif %}
+                                </ul>
+                            </div>
+                        </div>
+
+                        {% if project.description %}
+                        <p class="card-text text-muted small mb-3">{{ project.description[:100] }}{% if project.description|length > 100 %}...{% endif %}</p>
+                        {% endif %}
+
+                        <div class="d-flex justify-content-between align-items-center mt-auto">
+                            <div class="d-flex gap-3 small text-muted">
+                                <span><i class="bi bi-check2-square"></i> {{ project.task_count }} tasks</span>
+                                <span><i class="bi bi-people"></i> {{ project.member_count }}</span>
+                            </div>
+                            {% if project.department %}
+                            <span class="badge bg-secondary">{{ project.department }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+            </div>
+            {% else %}
+            <div class="card">
+                <div class="card-body text-center text-muted py-5">
+                    <i class="bi bi-kanban fs-1 d-block mb-2"></i>
+                    <h5>No projects yet</h5>
+                    <p class="mb-3">Create your first project to get started</p>
+                    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#createProjectModal">
+                        <i class="bi bi-plus-circle"></i> Create Project
+                    </button>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Archived Projects -->
+    {% if archived_projects %}
+    <div class="mt-5">
+        <h5 class="mb-3 text-muted">
+            <i class="bi bi-archive"></i> Archived Projects
+            <small>({{ archived_projects|length }})</small>
+        </h5>
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-4 g-3">
+            {% for project in archived_projects %}
+            <div class="col">
+                <div class="card h-100 project-card opacity-75" style="border-left: 4px solid {{ project.color }};">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div class="d-flex align-items-center gap-2">
+                                {% if project.icon %}
+                                <span class="fs-4">{{ project.icon }}</span>
+                                {% else %}
+                                <i class="bi bi-kanban fs-4" style="color: {{ project.color }};"></i>
+                                {% endif %}
+                                <h5 class="card-title mb-0">{{ project.name }}</h5>
+                            </div>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="unarchiveProject({{ project.id }}, event)">
+                                <i class="bi bi-archive"></i> Unarchive
+                            </button>
+                        </div>
+
+                        {% if project.description %}
+                        <p class="card-text text-muted small mb-3">{{ project.description[:80] }}...</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+        </div>
+        <!-- End Dashboard View -->
+
+        <!-- Calendar View -->
+        <div class="tab-pane fade" id="calendar-view" role="tabpanel">
+            <div id="calendar"></div>
+        </div>
+    </div>
+    <!-- End Tab Content -->
+</div>
+
+<!-- Create Project Modal -->
+<div class="modal fade" id="createProjectModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Create New Project</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="createProjectForm">
+                    <div class="mb-3">
+                        <label for="projectName" class="form-label">Project Name *</label>
+                        <input type="text" class="form-control" id="projectName" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="projectDescription" class="form-label">Description</label>
+                        <textarea class="form-control" id="projectDescription" name="description" rows="3"></textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="projectColor" class="form-label">Color</label>
+                            <input type="color" class="form-control form-control-color w-100" id="projectColor" name="color" value="#3B82F6">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="projectIcon" class="form-label">Icon (emoji)</label>
+                            <input type="text" class="form-control" id="projectIcon" name="icon" placeholder="📋">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="createProject()">Create Project</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<!-- FullCalendar JS -->
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js'></script>
+
+<script>
+let calendar;
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize FullCalendar
+    const calendarEl = document.getElementById('calendar');
+    calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        height: 'auto',
+        contentHeight: 650,
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,timeGridWeek,listWeek'
+        },
+        events: [
+            {% for task in all_tasks %}
+            {% if task.due_date %}
+            {
+                id: '{{ task.id }}',
+                title: '{{ task.title|replace("'", "\\'") }}',
+                start: '{{ task.due_date.strftime('%Y-%m-%d') }}',
+                color: '{{ "#dc3545" if task.priority == "high" else "#ffc107" if task.priority == "medium" else "#28a745" }}',
+                extendedProps: {
+                    status: '{{ task.status }}',
+                    priority: '{{ task.priority }}',
+                    description: '{{ task.description|replace("'", "\\'")|replace("\n", " ") if task.description else "" }}',
+                    project: '{{ task.project.name if task.project else "" }}'
+                }
+            },
+            {% endif %}
+            {% endfor %}
+        ],
+        eventClick: function(info) {
+            const taskId = info.event.id;
+            window.location.href = `/tasks/${taskId}`;
+        }
+    });
+
+    // Render calendar when tab is shown
+    const calendarTab = document.getElementById('calendar-tab');
+    if (calendarTab) {
+        calendarTab.addEventListener('shown.bs.tab', function (event) {
+            calendar.render();
+            calendar.updateSize();
+        });
+    }
+
+    // Initial render
+    calendar.render();
+});
+</script>
+
+<script>
+function createProject() {
+    const form = document.getElementById('createProjectForm');
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData.entries());
+
+    // Get CSRF token
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+    fetch('{{ url_for("projects.create") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.id) {
+            window.location.href = `/projects/${data.id}`;
+        } else if (data.error) {
+            alert(data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to create project');
+    });
+}
+
+function archiveProject(projectId, event) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (confirm('Archive this project? You can unarchive it later.')) {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+        fetch(`/projects/${projectId}/archive`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({ archive: true })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.is_archived) {
+                window.location.reload();
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Failed to archive project');
+        });
+    }
+}
+
+function unarchiveProject(projectId, event) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+    fetch(`/projects/${projectId}/archive`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify({ archive: false })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (!data.is_archived) {
+            window.location.reload();
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to unarchive project');
+    });
+}
+
+function deleteProject(projectId, event) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (confirm('Delete this project permanently? This cannot be undone.')) {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+        fetch(`/projects/${projectId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                window.location.reload();
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Failed to delete project');
+        });
+    }
+}
+</script>
+{% endblock %}

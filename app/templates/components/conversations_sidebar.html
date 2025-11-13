@@ -1,0 +1,283 @@
+<!-- Conversations Sidebar (Slack-style) -->
+<div class="conversations-sidebar">
+    <!-- Header with create channel button -->
+    <div class="conversations-header">
+        <h6 class="mb-0 text-white">Conversations</h6>
+        <button class="btn btn-sm btn-link text-white p-0" data-bs-toggle="modal" data-bs-target="#createChannelModal" title="Create channel">
+            <i class="bi bi-plus-circle"></i>
+        </button>
+    </div>
+
+    <!-- Scrollable content -->
+    <div class="conversations-content">
+        <!-- Channels Section -->
+        <div class="conversations-section">
+            <div class="conversations-section-title" data-bs-toggle="collapse" data-bs-target="#channelsSection" style="cursor: pointer;">
+                <i class="bi bi-chevron-down"></i>
+                <span>Channels</span>
+            </div>
+            <div class="collapse show" id="channelsSection">
+                <!-- All Channels (Department + Custom) -->
+                {% if current_tenant %}
+                    {% for channel in current_tenant.channels.filter_by(is_archived=False).order_by('name').all() %}
+                        <a href="{{ url_for('chat.channel_chat', slug=channel.slug) }}"
+                           class="conversation-item {% if request.endpoint == 'chat.channel_chat' and request.view_args.get('slug') == channel.slug %}active{% endif %}"
+                           data-conversation-type="channel"
+                           data-conversation-id="{{ channel.slug }}"
+                           onclick="markAsRead('channel', '{{ channel.slug }}')">
+                            {% if channel.is_department_channel %}
+                                <!-- Department channel with colored badge -->
+                                <span class="dept-badge" style="background-color: {{ channel.department.color }};"></span>
+                            {% elif channel.is_private %}
+                                <!-- Private custom channel -->
+                                <span class="channel-icon"><i class="bi bi-lock"></i></span>
+                            {% else %}
+                                <!-- Public custom channel -->
+                                <span class="channel-icon">#</span>
+                            {% endif %}
+                            <span class="conversation-name" data-key="channel_{{ channel.slug }}">{{ channel.name }}</span>
+                            <span class="unread-badge" data-key="channel_{{ channel.slug }}" style="display: none;"></span>
+                        </a>
+                    {% endfor %}
+                {% endif %}
+
+                <!-- Add channel button -->
+                <button class="conversation-item btn-add" data-bs-toggle="modal" data-bs-target="#createChannelModal">
+                    <i class="bi bi-plus"></i>
+                    <span>Add channel</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Direct Messages Section -->
+        <div class="conversations-section">
+            <div class="conversations-section-title" data-bs-toggle="collapse" data-bs-target="#dmSection" style="cursor: pointer;">
+                <i class="bi bi-chevron-down"></i>
+                <span>Direct messages</span>
+            </div>
+            <div class="collapse show" id="dmSection">
+                {% if current_tenant %}
+                    <!-- Show all AI agents from all departments -->
+                    {% for department in current_tenant.get_departments() %}
+                        {% for agent in department.get_agents() %}
+                            <a href="{{ url_for('chat.agent_chat', agent_id=agent.id) }}"
+                               class="conversation-item {% if request.endpoint == 'chat.agent_chat' and request.view_args.get('agent_id') == agent.id %}active{% endif %}"
+                               data-conversation-type="agent"
+                               data-conversation-id="{{ agent.id }}"
+                               onclick="markAsRead('agent', '{{ agent.id }}')">
+                                <div class="position-relative" style="flex-shrink: 0;">
+                                    {% if agent.avatar_url %}
+                                        <img src="{{ agent.avatar_url }}" alt="{{ agent.name }}" class="conversation-avatar rounded" width="24" height="24">
+                                    {% else %}
+                                        <i class="bi bi-robot" style="font-size: 24px;"></i>
+                                    {% endif %}
+                                    <span class="avatar-status online"></span>
+                                </div>
+                                <span class="conversation-name" data-key="agent_{{ agent.id }}">{{ agent.name }}</span>
+                                <span class="unread-badge" data-key="agent_{{ agent.id }}" style="display: none;"></span>
+                            </a>
+                        {% endfor %}
+                    {% endfor %}
+
+                    <!-- Show human users -->
+                    {% for member in current_tenant.get_members()[:20] %}
+                        {% if member.id != current_user.id %}
+                            <a href="{{ url_for('chat.user_chat', user_id=member.id) }}"
+                               class="conversation-item {% if request.endpoint == 'chat.user_chat' and request.view_args.get('user_id') == member.id %}active{% endif %}"
+                               data-conversation-type="user"
+                               data-conversation-id="{{ member.id }}"
+                               onclick="markAsRead('user', '{{ member.id }}')">
+                                <div class="position-relative" style="flex-shrink: 0;">
+                                    <i class="bi bi-person-square rounded" style="font-size: 24px; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;"></i>
+                                    <span class="avatar-status {{ 'online' if member.is_online_now() else 'offline' }}"></span>
+                                </div>
+                                <span class="conversation-name" data-key="user_{{ member.id }}">{{ member.full_name }}</span>
+                                <span class="unread-badge" data-key="user_{{ member.id }}" style="display: none;"></span>
+                            </a>
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Channel Modal -->
+<div class="modal fade" id="createChannelModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Create Channel</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="createChannelForm">
+                    <div class="mb-3">
+                        <label class="form-label">Channel Name</label>
+                        <div class="input-group">
+                            <span class="input-group-text">#</span>
+                            <input type="text" class="form-control" name="name" required placeholder="e.g., general, random, marketing">
+                        </div>
+                        <small class="text-muted">Use lowercase letters, numbers, and hyphens</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description (optional)</label>
+                        <textarea class="form-control" name="description" rows="2" placeholder="What is this channel about?"></textarea>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="is_private" id="isPrivate">
+                        <label class="form-check-label" for="isPrivate">
+                            <i class="bi bi-lock"></i> Make private
+                        </label>
+                        <small class="d-block text-muted">Private channels require invitation to join</small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="createChannel()">Create Channel</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function createChannel() {
+    const form = document.getElementById('createChannelForm');
+    const data = Object.fromEntries(new FormData(form));
+    data.is_private = form.is_private.checked;
+
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+    fetch('/chat/channels/create', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify(data)
+    }).then(r => r.json()).then(d => {
+        if (d.success) {
+            window.location.href = `/chat/channel/${d.slug}`;
+        } else {
+            alert(d.error || 'Failed to create channel');
+        }
+    });
+}
+
+// Unread messages functionality
+let unreadCounts = {};
+
+async function fetchUnreadCounts() {
+    try {
+        const response = await fetch('/chat/unread-counts');
+        if (response.ok) {
+            unreadCounts = await response.json();
+            updateUnreadUI();
+        }
+    } catch (error) {
+        console.error('Error fetching unread counts:', error);
+    }
+}
+
+function updateUnreadUI() {
+    // Update all conversation items
+    document.querySelectorAll('.conversation-item').forEach(item => {
+        const type = item.getAttribute('data-conversation-type');
+        const id = item.getAttribute('data-conversation-id');
+
+        if (!type || !id) return;
+
+        const key = `${type}_${id}`;
+        const count = unreadCounts[key] || 0;
+
+        // Find the conversation name and badge elements
+        const nameSpan = item.querySelector(`.conversation-name[data-key="${key}"]`);
+        const badgeSpan = item.querySelector(`.unread-badge[data-key="${key}"]`);
+
+        if (count > 0) {
+            // Bold the name
+            if (nameSpan) {
+                nameSpan.style.fontWeight = 'bold';
+            }
+
+            // Show badge
+            if (badgeSpan) {
+                badgeSpan.textContent = count > 99 ? '99+' : count;
+                badgeSpan.style.display = 'inline-block';
+                badgeSpan.style.backgroundColor = '#dc3545';
+                badgeSpan.style.color = 'white';
+                badgeSpan.style.borderRadius = '10px';
+                badgeSpan.style.padding = '2px 6px';
+                badgeSpan.style.fontSize = '11px';
+                badgeSpan.style.marginLeft = 'auto';
+                badgeSpan.style.minWidth = '20px';
+                badgeSpan.style.textAlign = 'center';
+            }
+        } else {
+            // Remove bold
+            if (nameSpan) {
+                nameSpan.style.fontWeight = 'normal';
+            }
+
+            // Hide badge
+            if (badgeSpan) {
+                badgeSpan.style.display = 'none';
+            }
+        }
+    });
+}
+
+async function markAsRead(type, id) {
+    const key = `${type}_${id}`;
+
+    // Immediately update UI
+    unreadCounts[key] = 0;
+    updateUnreadUI();
+
+    // Send to server
+    try {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        await fetch('/chat/mark-read', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({ type, id: String(id) })
+        });
+    } catch (error) {
+        console.error('Error marking as read:', error);
+    }
+}
+
+// Fetch unread counts on page load
+fetchUnreadCounts();
+
+// Refresh unread counts every 10 seconds
+setInterval(fetchUnreadCounts, 10000);
+
+// Listen for new messages via Socket.IO to update unread counts in real-time
+if (typeof io !== 'undefined') {
+    // Create a global unread count listener
+    const unreadSocket = io({
+        transports: ['websocket', 'polling']
+    });
+
+    unreadSocket.on('connect', () => {
+        console.log('Unread counts Socket.IO connected');
+        // Join a global room for unread count updates
+        unreadSocket.emit('join_conversation', { conversation_id: 'global_unread' });
+    });
+
+    unreadSocket.on('new_message', () => {
+        // Refresh counts when a new message arrives
+        fetchUnreadCounts();
+    });
+
+    unreadSocket.on('connect_error', () => {
+        // Silently fail - we'll still poll every 10 seconds
+        console.log('Unread counts Socket.IO connection error');
+    });
+}
+</script>
