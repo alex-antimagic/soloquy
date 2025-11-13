@@ -12,9 +12,11 @@ class Config:
         print("WARNING: Using auto-generated SECRET_KEY. Set SECRET_KEY environment variable for production.")
     SECRET_KEY = _secret
 
-    # Database
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
-        'postgresql://localhost/soloquy'
+    # Database - Handle Heroku's postgres:// -> postgresql:// conversion
+    database_url = os.environ.get('DATABASE_URL') or 'postgresql://localhost/soloquy'
+    if database_url.startswith('postgres://'):
+        database_url = database_url.replace('postgres://', 'postgresql://', 1)
+    SQLALCHEMY_DATABASE_URI = database_url
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     # Session
@@ -59,14 +61,9 @@ class ProductionConfig(Config):
     DEBUG = False
     SESSION_COOKIE_SECURE = True
 
-    # Force SSL for Postgres on Heroku
-    database_url = os.environ.get('DATABASE_URL', '')
-    if database_url.startswith('postgres://'):
-        database_url = database_url.replace('postgres://', 'postgresql://', 1)
-    if database_url and 'postgresql://' in database_url and 'sslmode' not in database_url:
-        SQLALCHEMY_DATABASE_URI = database_url + '?sslmode=require'
-    elif database_url:
-        SQLALCHEMY_DATABASE_URI = database_url
+    # Add SSL mode for Postgres on Heroku if not already present
+    if 'postgresql://' in Config.database_url and 'sslmode' not in Config.database_url:
+        SQLALCHEMY_DATABASE_URI = Config.database_url + '?sslmode=require'
 
     # Note: ANTHROPIC_API_KEY validation happens at runtime, not import time
     # This prevents errors when importing config in development
