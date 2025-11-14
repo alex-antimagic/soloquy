@@ -311,15 +311,11 @@ class MCPManager:
 
         process_name = self._get_process_name(integration)
 
-        # Check if already running
-        if process_name in self.processes and self.is_process_running(process_name):
-            return True, f"MCP server {process_name} is already running"
-
         # Get credentials directory
         creds_dir = self._get_credentials_path(integration)
 
-        # Write credentials to filesystem before starting server
-        # This ensures MCP server has latest OAuth tokens
+        # Write credentials to filesystem BEFORE checking if already running
+        # This ensures MCP server always has latest OAuth tokens, even if process is running
         try:
             print(f"[MCP START] Preparing credentials for {process_name}")
             print(f"[MCP START] client_id present: {integration.client_id is not None}")
@@ -347,6 +343,10 @@ class MCPManager:
             print(f"[MCP START] ERROR: Failed to write credentials for {process_name}: {e}")
             import traceback
             print(f"[MCP START] Traceback: {traceback.format_exc()}")
+
+        # Check if already running
+        if process_name in self.processes and self.is_process_running(process_name):
+            return True, f"MCP server {process_name} is already running"
 
         # Build command based on MCP server type
         try:
