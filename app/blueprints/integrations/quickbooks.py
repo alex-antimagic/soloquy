@@ -7,7 +7,7 @@ from flask_login import login_required, current_user
 from app.blueprints.integrations import integrations_bp
 from app.services.quickbooks_service import quickbooks_service
 from app.models.integration import Integration
-from app import db
+from app import db, limiter
 
 
 @integrations_bp.route('/quickbooks/configure', methods=['GET', 'POST'])
@@ -82,8 +82,13 @@ def quickbooks_configure():
 
 @integrations_bp.route('/quickbooks/connect')
 @login_required
+@limiter.limit("10 per minute")
 def quickbooks_connect():
-    """Initiate QuickBooks OAuth flow"""
+    """
+    Initiate QuickBooks OAuth flow
+
+    SECURITY: Rate limited to prevent OAuth flow spam/abuse
+    """
     if not g.current_tenant:
         flash('Please select a workspace first.', 'warning')
         return redirect(url_for('tenant.home'))
@@ -115,8 +120,13 @@ def quickbooks_connect():
 
 @integrations_bp.route('/quickbooks/callback')
 @login_required
+@limiter.limit("20 per minute")
 def quickbooks_callback():
-    """Handle QuickBooks OAuth callback"""
+    """
+    Handle QuickBooks OAuth callback
+
+    SECURITY: Rate limited to prevent callback abuse
+    """
     # Get authorization code and realm ID from callback
     auth_code = request.args.get('code')
     realm_id = request.args.get('realmId')

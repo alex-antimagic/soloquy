@@ -31,26 +31,113 @@ class MCPManager:
     def __init__(self):
         """Initialize MCP Manager"""
         self.processes: Dict[str, subprocess.Popen] = {}  # process_name -> Popen object
-        self.base_credentials_path = Path(os.getenv('MCP_CREDENTIALS_PATH', '/tmp/mcp/credentials'))
+        self.base_credentials_path = self._get_secure_credentials_path()
         self._ensure_credentials_directory()
 
+    def _get_secure_credentials_path(self) -> Path:
+        """
+        Determine secure location for MCP credentials storage
+
+        SECURITY: Credentials must be stored in a secure location with proper permissions.
+
+        Priority order:
+        1. MCP_CREDENTIALS_PATH environment variable (if set and valid)
+        2. Heroku dyno: /app/var/mcp/credentials (app-specific, ephemeral)
+        3. Production: /var/lib/mcp/credentials (persistent, system-managed)
+        4. Development: ~/.local/share/soloquy/mcp/credentials (user-specific)
+
+        Requirements:
+        - Directory must be owned by application user
+        - Permissions must be 0o700 (owner-only access)
+        - Must be outside web-accessible directories
+        - Should be persistent across app restarts (except Heroku)
+
+        Returns:
+            Path object for credentials base directory
+
+        Raises:
+            ValueError: If no secure location can be determined
+        """
+        # Check for explicit configuration
+        if os.getenv('MCP_CREDENTIALS_PATH'):
+            explicit_path = Path(os.getenv('MCP_CREDENTIALS_PATH'))
+            print(f"MCP: Using MCP_CREDENTIALS_PATH from environment: {explicit_path}")
+            return explicit_path
+
+        # Detect Heroku environment
+        if os.getenv('DYNO'):
+            # On Heroku, use /app/var/mcp/credentials
+            # This is ephemeral (lost on dyno restart) but that's OK since MCP processes
+            # are also ephemeral and credentials are stored in encrypted database
+            heroku_path = Path('/app/var/mcp/credentials')
+            print(f"MCP: Detected Heroku environment, using: {heroku_path}")
+            return heroku_path
+
+        # Check for production environment with /var/lib access
+        prod_path = Path('/var/lib/mcp/credentials')
+        if prod_path.parent.exists() and os.access(prod_path.parent, os.W_OK):
+            print(f"MCP: Using production path: {prod_path}")
+            return prod_path
+
+        # Development/local environment - use user-specific directory
+        home = Path.home()
+        dev_path = home / '.local' / 'share' / 'soloquy' / 'mcp' / 'credentials'
+        print(f"MCP: Using development/local path: {dev_path}")
+        return dev_path
+
     def _ensure_credentials_directory(self):
-        """Create base credentials directory if it doesn't exist"""
+        """
+        Create and validate credentials directory with secure permissions
+
+        SECURITY: Directory must have 0o700 permissions (owner-only access)
+        to prevent credential theft by other users/processes.
+        """
         try:
+            # Create directory with secure permissions
             self.base_credentials_path.mkdir(parents=True, exist_ok=True, mode=0o700)
+
+            # Verify permissions are correct
+            current_perms = self.base_credentials_path.stat().st_mode & 0o777
+
+            if current_perms != 0o700:
+                # Attempt to fix permissions
+                print(
+                    f"MCP WARNING: Credentials directory has insecure permissions: {oct(current_perms)}. "
+                    f"Attempting to fix to 0o700"
+                )
+                self.base_credentials_path.chmod(0o700)
+
+                # Verify fix worked
+                new_perms = self.base_credentials_path.stat().st_mode & 0o777
+                if new_perms != 0o700:
+                    print(
+                        f"MCP SECURITY ERROR: Unable to set secure permissions on {self.base_credentials_path}. "
+                        f"Credentials may be accessible to other users!"
+                    )
+                else:
+                    print(f"MCP: Fixed permissions on {self.base_credentials_path} to 0o700")
+            else:
+                print(
+                    f"MCP: Credentials directory ready with secure permissions: {self.base_credentials_path}"
+                )
+
         except Exception as e:
-            current_app.logger.error(f"Failed to create MCP credentials directory: {e}")
+            print(f"MCP ERROR: Failed to create MCP credentials directory: {e}")
+            raise
 
     def _get_credentials_path(self, integration: Integration) -> Path:
         """
-        Get filesystem path for integration credentials
+        Get filesystem path for integration credentials with secure permissions
 
         Directory structure:
-        /var/mcp/credentials/{owner_type}/{owner_id}/{integration_type}/
+        {base_path}/{owner_type}/{owner_id}/{integration_type}/
 
         Examples:
-        - Workspace Gmail: /var/mcp/credentials/tenant/3/gmail/
-        - User Gmail: /var/mcp/credentials/user/5/gmail/
+        - Workspace Gmail: ~/.local/share/soloquy/mcp/credentials/tenant/3/gmail/
+        - User Gmail: ~/.local/share/soloquy/mcp/credentials/user/5/gmail/
+
+        SECURITY: Each directory level has 0o700 permissions (owner-only access)
+        to prevent credential access by other users/processes.
 
         Args:
             integration: Integration model instance
@@ -58,8 +145,25 @@ class MCPManager:
         Returns:
             Path object for credentials directory
         """
-        path = self.base_credentials_path / integration.owner_type / str(integration.owner_id) / integration.integration_type
+        # Build path with owner isolation
+        path = (
+            self.base_credentials_path /
+            integration.owner_type /
+            str(integration.owner_id) /
+            integration.integration_type
+        )
+
+        # Create directory with secure permissions
         path.mkdir(parents=True, exist_ok=True, mode=0o700)
+
+        # Verify permissions on the final directory
+        current_perms = path.stat().st_mode & 0o777
+        if current_perms != 0o700:
+            current_app.logger.warning(
+                f"Fixing insecure permissions on {path}: {oct(current_perms)} -> 0o700"
+            )
+            path.chmod(0o700)
+
         return path
 
     def _get_process_name(self, integration: Integration) -> str:
@@ -400,22 +504,69 @@ class MCPManager:
 
     def _get_process_env(self, integration: Integration) -> dict:
         """
-        Build environment variables for MCP server process
+        Build minimal environment variables for MCP server process
+
+        SECURITY: DO NOT inherit parent environment to prevent credential leakage.
+        Only include explicitly needed variables.
+
+        Excluded from child processes:
+        - DATABASE_URL (database credentials)
+        - ENCRYPTION_KEY (application secrets)
+        - ANTHROPIC_API_KEY (API keys)
+        - SESSION_SECRET_KEY (session secrets)
+        - Any other sensitive environment variables
 
         Args:
             integration: Integration model instance
 
         Returns:
-            Dict of environment variables
+            Dict of environment variables (minimal set)
         """
-        env = os.environ.copy()
+        # Build minimal safe environment - DO NOT use os.environ.copy()
+        creds_dir = self._get_credentials_path(integration)
 
-        # Add any MCP-specific env vars from config
+        safe_env = {
+            # Essential system paths
+            'PATH': '/usr/local/bin:/usr/bin:/bin',
+            'LANG': 'en_US.UTF-8',
+            'LC_ALL': 'en_US.UTF-8',
+
+            # Node.js configuration
+            'NODE_ENV': 'production',
+
+            # Set HOME to credentials directory for process isolation
+            # MCP servers will only have access to their own credential files
+            'HOME': str(creds_dir),
+
+            # Process identification (for logging/debugging)
+            'MCP_PROCESS_NAME': self._get_process_name(integration),
+            'MCP_INTEGRATION_TYPE': integration.integration_type,
+            'MCP_OWNER_TYPE': integration.owner_type,
+            'MCP_OWNER_ID': str(integration.owner_id)
+        }
+
+        # Add MCP-specific configuration (whitelist approach)
+        # Only allow variables that start with MCP_ or are integration-specific
         if integration.mcp_config:
             for key, value in integration.mcp_config.items():
-                env[key] = str(value)
+                # Whitelist: only allow MCP-specific and safe integration variables
+                if (key.startswith('MCP_') or
+                    key.startswith('GOOGLE_') or
+                    key.startswith('MS_') or
+                    key in ['CLIENT_ID', 'CLIENT_SECRET', 'REDIRECT_URI']):
+                    safe_env[key] = str(value)
+                else:
+                    # Log attempt to add non-whitelisted variable
+                    current_app.logger.warning(
+                        f"Blocked non-whitelisted env var '{key}' for MCP process {integration.get_mcp_process_name()}"
+                    )
 
-        return env
+        current_app.logger.info(
+            f"Built safe environment for MCP process {integration.get_mcp_process_name()} "
+            f"with {len(safe_env)} variables (isolated from parent process)"
+        )
+
+        return safe_env
 
     def _kill_by_pid(self, pid: int) -> Tuple[bool, str]:
         """

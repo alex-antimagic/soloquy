@@ -27,6 +27,12 @@ class AIService:
         """
         Build MCP server configuration from agent's enabled integrations
 
+        SECURITY: Personal integrations are ONLY accessible if:
+        - The agent was created by the current user, OR
+        - The integration belongs to the current user
+
+        Workspace integrations are always accessible (admin-controlled).
+
         Args:
             agent: Agent model with integration flags (enable_gmail, etc.)
             user: User model for checking personal integrations
@@ -35,13 +41,21 @@ class AIService:
             List of MCP server configurations for Anthropic API, or None if no MCP integrations
         """
         from app.models.integration import Integration
+        from app.models.audit_log import AuditLog
         from app.services.mcp_manager import mcp_manager
+        from flask import request, g
 
         mcp_servers = []
 
+        # Determine if current user can access personal integrations from this agent
+        # Rule: Agent must be created by current user to access their personal integrations
+        can_access_personal = (agent.created_by_id == user.id)
+
         # Gmail MCP
         if agent.enable_gmail:
-            # Check workspace Gmail first
+            gmail_integration = None
+
+            # Check workspace Gmail first (always accessible)
             gmail_workspace = Integration.query.filter_by(
                 tenant_id=agent.tenant_id,
                 integration_type='gmail',
@@ -50,23 +64,47 @@ class AIService:
                 is_active=True
             ).first()
 
-            # Fall back to user's personal Gmail
-            gmail_personal = Integration.query.filter_by(
-                tenant_id=agent.tenant_id,
-                integration_type='gmail',
-                owner_type='user',
-                owner_id=user.id,
-                is_active=True
-            ).first()
-
-            # Use workspace if available, otherwise use personal
-            gmail_integration = gmail_workspace or gmail_personal
+            if gmail_workspace:
+                gmail_integration = gmail_workspace
+            elif can_access_personal:
+                # Only check personal if user created this agent
+                gmail_personal = Integration.query.filter_by(
+                    tenant_id=agent.tenant_id,
+                    integration_type='gmail',
+                    owner_type='user',
+                    owner_id=user.id,
+                    is_active=True
+                ).first()
+                gmail_integration = gmail_personal
+            else:
+                # Log denied access attempt
+                current_app.logger.warning(
+                    f"MCP_ACCESS_DENIED: user={user.id} agent={agent.id} "
+                    f"integration_type=gmail reason=agent_not_created_by_user"
+                )
+                AuditLog.log_access_denied(
+                    user_id=user.id,
+                    tenant_id=g.current_tenant.id if hasattr(g, 'current_tenant') else agent.tenant_id,
+                    resource_type='integration',
+                    resource_id=None,
+                    reason='Personal Gmail access denied - agent not created by user',
+                    agent_id=agent.id,
+                    ip_address=request.remote_addr if request else None
+                )
 
             if gmail_integration:
                 status = mcp_manager.get_process_status(gmail_integration)
                 if status.get('running'):
-                    # MCP server is running, add to configuration
-                    # The MCP server communicates via stdin/stdout, so we reference it by process
+                    # Log successful MCP access
+                    AuditLog.log_mcp_access(
+                        user_id=user.id,
+                        tenant_id=g.current_tenant.id if hasattr(g, 'current_tenant') else agent.tenant_id,
+                        agent_id=agent.id,
+                        integration=gmail_integration,
+                        status='success',
+                        ip_address=request.remote_addr if request else None
+                    )
+
                     mcp_servers.append({
                         'name': f'gmail_{gmail_integration.owner_type}',
                         'integration_id': gmail_integration.id,
@@ -76,6 +114,9 @@ class AIService:
 
         # Outlook MCP
         if agent.enable_outlook:
+            outlook_integration = None
+
+            # Check workspace Outlook first (always accessible)
             outlook_workspace = Integration.query.filter_by(
                 tenant_id=agent.tenant_id,
                 integration_type='outlook',
@@ -84,19 +125,47 @@ class AIService:
                 is_active=True
             ).first()
 
-            outlook_personal = Integration.query.filter_by(
-                tenant_id=agent.tenant_id,
-                integration_type='outlook',
-                owner_type='user',
-                owner_id=user.id,
-                is_active=True
-            ).first()
-
-            outlook_integration = outlook_workspace or outlook_personal
+            if outlook_workspace:
+                outlook_integration = outlook_workspace
+            elif can_access_personal:
+                # Only check personal if user created this agent
+                outlook_personal = Integration.query.filter_by(
+                    tenant_id=agent.tenant_id,
+                    integration_type='outlook',
+                    owner_type='user',
+                    owner_id=user.id,
+                    is_active=True
+                ).first()
+                outlook_integration = outlook_personal
+            else:
+                # Log denied access attempt
+                current_app.logger.warning(
+                    f"MCP_ACCESS_DENIED: user={user.id} agent={agent.id} "
+                    f"integration_type=outlook reason=agent_not_created_by_user"
+                )
+                AuditLog.log_access_denied(
+                    user_id=user.id,
+                    tenant_id=g.current_tenant.id if hasattr(g, 'current_tenant') else agent.tenant_id,
+                    resource_type='integration',
+                    resource_id=None,
+                    reason='Personal Outlook access denied - agent not created by user',
+                    agent_id=agent.id,
+                    ip_address=request.remote_addr if request else None
+                )
 
             if outlook_integration:
                 status = mcp_manager.get_process_status(outlook_integration)
                 if status.get('running'):
+                    # Log successful MCP access
+                    AuditLog.log_mcp_access(
+                        user_id=user.id,
+                        tenant_id=g.current_tenant.id if hasattr(g, 'current_tenant') else agent.tenant_id,
+                        agent_id=agent.id,
+                        integration=outlook_integration,
+                        status='success',
+                        ip_address=request.remote_addr if request else None
+                    )
+
                     mcp_servers.append({
                         'name': f'outlook_{outlook_integration.owner_type}',
                         'integration_id': outlook_integration.id,
@@ -106,6 +175,9 @@ class AIService:
 
         # Google Drive MCP
         if agent.enable_google_drive:
+            drive_integration = None
+
+            # Check workspace Drive first (always accessible)
             drive_workspace = Integration.query.filter_by(
                 tenant_id=agent.tenant_id,
                 integration_type='google_drive',
@@ -114,19 +186,47 @@ class AIService:
                 is_active=True
             ).first()
 
-            drive_personal = Integration.query.filter_by(
-                tenant_id=agent.tenant_id,
-                integration_type='google_drive',
-                owner_type='user',
-                owner_id=user.id,
-                is_active=True
-            ).first()
-
-            drive_integration = drive_workspace or drive_personal
+            if drive_workspace:
+                drive_integration = drive_workspace
+            elif can_access_personal:
+                # Only check personal if user created this agent
+                drive_personal = Integration.query.filter_by(
+                    tenant_id=agent.tenant_id,
+                    integration_type='google_drive',
+                    owner_type='user',
+                    owner_id=user.id,
+                    is_active=True
+                ).first()
+                drive_integration = drive_personal
+            else:
+                # Log denied access attempt
+                current_app.logger.warning(
+                    f"MCP_ACCESS_DENIED: user={user.id} agent={agent.id} "
+                    f"integration_type=google_drive reason=agent_not_created_by_user"
+                )
+                AuditLog.log_access_denied(
+                    user_id=user.id,
+                    tenant_id=g.current_tenant.id if hasattr(g, 'current_tenant') else agent.tenant_id,
+                    resource_type='integration',
+                    resource_id=None,
+                    reason='Personal Drive access denied - agent not created by user',
+                    agent_id=agent.id,
+                    ip_address=request.remote_addr if request else None
+                )
 
             if drive_integration:
                 status = mcp_manager.get_process_status(drive_integration)
                 if status.get('running'):
+                    # Log successful MCP access
+                    AuditLog.log_mcp_access(
+                        user_id=user.id,
+                        tenant_id=g.current_tenant.id if hasattr(g, 'current_tenant') else agent.tenant_id,
+                        agent_id=agent.id,
+                        integration=drive_integration,
+                        status='success',
+                        ip_address=request.remote_addr if request else None
+                    )
+
                     mcp_servers.append({
                         'name': f'drive_{drive_integration.owner_type}',
                         'integration_id': drive_integration.id,

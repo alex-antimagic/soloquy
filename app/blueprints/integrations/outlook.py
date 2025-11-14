@@ -5,7 +5,7 @@ Uses Model Context Protocol via outlook-mcp
 """
 from flask import render_template, redirect, url_for, flash, request, session, g, jsonify
 from flask_login import login_required, current_user
-from app import db
+from app import db, limiter
 from app.blueprints.integrations import integrations_bp
 from app.models.integration import Integration
 from app.services.mcp_manager import mcp_manager
@@ -108,9 +108,12 @@ def outlook_configure():
 
 @integrations_bp.route('/outlook/connect')
 @login_required
+@limiter.limit("10 per minute")
 def outlook_connect():
     """
     Initiate OAuth flow for Outlook
+
+    SECURITY: Rate limited to prevent OAuth flow spam/abuse
 
     Query params:
     - scope: 'workspace' or 'user'
@@ -166,9 +169,12 @@ def outlook_connect():
 
 @integrations_bp.route('/outlook/callback')
 @login_required
+@limiter.limit("20 per minute")
 def outlook_callback():
     """
     Handle OAuth callback from Microsoft
+
+    SECURITY: Rate limited to prevent callback abuse
 
     Query params:
     - code: Authorization code

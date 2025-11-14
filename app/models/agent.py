@@ -9,6 +9,7 @@ class Agent(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     department_id = db.Column(db.Integer, db.ForeignKey('departments.id'), nullable=False, index=True)
+    created_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
 
     # Agent identity
     name = db.Column(db.String(255), nullable=False)
@@ -37,6 +38,7 @@ class Agent(db.Model):
 
     # Relationships
     department = db.relationship('Department', back_populates='agents')
+    created_by = db.relationship('User', foreign_keys=[created_by_id])
     messages = db.relationship('Message', back_populates='agent', lazy='dynamic')
 
     def __repr__(self):

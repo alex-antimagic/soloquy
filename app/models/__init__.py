@@ -8,6 +8,7 @@ from app.models.message import Message
 from app.models.task import Task
 from app.models.project import Project, ProjectMember
 from app.models.status_column import StatusColumn
+from app.models.audit_log import AuditLog
 
 # CRM Models
 from app.models.company import Company

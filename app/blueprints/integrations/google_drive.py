@@ -5,7 +5,7 @@ Uses Model Context Protocol via @piotr-agier/google-drive-mcp
 """
 from flask import render_template, redirect, url_for, flash, request, session, g, jsonify
 from flask_login import login_required, current_user
-from app import db
+from app import db, limiter
 from app.blueprints.integrations import integrations_bp
 from app.models.integration import Integration
 from app.services.mcp_manager import mcp_manager
@@ -108,9 +108,12 @@ def google_drive_configure():
 
 @integrations_bp.route('/google-drive/connect')
 @login_required
+@limiter.limit("10 per minute")
 def google_drive_connect():
     """
     Initiate OAuth flow for Google Drive
+
+    SECURITY: Rate limited to prevent OAuth flow spam/abuse
 
     Query params:
     - scope: 'workspace' or 'user'
@@ -176,9 +179,12 @@ def google_drive_connect():
 
 @integrations_bp.route('/google-drive/callback')
 @login_required
+@limiter.limit("20 per minute")
 def google_drive_callback():
     """
     Handle OAuth callback from Google
+
+    SECURITY: Rate limited to prevent callback abuse
 
     Query params:
     - state: OAuth state token
