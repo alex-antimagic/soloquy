@@ -312,6 +312,47 @@
 
         const time = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 
+        // Build task cards if agent mentioned any tasks
+        let taskCardsHtml = '';
+        {% if is_agent %}
+        if (!isFromMe && message.mentioned_tasks && message.mentioned_tasks.length > 0) {
+            taskCardsHtml = '<div class="mt-2">';
+            message.mentioned_tasks.forEach(task => {
+                const priorityClass = task.priority === 'high' ? 'danger' : task.priority === 'medium' ? 'primary' : 'secondary';
+                const statusClass = task.status === 'completed' ? 'success' : task.status === 'in_progress' ? 'info' : 'secondary';
+                const overdueTag = task.is_overdue ? '<span class="badge bg-danger ms-1">Overdue</span>' : '';
+
+                taskCardsHtml += `
+                    <div class="card border-start border-${priorityClass} border-3 mb-2" style="background-color: var(--bs-secondary-bg);">
+                        <div class="card-body py-2 px-3">
+                            <div class="d-flex justify-content-between align-items-start mb-1">
+                                <div class="flex-grow-1">
+                                    <small class="text-muted d-block mb-1">
+                                        <i class="bi bi-check2-square"></i> Referenced Task
+                                    </small>
+                                    <strong>${escapeHtml(task.title)}</strong>
+                                    <span class="badge bg-${statusClass} ms-2">${task.status}</span>
+                                    ${overdueTag}
+                                    ${task.due_date ? `<span class="text-muted small ms-2"><i class="bi bi-calendar"></i> ${new Date(task.due_date).toLocaleDateString()}</span>` : ''}
+                                </div>
+                            </div>
+                            ${task.description ? `<p class="text-muted small mb-2">${escapeHtml(task.description)}</p>` : ''}
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-sm btn-success" onclick="completeTask(${task.id})">
+                                    <i class="bi bi-check"></i> Complete
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary" onclick="viewTask(${task.id})">
+                                    <i class="bi bi-eye"></i> View
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            taskCardsHtml += '</div>';
+        }
+        {% endif %}
+
         messageDiv.innerHTML = `
             <div class="message-avatar">${avatar}${statusHtml}</div>
             <div class="message-bubble">
@@ -321,6 +362,7 @@
                 </div>
                 <div class="message-content">
                     <div class="message-body">${formatMessageContent(message.content)}</div>
+                    ${taskCardsHtml}
                 </div>
             </div>
         `;
@@ -332,7 +374,7 @@
 
     let typingTimeout = null;
 
-    function showTypingIndicator(userName) {
+    function showTypingIndicator(userName, isAgent = false) {
         hideTypingIndicator();
 
         const typingDiv = document.createElement('div');
@@ -366,8 +408,12 @@
         messagesContainer.appendChild(typingDiv);
         scrollToBottom();
 
-        if (typingTimeout) clearTimeout(typingTimeout);
-        typingTimeout = setTimeout(hideTypingIndicator, 3000);
+        // Only set auto-hide timeout for user typing indicators, not agent thinking indicators
+        // (agent thinking may take longer than 3 seconds)
+        if (!isAgent) {
+            if (typingTimeout) clearTimeout(typingTimeout);
+            typingTimeout = setTimeout(hideTypingIndicator, 3000);
+        }
     }
 
     function hideTypingIndicator() {
@@ -439,7 +485,7 @@
         {% if is_agent %}
         const randomDelay = Math.random() * 1500 + 500;
         await new Promise(resolve => setTimeout(resolve, randomDelay));
-        showTypingIndicator(recipientName);
+        showTypingIndicator(recipientName, true);  // true = isAgent (no auto-hide)
         {% endif %}
 
         try {
