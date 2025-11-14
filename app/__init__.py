@@ -189,6 +189,12 @@ def _initialize_mcp_credentials(app):
         print("[MCP INIT] Starting credential initialization")
         print(f"[MCP INIT] DYNO value: {os.environ.get('DYNO', 'NOT SET')}")
 
+        # Only run on web dynos (not release phase)
+        dyno = os.environ.get('DYNO', '')
+        if not dyno.startswith('web'):
+            print(f"[MCP INIT] Skipping - not a web dyno (DYNO={dyno})")
+            return
+
         from app.models.integration import Integration
 
         # Get all MCP-mode integrations
@@ -203,12 +209,9 @@ def _initialize_mcp_credentials(app):
 
         print(f"[MCP INIT] Found {len(integrations)} MCP integrations")
 
-        # Determine base credentials directory
-        if os.path.exists('/app/var/mcp/credentials'):
-            base_dir = Path('/app/var/mcp/credentials')
-        else:
-            base_dir = Path.home() / '.mcp' / 'credentials'
-            base_dir.mkdir(parents=True, exist_ok=True)
+        # Always use /app/var/mcp/credentials on Heroku
+        base_dir = Path('/app/var/mcp/credentials')
+        base_dir.mkdir(parents=True, exist_ok=True)
 
         print(f"[MCP INIT] Using credentials directory: {base_dir}")
 
