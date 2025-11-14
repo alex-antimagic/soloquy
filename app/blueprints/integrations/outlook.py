@@ -152,7 +152,7 @@ def outlook_connect():
 
         # Build authorization URL
         auth_url = msal_app.get_authorization_request_url(
-            scopes=OUTLOOK_SCOPES,
+            scopes=list(OUTLOOK_SCOPES),  # Ensure scopes is a list
             redirect_uri=integration.redirect_uri,
             prompt='consent'  # Force consent to get refresh token
         )
@@ -217,7 +217,7 @@ def outlook_callback(scope):
 
         result = msal_app.acquire_token_by_authorization_code(
             code,
-            scopes=OUTLOOK_SCOPES,
+            scopes=list(OUTLOOK_SCOPES),  # Ensure scopes is a list
             redirect_uri=integration.redirect_uri
         )
 
