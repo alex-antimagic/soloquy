@@ -25,8 +25,8 @@ class Agent(db.Model):
     is_active = db.Column(db.Boolean, default=True, nullable=False)
     is_primary = db.Column(db.Boolean, default=False, nullable=False)  # Primary agent for department
 
-    # Integration access control
-    enable_quickbooks = db.Column(db.Boolean, default=True, nullable=False)  # Allow access to QuickBooks data
+    # Integration access control (secure by default - admin must explicitly enable)
+    enable_quickbooks = db.Column(db.Boolean, default=False, nullable=False)  # Allow access to QuickBooks data
 
     # Timestamps
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
