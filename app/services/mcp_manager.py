@@ -337,6 +337,11 @@ class MCPManager:
             if creds_data:
                 self.write_credentials(integration, creds_data)
                 print(f"[MCP START] ✓ Wrote credentials for {process_name}")
+
+                # If server is already running, restart it to pick up new credentials
+                if process_name in self.processes and self.is_process_running(process_name):
+                    print(f"[MCP START] Server already running, restarting to load new credentials...")
+                    self.stop_mcp_server(process_name)
             else:
                 print(f"[MCP START] WARNING: No credentials to write for {process_name} - all values were None")
         except Exception as e:
@@ -344,7 +349,7 @@ class MCPManager:
             import traceback
             print(f"[MCP START] Traceback: {traceback.format_exc()}")
 
-        # Check if already running
+        # Check if already running (after potential restart above)
         if process_name in self.processes and self.is_process_running(process_name):
             return True, f"MCP server {process_name} is already running"
 
