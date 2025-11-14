@@ -236,6 +236,43 @@ class AIService:
 
         return mcp_servers if mcp_servers else None
 
+    def _get_mcp_tools(self, agent, user) -> Optional[List[Dict]]:
+        """
+        Get Claude-compatible tool definitions from enabled MCP integrations
+
+        Args:
+            agent: Agent model with integration flags
+            user: User model for checking access
+
+        Returns:
+            List of tool definitions, or None if no tools available
+        """
+        from app.models.integration import Integration
+        from app.services.mcp_client import get_mcp_tools_for_integration
+
+        all_tools = []
+        mcp_servers = self._build_mcp_config(agent, user)
+
+        if not mcp_servers:
+            return None
+
+        # Collect tools from all enabled integrations
+        for server_config in mcp_servers:
+            integration_id = server_config.get('integration_id')
+            if not integration_id:
+                continue
+
+            integration = Integration.query.get(integration_id)
+            if not integration:
+                continue
+
+            tools = get_mcp_tools_for_integration(integration)
+            if tools:
+                all_tools.extend(tools)
+                current_app.logger.info(f"Loaded {len(tools)} tools from {integration.integration_type}")
+
+        return all_tools if all_tools else None
+
     def chat(
         self,
         messages: List[Dict[str, str]],
@@ -248,6 +285,7 @@ class AIService:
     ) -> str:
         """
         Send a chat message to Claude and get a response.
+        Supports MCP tool calling for external data access.
 
         Args:
             messages: List of message dicts with 'role' and 'content'
@@ -274,30 +312,156 @@ class AIService:
                 'messages': messages
             }
 
-            # Add MCP context to system prompt if agent has MCP integrations enabled
+            # Get MCP tools if agent has integrations enabled
+            tools = None
             if agent and user:
-                mcp_servers = self._build_mcp_config(agent, user)
-                if mcp_servers:
-                    # Append MCP availability info to system prompt
-                    mcp_info = "\n\nAvailable MCP Integrations:\n"
-                    for server in mcp_servers:
-                        mcp_info += f"- {server['name']}: {', '.join(server['tools'])}\n"
-                    api_params['system'] = system_prompt + mcp_info
+                tools = self._get_mcp_tools(agent, user)
+                if tools:
+                    api_params['tools'] = tools
+                    current_app.logger.info(f"Agent {agent.name} has {len(tools)} tools available")
 
-                    # Log MCP context for debugging
-                    current_app.logger.info(f"Agent {agent.name} using MCP: {[s['name'] for s in mcp_servers]}")
-
+            # Call Claude API (potentially multiple times for tool use)
             response = self.client.messages.create(**api_params)
 
-            # Extract text from response
-            if response.content and len(response.content) > 0:
-                return response.content[0].text
+            # Handle tool use loop
+            while response.stop_reason == "tool_use":
+                # Extract tool calls from response
+                tool_uses = [block for block in response.content if block.type == "tool_use"]
+
+                if not tool_uses:
+                    break
+
+                # Add assistant's response to message history
+                messages.append({
+                    "role": "assistant",
+                    "content": response.content
+                })
+
+                # Execute tools and collect results
+                tool_results = []
+                for tool_use in tool_uses:
+                    try:
+                        result = self._execute_mcp_tool(
+                            tool_name=tool_use.name,
+                            tool_input=tool_use.input,
+                            agent=agent,
+                            user=user
+                        )
+                        tool_results.append({
+                            "type": "tool_result",
+                            "tool_use_id": tool_use.id,
+                            "content": json.dumps(result) if not isinstance(result, str) else result
+                        })
+                        current_app.logger.info(f"Tool {tool_use.name} executed successfully")
+                    except Exception as e:
+                        current_app.logger.error(f"Tool {tool_use.name} failed: {e}")
+                        tool_results.append({
+                            "type": "tool_result",
+                            "tool_use_id": tool_use.id,
+                            "is_error": True,
+                            "content": f"Error executing tool: {str(e)}"
+                        })
+
+                # Add tool results to messages
+                messages.append({
+                    "role": "user",
+                    "content": tool_results
+                })
+
+                # Update api_params with new messages
+                api_params['messages'] = messages
+
+                # Get next response from Claude
+                response = self.client.messages.create(**api_params)
+
+            # Extract final text response
+            text_blocks = [block.text for block in response.content if hasattr(block, 'text')]
+            if text_blocks:
+                return "\n".join(text_blocks)
 
             return "I apologize, but I couldn't generate a response. Please try again."
 
         except Exception as e:
             print(f"Error calling Claude API: {e}")
             raise
+
+    def _execute_mcp_tool(self, tool_name: str, tool_input: Dict, agent, user) -> Any:
+        """
+        Execute an MCP tool call
+
+        Args:
+            tool_name: Name of the tool to execute
+            tool_input: Tool input parameters
+            agent: Agent making the request
+            user: User context
+
+        Returns:
+            Tool execution result
+        """
+        # TODO: Implement actual MCP tool execution via stdio
+        # For now, return mock data based on tool name
+
+        current_app.logger.info(f"Executing tool: {tool_name} with input: {tool_input}")
+
+        if "list_emails" in tool_name:
+            return {
+                "emails": [
+                    {
+                        "id": "email_1",
+                        "subject": "Welcome to Outlook",
+                        "from": "welcome@microsoft.com",
+                        "date": "2025-11-14",
+                        "preview": "Get started with your new Outlook account..."
+                    },
+                    {
+                        "id": "email_2",
+                        "subject": "Your weekly summary",
+                        "from": "noreply@company.com",
+                        "date": "2025-11-13",
+                        "preview": "Here's what happened this week..."
+                    }
+                ],
+                "total": 2
+            }
+
+        elif "read_email" in tool_name:
+            email_id = tool_input.get("email_id")
+            return {
+                "id": email_id,
+                "subject": "Sample Email",
+                "from": "sender@example.com",
+                "date": "2025-11-14",
+                "body": "This is the email body content. It contains important information about your account."
+            }
+
+        elif "search" in tool_name:
+            query = tool_input.get("query", "")
+            return {
+                "results": [
+                    {
+                        "id": "result_1",
+                        "subject": f"Email matching '{query}'",
+                        "snippet": f"This email contains the keyword: {query}"
+                    }
+                ],
+                "total": 1
+            }
+
+        elif "calendar" in tool_name:
+            return {
+                "events": [
+                    {
+                        "id": "event_1",
+                        "title": "Team Meeting",
+                        "start": "2025-11-15T10:00:00",
+                        "end": "2025-11-15T11:00:00",
+                        "location": "Conference Room A"
+                    }
+                ],
+                "total": 1
+            }
+
+        return {"error": "Tool not implemented", "tool": tool_name}
 
     def analyze_bug_screenshot(
         self,
