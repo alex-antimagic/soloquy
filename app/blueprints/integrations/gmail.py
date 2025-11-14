@@ -1,0 +1,368 @@
+"""
+Gmail Integration (MCP)
+Supports both workspace-level (shared) and user-level (personal) Gmail accounts
+Uses Model Context Protocol via @gongrzhe/server-gmail-autoauth-mcp
+"""
+from flask import render_template, redirect, url_for, flash, request, session, g, jsonify
+from flask_login import login_required, current_user
+from app import db
+from app.blueprints.integrations import integrations_bp
+from app.models.integration import Integration
+from app.services.mcp_manager import mcp_manager
+from google_auth_oauthlib.flow import Flow
+from google.oauth2.credentials import Credentials
+import os
+
+
+# Gmail OAuth Scopes (read/send emails, manage labels)
+GMAIL_SCOPES = [
+    'https://www.googleapis.com/auth/gmail.modify',
+    'https://www.googleapis.com/auth/gmail.send',
+    'https://www.googleapis.com/auth/gmail.labels'
+]
+
+
+@integrations_bp.route('/gmail/configure', methods=['GET', 'POST'])
+@login_required
+def gmail_configure():
+    """
+    Configure Gmail OAuth credentials
+
+    Supports two modes:
+    - workspace: Shared Gmail account for entire workspace (admin only)
+    - user: Personal Gmail account for individual user
+
+    Query params:
+    - scope: 'workspace' or 'user' (default: 'workspace')
+    """
+    # Check scope (workspace or user)
+    scope = request.args.get('scope', 'workspace')
+
+    # Workspace scope requires admin
+    if scope == 'workspace':
+        role = current_user.get_role_in_tenant(g.current_tenant.id)
+        if role not in ['owner', 'admin']:
+            flash('Only workspace owners and admins can configure workspace integrations.', 'danger')
+            return redirect(url_for('integrations.index'))
+
+    # Check if integration already exists
+    owner_type = 'tenant' if scope == 'workspace' else 'user'
+    owner_id = g.current_tenant.id if scope == 'workspace' else current_user.id
+
+    integration = Integration.query.filter_by(
+        tenant_id=g.current_tenant.id,
+        integration_type='gmail',
+        owner_type=owner_type,
+        owner_id=owner_id
+    ).first()
+
+    if request.method == 'POST':
+        client_id = request.form.get('client_id', '').strip()
+        client_secret = request.form.get('client_secret', '').strip()
+        display_name = request.form.get('display_name', '').strip()
+
+        if not client_id or not client_secret:
+            flash('Please provide both Client ID and Client Secret.', 'danger')
+            return redirect(url_for('integrations.gmail_configure', scope=scope))
+
+        # Create or update integration
+        if not integration:
+            integration = Integration(
+                tenant_id=g.current_tenant.id,
+                integration_type='gmail',
+                owner_type=owner_type,
+                owner_id=owner_id,
+                integration_mode='mcp',
+                mcp_server_type='gmail',
+                is_active=False  # Not active until OAuth completes
+            )
+            db.session.add(integration)
+
+        # Set credentials and display name
+        integration.client_id = client_id
+        integration.client_secret = client_secret
+        integration.display_name = display_name or (
+            f"{g.current_tenant.name} Gmail" if scope == 'workspace'
+            else f"{current_user.full_name}'s Gmail"
+        )
+
+        # Build redirect URI
+        integration.redirect_uri = url_for(
+            'integrations.gmail_callback',
+            scope=scope,
+            _external=True
+        )
+
+        db.session.commit()
+
+        flash('Gmail credentials saved! Now authorize access to your Gmail account.', 'success')
+        return redirect(url_for('integrations.gmail_connect', scope=scope))
+
+    return render_template(
+        'integrations/gmail_configure.html',
+        title='Configure Gmail',
+        integration=integration,
+        scope=scope,
+        is_workspace=scope == 'workspace'
+    )
+
+
+@integrations_bp.route('/gmail/connect')
+@login_required
+def gmail_connect():
+    """
+    Initiate OAuth flow for Gmail
+
+    Query params:
+    - scope: 'workspace' or 'user'
+    """
+    scope = request.args.get('scope', 'workspace')
+
+    # Workspace scope requires admin
+    if scope == 'workspace':
+        role = current_user.get_role_in_tenant(g.current_tenant.id)
+        if role not in ['owner', 'admin']:
+            flash('Only workspace owners and admins can connect workspace integrations.', 'danger')
+            return redirect(url_for('integrations.index'))
+
+    # Get integration
+    owner_type = 'tenant' if scope == 'workspace' else 'user'
+    owner_id = g.current_tenant.id if scope == 'workspace' else current_user.id
+
+    integration = Integration.query.filter_by(
+        tenant_id=g.current_tenant.id,
+        integration_type='gmail',
+        owner_type=owner_type,
+        owner_id=owner_id
+    ).first()
+
+    if not integration or not integration.client_id or not integration.client_secret:
+        flash('Please configure Gmail credentials first.', 'warning')
+        return redirect(url_for('integrations.gmail_configure', scope=scope))
+
+    # Create OAuth flow
+    try:
+        client_config = {
+            "web": {
+                "client_id": integration.client_id,
+                "client_secret": integration.client_secret,
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token",
+                "redirect_uris": [integration.redirect_uri]
+            }
+        }
+
+        flow = Flow.from_client_config(
+            client_config,
+            scopes=GMAIL_SCOPES,
+            redirect_uri=integration.redirect_uri
+        )
+
+        # Store state in session
+        authorization_url, state = flow.authorization_url(
+            access_type='offline',
+            include_granted_scopes='true',
+            prompt='consent'  # Force consent to get refresh token
+        )
+
+        session['gmail_oauth_state'] = state
+        session['gmail_oauth_scope'] = scope
+
+        return redirect(authorization_url)
+
+    except Exception as e:
+        flash(f'Error initiating OAuth: {str(e)}', 'danger')
+        return redirect(url_for('integrations.gmail_configure', scope=scope))
+
+
+@integrations_bp.route('/gmail/callback')
+@login_required
+def gmail_callback():
+    """
+    Handle OAuth callback from Google
+
+    Query params:
+    - state: OAuth state token
+    - code: Authorization code
+    - scope: 'workspace' or 'user'
+    """
+    # Verify state
+    state = request.args.get('state')
+    stored_state = session.get('gmail_oauth_state')
+    scope_type = session.get('gmail_oauth_scope', 'workspace')
+
+    if not state or state != stored_state:
+        flash('Invalid OAuth state. Please try again.', 'danger')
+        return redirect(url_for('integrations.index'))
+
+    # Get authorization code
+    code = request.args.get('code')
+    if not code:
+        flash('Authorization denied or failed.', 'danger')
+        return redirect(url_for('integrations.index'))
+
+    # Get integration
+    owner_type = 'tenant' if scope_type == 'workspace' else 'user'
+    owner_id = g.current_tenant.id if scope_type == 'workspace' else current_user.id
+
+    integration = Integration.query.filter_by(
+        tenant_id=g.current_tenant.id,
+        integration_type='gmail',
+        owner_type=owner_type,
+        owner_id=owner_id
+    ).first()
+
+    if not integration:
+        flash('Integration not found. Please configure again.', 'danger')
+        return redirect(url_for('integrations.gmail_configure', scope=scope_type))
+
+    try:
+        # Exchange code for tokens
+        client_config = {
+            "web": {
+                "client_id": integration.client_id,
+                "client_secret": integration.client_secret,
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token",
+                "redirect_uris": [integration.redirect_uri]
+            }
+        }
+
+        flow = Flow.from_client_config(
+            client_config,
+            scopes=GMAIL_SCOPES,
+            redirect_uri=integration.redirect_uri,
+            state=state
+        )
+
+        flow.fetch_token(code=code)
+        credentials = flow.credentials
+
+        # Store tokens
+        integration.access_token = credentials.token
+        integration.refresh_token = credentials.refresh_token
+        integration.is_active = True
+
+        # Write credentials to filesystem for MCP server
+        creds_data = {
+            'client_id': integration.client_id,
+            'client_secret': integration.client_secret,
+            'access_token': credentials.token,
+            'refresh_token': credentials.refresh_token,
+            'redirect_uri': integration.redirect_uri
+        }
+
+        mcp_manager.write_credentials(integration, creds_data)
+
+        # Start MCP server
+        success, message = mcp_manager.start_mcp_server(integration)
+
+        if success:
+            db.session.commit()
+            flash(f'Gmail connected successfully! {message}', 'success')
+        else:
+            flash(f'Gmail connected but MCP server failed to start: {message}', 'warning')
+            db.session.commit()
+
+        # Clear session
+        session.pop('gmail_oauth_state', None)
+        session.pop('gmail_oauth_scope', None)
+
+        return redirect(url_for('integrations.index'))
+
+    except Exception as e:
+        flash(f'Error completing OAuth: {str(e)}', 'danger')
+        return redirect(url_for('integrations.gmail_configure', scope=scope_type))
+
+
+@integrations_bp.route('/gmail/disconnect', methods=['POST'])
+@login_required
+def gmail_disconnect():
+    """
+    Disconnect Gmail integration
+
+    Form data:
+    - scope: 'workspace' or 'user'
+    """
+    scope = request.form.get('scope', 'workspace')
+
+    # Workspace scope requires admin
+    if scope == 'workspace':
+        role = current_user.get_role_in_tenant(g.current_tenant.id)
+        if role not in ['owner', 'admin']:
+            flash('Only workspace owners and admins can disconnect workspace integrations.', 'danger')
+            return redirect(url_for('integrations.index'))
+
+    # Get integration
+    owner_type = 'tenant' if scope == 'workspace' else 'user'
+    owner_id = g.current_tenant.id if scope == 'workspace' else current_user.id
+
+    integration = Integration.query.filter_by(
+        tenant_id=g.current_tenant.id,
+        integration_type='gmail',
+        owner_type=owner_type,
+        owner_id=owner_id
+    ).first()
+
+    if not integration:
+        flash('Integration not found.', 'warning')
+        return redirect(url_for('integrations.index'))
+
+    try:
+        # Stop MCP server
+        mcp_manager.stop_mcp_server(integration)
+
+        # Cleanup credentials
+        mcp_manager.cleanup_credentials(integration)
+
+        # Deactivate integration
+        integration.deactivate()
+        db.session.commit()
+
+        flash('Gmail disconnected successfully.', 'success')
+
+    except Exception as e:
+        flash(f'Error disconnecting Gmail: {str(e)}', 'danger')
+
+    return redirect(url_for('integrations.index'))
+
+
+@integrations_bp.route('/gmail/status')
+@login_required
+def gmail_status():
+    """
+    Get Gmail MCP server status
+
+    Query params:
+    - scope: 'workspace' or 'user'
+
+    Returns:
+    JSON with server status
+    """
+    scope = request.args.get('scope', 'workspace')
+
+    # Get integration
+    owner_type = 'tenant' if scope == 'workspace' else 'user'
+    owner_id = g.current_tenant.id if scope == 'workspace' else current_user.id
+
+    integration = Integration.query.filter_by(
+        tenant_id=g.current_tenant.id,
+        integration_type='gmail',
+        owner_type=owner_type,
+        owner_id=owner_id
+    ).first()
+
+    if not integration:
+        return jsonify({'error': 'Integration not found'}), 404
+
+    status = mcp_manager.get_process_status(integration)
+
+    return jsonify({
+        'integration': {
+            'id': integration.id,
+            'display_name': integration.display_name,
+            'is_active': integration.is_active,
+            'owner_type': integration.owner_type
+        },
+        'server': status
+    })

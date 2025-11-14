@@ -1,0 +1,196 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('integrations.index') }}">Integrations</a></li>
+                    <li class="breadcrumb-item active">Configure Google Drive</li>
+                </ol>
+            </nav>
+            <h2>
+                {% if is_workspace %}
+                    <i class="bi bi-building me-2"></i>Set Up Workspace Google Drive
+                {% else %}
+                    <i class="bi bi-person me-2"></i>Set Up Personal Google Drive
+                {% endif %}
+            </h2>
+            <p class="text-muted">
+                {% if is_workspace %}
+                    Configure a shared Google Drive for your entire workspace (shared folders, team documents)
+                {% else %}
+                    Connect your personal Google Drive for AI agent access to your files and folders
+                {% endif %}
+            </p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Configuration Form -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-key me-2"></i>Google Cloud OAuth Credentials
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                        <div class="mb-3">
+                            <label for="display_name" class="form-label">
+                                Display Name
+                            </label>
+                            <input type="text"
+                                   class="form-control"
+                                   id="display_name"
+                                   name="display_name"
+                                   value="{{ integration.display_name if integration else '' }}"
+                                   placeholder="{% if is_workspace %}Team Shared Drive{% else %}My Personal Drive{% endif %}">
+                            <small class="form-text text-muted">
+                                Friendly name to identify this Google Drive connection
+                            </small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="client_id" class="form-label">
+                                Client ID <span class="text-danger">*</span>
+                            </label>
+                            <input type="text"
+                                   class="form-control font-monospace"
+                                   id="client_id"
+                                   name="client_id"
+                                   value="{{ integration.client_id if integration else '' }}"
+                                   required
+                                   placeholder="123456789-abc123.apps.googleusercontent.com">
+                            <small class="form-text text-muted">
+                                From your Google Cloud Project OAuth credentials
+                            </small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="client_secret" class="form-label">
+                                Client Secret <span class="text-danger">*</span>
+                            </label>
+                            <input type="password"
+                                   class="form-control font-monospace"
+                                   id="client_secret"
+                                   name="client_secret"
+                                   value="{{ integration.client_secret if integration else '' }}"
+                                   required
+                                   placeholder="GOCSPX-xxxxxxxxxxxxxxxxxxxxx">
+                            <small class="form-text text-muted">
+                                This secret is encrypted before storage and never exposed
+                            </small>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label">Redirect URI (Auto-configured)</label>
+                            <input type="text"
+                                   class="form-control font-monospace bg-light"
+                                   value="{{ url_for('integrations.google_drive_callback', scope=scope, _external=True) }}"
+                                   disabled>
+                            <small class="form-text text-muted">
+                                Add this to your Google Cloud OAuth "Authorized redirect URIs"
+                            </small>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg me-2"></i>Save Credentials
+                        </button>
+                        <a href="{{ url_for('integrations.index') }}" class="btn btn-secondary">
+                            Cancel
+                        </a>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Setup Instructions -->
+        <div class="col-lg-4">
+            <div class="card bg-light">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Setup Instructions</h6>
+                </div>
+                <div class="card-body">
+                    <h6>1. Create Google Cloud Project</h6>
+                    <p class="small">
+                        Go to <a href="https://console.cloud.google.com" target="_blank">Google Cloud Console</a>
+                        and create a new project (or use existing)
+                    </p>
+
+                    <h6>2. Enable Google Drive API</h6>
+                    <p class="small">
+                        In "APIs & Services" → "Library", search for "Google Drive API" and enable it
+                    </p>
+
+                    <h6>3. Create OAuth Credentials</h6>
+                    <p class="small">
+                        In "APIs & Services" → "Credentials":
+                    </p>
+                    <ul class="small">
+                        <li>Click "Create Credentials" → "OAuth client ID"</li>
+                        <li>Application type: "Web application"</li>
+                        <li>Add this redirect URI:<br>
+                            <code class="small">{{ url_for('integrations.google_drive_callback', scope=scope, _external=True) }}</code>
+                        </li>
+                    </ul>
+
+                    <h6>4. Configure OAuth Consent Screen</h6>
+                    <p class="small">
+                        {% if is_workspace %}
+                            Choose "Internal" if using Google Workspace, or "External" for personal accounts
+                        {% else %}
+                            Choose "External" and add yourself as a test user
+                        {% endif %}
+                    </p>
+
+                    <h6>5. Required Scopes</h6>
+                    <ul class="small">
+                        <li>drive (Full access to Drive)</li>
+                        <li>drive.file (Per-file access)</li>
+                    </ul>
+
+                    <div class="alert alert-info small mt-3 mb-3">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <strong>Note:</strong> You can use the same Google Cloud project for both Gmail and Drive.
+                        Just enable both APIs and add the necessary scopes.
+                    </div>
+
+                    <div class="alert alert-warning small mb-0">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        <strong>Security Note:</strong> Your credentials are encrypted at rest. The Drive MCP server
+                        runs as a separate process and only your authorized agents can access it.
+                    </div>
+                </div>
+            </div>
+
+            {% if integration and integration.is_active %}
+            <div class="card border-success mt-3">
+                <div class="card-header bg-success text-white">
+                    <h6 class="mb-0"><i class="bi bi-check-circle me-2"></i>Connected</h6>
+                </div>
+                <div class="card-body">
+                    <p class="small mb-2">
+                        <strong>{{ integration.display_name }}</strong>
+                    </p>
+                    <p class="small text-muted mb-3">
+                        Connected {{ integration.connected_at.strftime('%B %d, %Y') }}
+                    </p>
+                    <form method="POST" action="{{ url_for('integrations.google_drive_disconnect') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="scope" value="{{ scope }}">
+                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to disconnect Google Drive?')">
+                            <i class="bi bi-x-circle me-1"></i>Disconnect
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

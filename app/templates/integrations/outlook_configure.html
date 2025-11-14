@@ -1,0 +1,199 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('integrations.index') }}">Integrations</a></li>
+                    <li class="breadcrumb-item active">Configure Outlook</li>
+                </ol>
+            </nav>
+            <h2>
+                {% if is_workspace %}
+                    <i class="bi bi-building me-2"></i>Set Up Workspace Outlook
+                {% else %}
+                    <i class="bi bi-person me-2"></i>Set Up Personal Outlook
+                {% endif %}
+            </h2>
+            <p class="text-muted">
+                {% if is_workspace %}
+                    Configure a shared Outlook account for your entire workspace (e.g., support@company.com, sales@company.com)
+                {% else %}
+                    Connect your personal Outlook account for AI agent access to your emails, folders, and calendar
+                {% endif %}
+            </p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Configuration Form -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-key me-2"></i>Microsoft Azure OAuth Credentials
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                        <div class="mb-3">
+                            <label for="display_name" class="form-label">
+                                Display Name
+                            </label>
+                            <input type="text"
+                                   class="form-control"
+                                   id="display_name"
+                                   name="display_name"
+                                   value="{{ integration.display_name if integration else '' }}"
+                                   placeholder="{% if is_workspace %}Support Team Outlook{% else %}My Personal Outlook{% endif %}">
+                            <small class="form-text text-muted">
+                                Friendly name to identify this Outlook connection
+                            </small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="client_id" class="form-label">
+                                Application (client) ID <span class="text-danger">*</span>
+                            </label>
+                            <input type="text"
+                                   class="form-control font-monospace"
+                                   id="client_id"
+                                   name="client_id"
+                                   value="{{ integration.client_id if integration else '' }}"
+                                   required
+                                   placeholder="12345678-1234-1234-1234-123456789012">
+                            <small class="form-text text-muted">
+                                From your Azure App Registration
+                            </small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="client_secret" class="form-label">
+                                Client Secret <span class="text-danger">*</span>
+                            </label>
+                            <input type="password"
+                                   class="form-control font-monospace"
+                                   id="client_secret"
+                                   name="client_secret"
+                                   value="{{ integration.client_secret if integration else '' }}"
+                                   required
+                                   placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxx">
+                            <small class="form-text text-muted">
+                                This secret is encrypted before storage and never exposed
+                            </small>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label">Redirect URI (Auto-configured)</label>
+                            <input type="text"
+                                   class="form-control font-monospace bg-light"
+                                   value="{{ url_for('integrations.outlook_callback', scope=scope, _external=True) }}"
+                                   disabled>
+                            <small class="form-text text-muted">
+                                Add this to your Azure App "Redirect URIs" under Authentication
+                            </small>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg me-2"></i>Save Credentials
+                        </button>
+                        <a href="{{ url_for('integrations.index') }}" class="btn btn-secondary">
+                            Cancel
+                        </a>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Setup Instructions -->
+        <div class="col-lg-4">
+            <div class="card bg-light">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Setup Instructions</h6>
+                </div>
+                <div class="card-body">
+                    <h6>1. Sign in to Azure Portal</h6>
+                    <p class="small">
+                        Go to <a href="https://portal.azure.com" target="_blank">Azure Portal</a>
+                        and sign in with your Microsoft account
+                    </p>
+
+                    <h6>2. Register App</h6>
+                    <p class="small">
+                        Navigate to "Azure Active Directory" → "App registrations" → "New registration"
+                    </p>
+                    <ul class="small">
+                        <li>Name: "Soloquy MCP Integration"</li>
+                        <li>Supported account types: "Accounts in any organizational directory and personal Microsoft accounts"</li>
+                    </ul>
+
+                    <h6>3. Configure Authentication</h6>
+                    <p class="small">
+                        In your app's "Authentication" section:
+                    </p>
+                    <ul class="small">
+                        <li>Add platform: "Web"</li>
+                        <li>Add redirect URI:<br>
+                            <code class="small">{{ url_for('integrations.outlook_callback', scope=scope, _external=True) }}</code>
+                        </li>
+                        <li>Enable "Access tokens" and "ID tokens"</li>
+                    </ul>
+
+                    <h6>4. Create Client Secret</h6>
+                    <p class="small">
+                        In "Certificates & secrets" → "Client secrets" → "New client secret"
+                    </p>
+                    <ul class="small">
+                        <li>Description: "Soloquy MCP"</li>
+                        <li>Expiration: Your choice</li>
+                        <li><strong>Copy the secret value immediately</strong> (you can't see it again)</li>
+                    </ul>
+
+                    <h6>5. API Permissions</h6>
+                    <p class="small">
+                        In "API permissions" → "Add a permission" → "Microsoft Graph":
+                    </p>
+                    <ul class="small">
+                        <li>Mail.ReadWrite (Delegated)</li>
+                        <li>Mail.Send (Delegated)</li>
+                        <li>offline_access (Delegated)</li>
+                    </ul>
+
+                    <div class="alert alert-warning small mt-3 mb-0">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        <strong>Security Note:</strong> Your credentials are encrypted at rest. The Outlook MCP server
+                        runs as a separate process and only your authorized agents can access it.
+                    </div>
+                </div>
+            </div>
+
+            {% if integration and integration.is_active %}
+            <div class="card border-success mt-3">
+                <div class="card-header bg-success text-white">
+                    <h6 class="mb-0"><i class="bi bi-check-circle me-2"></i>Connected</h6>
+                </div>
+                <div class="card-body">
+                    <p class="small mb-2">
+                        <strong>{{ integration.display_name }}</strong>
+                    </p>
+                    <p class="small text-muted mb-3">
+                        Connected {{ integration.connected_at.strftime('%B %d, %Y') }}
+                    </p>
+                    <form method="POST" action="{{ url_for('integrations.outlook_disconnect') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="scope" value="{{ scope }}">
+                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to disconnect Outlook?')">
+                            <i class="bi bi-x-circle me-1"></i>Disconnect
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

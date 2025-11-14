@@ -9,72 +9,40 @@
         </div>
     </div>
 
-    <div class="row g-4">
-        {% for integration in integrations %}
-        <div class="col-md-6 col-lg-4">
-            <div class="card h-100 integration-card">
-                <div class="card-body d-flex flex-column">
-                    <div class="d-flex align-items-start mb-3">
-                        <div class="integration-logo me-3">
-                            <img src="{{ url_for('static', filename='images/integrations/' + integration.logo) }}"
-                                 alt="{{ integration.name }}"
-                                 class="img-fluid"
-                                 onerror="this.src='{{ url_for('static', filename='images/integrations/placeholder.svg') }}'">
-                        </div>
-                        <div class="flex-grow-1">
-                            <h5 class="card-title mb-1">{{ integration.name }}</h5>
-                            <span class="badge bg-secondary small">{{ integration.category }}</span>
-                        </div>
-                    </div>
-                    <p class="card-text text-muted flex-grow-1">{{ integration.description }}</p>
-                    <div class="mt-3">
-                        {% if integration.available %}
-                            {% if integration.connected %}
-                                <div class="d-flex align-items-center gap-2 flex-wrap">
-                                    <span class="badge bg-success"><i class="bi bi-check-circle"></i> Connected</span>
-                                    <button class="btn btn-outline-danger btn-sm"
-                                            onclick="disconnectIntegration('{{ integration.name }}', '{{ url_for(integration.disconnect_url) }}')">
-                                        <i class="bi bi-x-circle"></i> Disconnect
-                                    </button>
-                                    {% if integration.configure_url %}
-                                        <a href="{{ url_for(integration.configure_url) }}" class="btn btn-outline-secondary btn-sm">
-                                            <i class="bi bi-gear"></i> Settings
-                                        </a>
-                                    {% endif %}
-                                </div>
-                            {% elif integration.get('configured') %}
-                                <div class="d-flex align-items-center gap-2 flex-wrap">
-                                    <a href="{{ url_for(integration.connect_url) }}" class="btn btn-primary btn-sm">
-                                        <i class="bi bi-plug"></i> Connect
-                                    </a>
-                                    {% if integration.configure_url %}
-                                        <a href="{{ url_for(integration.configure_url) }}" class="btn btn-outline-secondary btn-sm">
-                                            <i class="bi bi-gear"></i> Settings
-                                        </a>
-                                    {% endif %}
-                                </div>
-                            {% elif integration.configure_url %}
-                                <a href="{{ url_for(integration.configure_url) }}" class="btn btn-warning btn-sm">
-                                    <i class="bi bi-wrench"></i> Configure
-                                </a>
-                            {% else %}
-                                <button class="btn btn-outline-secondary btn-sm" disabled>
-                                    <i class="bi bi-exclamation-circle"></i> Configuration Required
-                                </button>
-                            {% endif %}
-                        {% else %}
-                            <button class="btn btn-outline-secondary btn-sm" disabled>
-                                <i class="bi bi-clock"></i> Coming Soon
-                            </button>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
+    {% if is_admin and workspace_integrations %}
+    <!-- Workspace Integrations (Admin Only) -->
+    <div class="mb-5">
+        <div class="d-flex align-items-center mb-3">
+            <i class="bi bi-building me-2 text-primary"></i>
+            <h4 class="mb-0">Workspace Integrations</h4>
+            <span class="badge bg-primary ms-2">Admin Only</span>
         </div>
-        {% endfor %}
+        <p class="text-muted small mb-3">Shared integrations accessible to all workspace agents (when enabled by admins)</p>
+
+        <div class="row g-4">
+            {% for integration in workspace_integrations %}
+            {% include 'integrations/_integration_card.html' %}
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Personal Integrations (All Users) -->
+    <div>
+        <div class="d-flex align-items-center mb-3">
+            <i class="bi bi-person me-2 text-success"></i>
+            <h4 class="mb-0">Personal Integrations</h4>
+        </div>
+        <p class="text-muted small mb-3">Your personal integrations, accessible only to agents you create</p>
+
+        <div class="row g-4">
+            {% for integration in personal_integrations %}
+            {% include 'integrations/_integration_card.html' %}
+            {% endfor %}
+        </div>
     </div>
 
-    {% if not integrations %}
+    {% if not workspace_integrations and not personal_integrations %}
     <div class="row">
         <div class="col text-center py-5">
             <i class="bi bi-plug display-1 text-muted"></i>
@@ -116,27 +84,40 @@
 
 {% block extra_js %}
 <script>
-async function disconnectIntegration(name, url) {
+async function disconnectIntegration(name, url, params = {}) {
     if (!confirm(`Are you sure you want to disconnect ${name}? This will remove access to your ${name} data.`)) {
         return;
     }
 
     try {
         const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+        // Build form data with CSRF token and any additional params
+        const formData = new FormData();
+        formData.append('csrf_token', csrfToken);
+
+        // Add any additional parameters (like scope)
+        for (const [key, value] of Object.entries(params)) {
+            formData.append(key, value);
+        }
+
         const response = await fetch(url, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': csrfToken
-            }
+            body: formData
         });
 
         if (response.ok) {
             // Reload page to show updated status
             window.location.reload();
         } else {
-            const data = await response.json();
-            alert(`Error disconnecting: ${data.error || 'Unknown error'}`);
+            let errorMsg = 'Unknown error';
+            try {
+                const data = await response.json();
+                errorMsg = data.error || errorMsg;
+            } catch (e) {
+                // Response might not be JSON
+            }
+            alert(`Error disconnecting: ${errorMsg}`);
         }
     } catch (error) {
         console.error('Error:', error);
