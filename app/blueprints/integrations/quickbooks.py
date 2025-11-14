@@ -18,8 +18,9 @@ def quickbooks_configure():
         flash('Please select a workspace first.', 'warning')
         return redirect(url_for('tenant.home'))
 
-    # Check if user is admin
-    if not current_user.is_admin(g.current_tenant.id):
+    # Check if user is admin or owner
+    role = current_user.get_role_in_tenant(g.current_tenant.id)
+    if role not in ['owner', 'admin']:
         flash('Only workspace administrators can configure integrations.', 'danger')
         return redirect(url_for('integrations.index'))
 
