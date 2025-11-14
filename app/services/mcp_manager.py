@@ -529,9 +529,22 @@ class MCPManager:
         # Build minimal safe environment - DO NOT use os.environ.copy()
         creds_dir = self._get_credentials_path(integration)
 
+        # Build PATH - include Heroku Node.js directory if present
+        path_components = ['/usr/local/bin', '/usr/bin', '/bin']
+
+        # Add Heroku-specific paths if on Heroku
+        if os.getenv('DYNO'):
+            # Heroku Node.js buildpack installs to /app/.heroku/node/bin
+            heroku_paths = [
+                '/app/.heroku/node/bin',
+                '/app/.heroku/python/bin',
+                '/app/node_modules/.bin'
+            ]
+            path_components = heroku_paths + path_components
+
         safe_env = {
             # Essential system paths
-            'PATH': '/usr/local/bin:/usr/bin:/bin',
+            'PATH': ':'.join(path_components),
             'LANG': 'en_US.UTF-8',
             'LC_ALL': 'en_US.UTF-8',
 
