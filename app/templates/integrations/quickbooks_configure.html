@@ -10,8 +10,8 @@
                     <li class="breadcrumb-item active">Configure QuickBooks</li>
                 </ol>
             </nav>
-            <h2>Configure QuickBooks OAuth</h2>
-            <p class="text-muted">Enter your QuickBooks OAuth application credentials to enable integration</p>
+            <h2>Set Up QuickBooks Integration</h2>
+            <p class="text-muted">Enter your QuickBooks OAuth credentials and connect your account</p>
         </div>
     </div>
 
@@ -80,8 +80,11 @@
                         </div>
 
                         <div class="d-flex gap-2">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-save"></i> Save Credentials
+                            <button type="submit" name="action" value="save_and_connect" class="btn btn-primary">
+                                <i class="bi bi-plug"></i> Save & Connect to QuickBooks
+                            </button>
+                            <button type="submit" name="action" value="save_only" class="btn btn-outline-secondary">
+                                <i class="bi bi-save"></i> Save Only
                             </button>
                             <a href="{{ url_for('integrations.index') }}" class="btn btn-outline-secondary">
                                 Cancel

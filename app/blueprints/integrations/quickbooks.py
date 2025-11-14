@@ -36,6 +36,7 @@ def quickbooks_configure():
             client_secret = request.form.get('client_secret', '').strip()
             redirect_uri = request.form.get('redirect_uri', '').strip()
             environment = request.form.get('environment', 'sandbox')
+            action = request.form.get('action', 'save_only')
 
             # Validate inputs
             if not client_id or not client_secret:
@@ -62,6 +63,11 @@ def quickbooks_configure():
             integration.environment = environment
 
             db.session.commit()
+
+            # If user wants to connect immediately, redirect to OAuth flow
+            if action == 'save_and_connect':
+                flash('Credentials saved! Redirecting to QuickBooks authorization...', 'info')
+                return redirect(url_for('integrations.quickbooks_connect'))
 
             flash('QuickBooks credentials saved successfully! You can now connect.', 'success')
             return redirect(url_for('integrations.index'))
