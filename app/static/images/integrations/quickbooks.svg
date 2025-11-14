@@ -1,5 +1,7 @@
-<svg width="60" height="60" xmlns="http://www.w3.org/2000/svg">
-  <rect width="60" height="60" fill="#2ca01c" rx="8"/>
-  <circle cx="30" cy="30" r="18" fill="white"/>
-  <text x="30" y="38" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="#2ca01c" text-anchor="middle">QB</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
+  <rect width="48" height="48" rx="8" fill="#2ca01c"/>
+  <circle cx="24" cy="24" r="16" fill="white"/>
+  <circle cx="24" cy="24" r="13" fill="#2ca01c"/>
+  <path fill="white" d="M24,14c-5.5,0-10,4.5-10,10s4.5,10,10,10s10-4.5,10-10S29.5,14,24,14z M24,31c-3.9,0-7-3.1-7-7s3.1-7,7-7 s7,3.1,7,7S27.9,31,24,31z"/>
+  <circle cx="24" cy="24" r="4" fill="white"/>
 </svg>
