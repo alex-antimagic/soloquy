@@ -1,0 +1,180 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2><i class="bi bi-robot me-2"></i>Create Personal AI Agent</h2>
+            <p class="text-muted">Create your own AI assistant with access to your personal integrations</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <form method="POST" action="{{ url_for('tenant.create_agent') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <!-- Basic Information -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Basic Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="name" class="form-label">Agent Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="name" name="name" required
+                                   placeholder="e.g., Executive Assistant">
+                            <div class="form-text">Give your AI assistant a descriptive name</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description</label>
+                            <input type="text" class="form-control" id="description" name="description"
+                                   placeholder="e.g., Personal assistant for managing emails and calendar">
+                            <div class="form-text">Brief description of what this agent does</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="system_prompt" class="form-label">System Prompt <span class="text-danger">*</span></label>
+                            <textarea class="form-control" id="system_prompt" name="system_prompt" rows="5" required
+                                      placeholder="You are an executive assistant helping with...">You are a highly capable executive assistant. You help with managing emails, scheduling meetings, organizing tasks, and providing insights from documents and communications. Be professional, proactive, and detail-oriented.</textarea>
+                            <div class="form-text">Define the agent's role and behavior. This shapes how the AI responds.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Model Configuration -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="bi bi-sliders me-2"></i>Model Configuration</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="model" class="form-label">AI Model</label>
+                            <select class="form-select" id="model" name="model">
+                                <option value="claude-3-5-sonnet-20241022" selected>Claude 3.5 Sonnet (Recommended)</option>
+                                <option value="claude-3-5-haiku-20241022">Claude 3.5 Haiku (Faster)</option>
+                                <option value="claude-3-opus-20240229">Claude 3 Opus (Most Capable)</option>
+                            </select>
+                            <div class="form-text">Choose the AI model. Sonnet offers the best balance of speed and capability.</div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="temperature" class="form-label">Temperature</label>
+                                <input type="number" class="form-control" id="temperature" name="temperature"
+                                       value="1.0" min="0" max="1" step="0.1">
+                                <div class="form-text">Higher = more creative, Lower = more focused (0-1)</div>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label for="max_tokens" class="form-label">Max Tokens</label>
+                                <input type="number" class="form-control" id="max_tokens" name="max_tokens"
+                                       value="4096" min="1024" max="8192" step="1024">
+                                <div class="form-text">Maximum response length</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Integration Access -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="bi bi-plug me-2"></i>Personal Integration Access</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted small mb-3">
+                            Enable access to your personal integrations. This agent will only access YOUR connected accounts,
+                            not workspace-wide integrations.
+                        </p>
+
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="enable_gmail" name="enable_gmail">
+                            <label class="form-check-label" for="enable_gmail">
+                                <i class="bi bi-envelope me-2"></i><strong>Gmail</strong>
+                                <div class="text-muted small">Access your personal Gmail emails and compose messages</div>
+                            </label>
+                        </div>
+
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="enable_outlook" name="enable_outlook" checked>
+                            <label class="form-check-label" for="enable_outlook">
+                                <i class="bi bi-envelope me-2"></i><strong>Outlook</strong>
+                                <div class="text-muted small">Access your personal Outlook emails, calendar, and contacts</div>
+                            </label>
+                        </div>
+
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="enable_google_drive" name="enable_google_drive">
+                            <label class="form-check-label" for="enable_google_drive">
+                                <i class="bi bi-cloud me-2"></i><strong>Google Drive</strong>
+                                <div class="text-muted small">Access your personal Google Drive files and documents</div>
+                            </label>
+                        </div>
+
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle me-2"></i>
+                            <strong>Privacy Note:</strong> Since you created this agent, it can access your personal integrations.
+                            Other workspace members won't have access to your personal data through this agent.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-plus-circle me-2"></i>Create Agent
+                    </button>
+                    <a href="{{ url_for('tenant.agents') }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle me-2"></i>Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+
+        <!-- Help Sidebar -->
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-lightbulb me-2"></i>Tips for Creating Agents</h6>
+                </div>
+                <div class="card-body">
+                    <h6>System Prompt Examples:</h6>
+                    <div class="mb-3">
+                        <strong>Executive Assistant:</strong>
+                        <p class="small text-muted">
+                            "You are an executive assistant helping manage my professional life. Prioritize emails,
+                            suggest meeting times, and help me stay organized. Be proactive and anticipate needs."
+                        </p>
+                    </div>
+
+                    <div class="mb-3">
+                        <strong>Research Assistant:</strong>
+                        <p class="small text-muted">
+                            "You are a research assistant helping me analyze documents and emails. Summarize key points,
+                            identify patterns, and provide insights. Be thorough and cite sources."
+                        </p>
+                    </div>
+
+                    <div class="mb-3">
+                        <strong>Project Manager:</strong>
+                        <p class="small text-muted">
+                            "You are a project management assistant. Help me track tasks, deadlines, and communications.
+                            Identify blockers and suggest next steps. Be organized and action-oriented."
+                        </p>
+                    </div>
+
+                    <hr>
+
+                    <h6>Integration Recommendations:</h6>
+                    <ul class="small">
+                        <li><strong>Outlook:</strong> Essential for email management and calendar scheduling</li>
+                        <li><strong>Gmail:</strong> If you use both Gmail and Outlook professionally</li>
+                        <li><strong>Google Drive:</strong> For document analysis and file management</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

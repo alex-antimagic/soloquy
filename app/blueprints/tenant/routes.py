@@ -621,6 +621,62 @@ def agents():
                           can_edit=can_edit)
 
 
+@tenant_bp.route('/agents/create', methods=['GET', 'POST'])
+@login_required
+def create_agent():
+    """Create a personal AI agent"""
+    if not g.current_tenant:
+        flash('Please select a workspace first.', 'warning')
+        return redirect(url_for('tenant.home'))
+
+    if request.method == 'POST':
+        # Get or create Personal department
+        from app.models.department import Department
+        from app.models.agent import Agent
+
+        personal_dept = Department.query.filter_by(
+            tenant_id=g.current_tenant.id,
+            slug='personal'
+        ).first()
+
+        if not personal_dept:
+            personal_dept = Department(
+                tenant_id=g.current_tenant.id,
+                name='Personal',
+                slug='personal',
+                description='Personal AI assistants',
+                color='#8b5cf6',
+                icon='👤'
+            )
+            db.session.add(personal_dept)
+            db.session.flush()
+
+        # Create the agent
+        agent = Agent(
+            department_id=personal_dept.id,
+            created_by_id=current_user.id,
+            name=request.form.get('name', '').strip(),
+            description=request.form.get('description', '').strip(),
+            system_prompt=request.form.get('system_prompt', '').strip(),
+            is_active=True,
+            is_primary=False,
+            model=request.form.get('model', 'claude-3-5-sonnet-20241022'),
+            temperature=float(request.form.get('temperature', 1.0)),
+            max_tokens=int(request.form.get('max_tokens', 4096)),
+            enable_gmail=request.form.get('enable_gmail') == 'on',
+            enable_outlook=request.form.get('enable_outlook') == 'on',
+            enable_google_drive=request.form.get('enable_google_drive') == 'on'
+        )
+        db.session.add(agent)
+        db.session.commit()
+
+        flash(f'Agent "{agent.name}" created successfully!', 'success')
+        return redirect(url_for('chat.agent_chat', agent_id=agent.id))
+
+    return render_template('tenant/create_agent.html',
+                          title='Create AI Agent')
+
+
 @tenant_bp.route('/edit-context', methods=['GET', 'POST'])
 @login_required
 def edit_context():
