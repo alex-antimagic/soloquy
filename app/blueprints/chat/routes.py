@@ -1,4 +1,4 @@
-from flask import render_template, request, jsonify, g
+from flask import render_template, request, jsonify, g, current_app
 from flask_login import login_required, current_user
 from app.blueprints.chat import chat_bp
 from app.models.message import Message
@@ -7,6 +7,7 @@ from app.models.channel import Channel
 from app.models.agent import Agent
 from app.models.task import Task
 from app.services.ai_service import get_ai_service
+from app.services.cloudinary_service import upload_image
 from app import db, limiter, socketio
 from app.utils.input_validators import validate_message_content, sanitize_ai_input
 from app.utils.security_decorators import require_tenant_access
@@ -105,6 +106,63 @@ def agent_chat(agent_id):
                            context_agent=agent)
 
 
+@chat_bp.route('/upload-image', methods=['POST'])
+@login_required
+def upload_chat_image():
+    """Upload an image for chat messages"""
+    try:
+        # Validate file upload
+        if 'image' not in request.files:
+            return jsonify({'error': 'No image provided'}), 400
+
+        file = request.files['image']
+
+        if file.filename == '':
+            return jsonify({'error': 'No file selected'}), 400
+
+        # Validate file size
+        file.seek(0, 2)  # Seek to end
+        file_size = file.tell()
+        file.seek(0)  # Reset to beginning
+
+        max_size = current_app.config.get('MAX_FILE_SIZE', 10 * 1024 * 1024)
+        if file_size > max_size:
+            return jsonify({'error': f'File too large. Maximum size is {max_size // (1024 * 1024)}MB'}), 400
+
+        # Validate file type
+        allowed_extensions = current_app.config.get('ALLOWED_IMAGE_EXTENSIONS', {'png', 'jpg', 'jpeg', 'gif', 'webp'})
+        file_ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else ''
+
+        if file_ext not in allowed_extensions:
+            return jsonify({'error': f'Invalid file type. Allowed: {", ".join(allowed_extensions)}'}), 400
+
+        # Determine MIME type
+        mime_types = {
+            'png': 'image/png',
+            'jpg': 'image/jpeg',
+            'jpeg': 'image/jpeg',
+            'gif': 'image/gif',
+            'webp': 'image/webp'
+        }
+        mime_type = mime_types.get(file_ext, 'image/png')
+
+        # Upload to Cloudinary
+        file.seek(0)
+        upload_result = upload_image(file, folder="chat_images")
+
+        return jsonify({
+            'success': True,
+            'url': upload_result['secure_url'],
+            'filename': file.filename,
+            'size': file_size,
+            'type': mime_type
+        })
+
+    except Exception as e:
+        current_app.logger.error(f"Error uploading chat image: {str(e)}")
+        return jsonify({'error': 'Failed to upload image. Please try again.'}), 500
+
+
 @chat_bp.route('/send', methods=['POST'])
 @login_required
 def send_message():
@@ -114,50 +172,72 @@ def send_message():
     if not data:
         return jsonify({'error': 'No data received'}), 400
 
-    content = data.get('content')
+    content = data.get('content', '')
     department_id = data.get('department_id')
     recipient_id = data.get('recipient_id')
     agent_id = data.get('agent_id')
 
-    # Validate message content
-    is_valid, error = validate_message_content(content)
-    if not is_valid:
-        return jsonify({'error': error}), 400
+    # Attachment data (if image was uploaded)
+    attachment_url = data.get('attachment_url')
+    attachment_type = data.get('attachment_type')
+    attachment_filename = data.get('attachment_filename')
+    attachment_size = data.get('attachment_size')
+
+    # Validate message content (allow empty if there's an attachment)
+    if not content and not attachment_url:
+        return jsonify({'error': 'Message cannot be empty'}), 400
+
+    if content:
+        is_valid, error = validate_message_content(content)
+        if not is_valid:
+            return jsonify({'error': error}), 400
+
+    # Determine message type
+    message_type = 'image' if attachment_url else 'text'
 
     # Save user's message
     message = Message(
-        content=content,
+        content=content or '(image)',
         sender_id=current_user.id,
         department_id=department_id,
-        recipient_id=recipient_id
+        recipient_id=recipient_id,
+        message_type=message_type,
+        attachment_url=attachment_url,
+        attachment_type=attachment_type,
+        attachment_filename=attachment_filename,
+        attachment_size=attachment_size
     )
     db.session.add(message)
     db.session.commit()
 
     # Broadcast user message via Socket.IO
+    message_data = {
+        'id': message.id,
+        'content': message.content,
+        'sender_id': current_user.id,
+        'sender': current_user.full_name,
+        'message_type': message.message_type,
+        'created_at': message.created_at.isoformat()
+    }
+
+    # Include attachment data if present
+    if message.attachment_url:
+        message_data.update({
+            'attachment_url': message.attachment_url,
+            'attachment_type': message.attachment_type,
+            'attachment_filename': message.attachment_filename,
+            'attachment_size': message.attachment_size
+        })
+
     if recipient_id:
         # User-to-user DM - create consistent conversation ID
         user_ids = sorted([current_user.id, recipient_id])
         conversation_id = f"user_{user_ids[0]}_{user_ids[1]}"
-
-        socketio.emit('new_message', {
-            'id': message.id,
-            'content': message.content,
-            'sender_id': current_user.id,
-            'sender': current_user.full_name,
-            'created_at': message.created_at.isoformat()
-        }, room=conversation_id)
+        socketio.emit('new_message', message_data, room=conversation_id)
     elif agent_id:
         # User-to-agent DM
         conversation_id = f"agent_{agent_id}_user_{current_user.id}"
-
-        socketio.emit('new_message', {
-            'id': message.id,
-            'content': message.content,
-            'sender_id': current_user.id,
-            'sender': current_user.full_name,
-            'created_at': message.created_at.isoformat()
-        }, room=conversation_id)
+        socketio.emit('new_message', message_data, room=conversation_id)
 
     # If message is to an agent, generate AI response
     agent_response = None

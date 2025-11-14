@@ -19,7 +19,13 @@ class Message(db.Model):
 
     # Message content
     content = db.Column(db.Text, nullable=False)
-    message_type = db.Column(db.String(50), default='text')  # text, system, notification
+    message_type = db.Column(db.String(50), default='text')  # text, image, system, notification
+
+    # Attachments (for images and files)
+    attachment_url = db.Column(db.String(500), nullable=True)  # Cloudinary URL
+    attachment_type = db.Column(db.String(100), nullable=True)  # MIME type (image/png, image/jpeg, etc.)
+    attachment_filename = db.Column(db.String(255), nullable=True)  # Original filename
+    attachment_size = db.Column(db.Integer, nullable=True)  # File size in bytes
 
     # Metadata
     is_edited = db.Column(db.Boolean, default=False, nullable=False)
