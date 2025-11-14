@@ -250,27 +250,39 @@ class AIService:
         from app.models.integration import Integration
         from app.services.mcp_client import get_mcp_tools_for_integration
 
+        print(f"[MCP DEBUG] _get_mcp_tools called for agent {agent.id}")
+        print(f"[MCP DEBUG] Agent flags: gmail={agent.enable_gmail}, outlook={agent.enable_outlook}, drive={agent.enable_google_drive}")
+
         all_tools = []
         mcp_servers = self._build_mcp_config(agent, user)
 
+        print(f"[MCP DEBUG] _build_mcp_config returned: {mcp_servers}")
+
         if not mcp_servers:
+            print(f"[MCP DEBUG] No MCP servers configured")
             return None
 
         # Collect tools from all enabled integrations
         for server_config in mcp_servers:
             integration_id = server_config.get('integration_id')
+            print(f"[MCP DEBUG] Processing server config: {server_config}")
             if not integration_id:
+                print(f"[MCP DEBUG] No integration_id in server config")
                 continue
 
             integration = Integration.query.get(integration_id)
             if not integration:
+                print(f"[MCP DEBUG] Integration {integration_id} not found")
                 continue
 
+            print(f"[MCP DEBUG] Getting tools for integration {integration.integration_type}")
             tools = get_mcp_tools_for_integration(integration)
+            print(f"[MCP DEBUG] Got {len(tools) if tools else 0} tools from {integration.integration_type}")
             if tools:
                 all_tools.extend(tools)
                 current_app.logger.info(f"Loaded {len(tools)} tools from {integration.integration_type}")
 
+        print(f"[MCP DEBUG] Total tools collected: {len(all_tools)}")
         return all_tools if all_tools else None
 
     def chat(
@@ -315,10 +327,15 @@ class AIService:
             # Get MCP tools if agent has integrations enabled
             tools = None
             if agent and user:
+                print(f"[MCP DEBUG] Getting tools for agent {agent.id} user {user.id}")
                 tools = self._get_mcp_tools(agent, user)
+                print(f"[MCP DEBUG] Got {len(tools) if tools else 0} tools")
                 if tools:
                     api_params['tools'] = tools
+                    print(f"[MCP DEBUG] Added {len(tools)} tools to API params")
                     current_app.logger.info(f"Agent {agent.name} has {len(tools)} tools available")
+                else:
+                    print(f"[MCP DEBUG] No tools returned")
 
             # Call Claude API (potentially multiple times for tool use)
             response = self.client.messages.create(**api_params)
