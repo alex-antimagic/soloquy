@@ -177,15 +177,49 @@
                             </div>
                         </div>
 
-                        {% if not qb_integration or not qb_integration.is_active %}
+                        <!-- Gmail Integration -->
+                        <div class="form-check mb-2">
+                            {{ form.enable_gmail(class="form-check-input") }}
+                            <label class="form-check-label" for="{{ form.enable_gmail.id }}">
+                                <strong>Gmail</strong>
+                                <span class="badge bg-secondary ms-2">Personal</span>
+                            </label>
+                            <div class="small text-muted ms-4">
+                                Access your personal Gmail emails and compose messages
+                            </div>
+                        </div>
+
+                        <!-- Outlook Integration -->
+                        <div class="form-check mb-2">
+                            {{ form.enable_outlook(class="form-check-input") }}
+                            <label class="form-check-label" for="{{ form.enable_outlook.id }}">
+                                <strong>Microsoft Outlook</strong>
+                                <span class="badge bg-secondary ms-2">Personal</span>
+                            </label>
+                            <div class="small text-muted ms-4">
+                                Access your personal Outlook emails, calendar, and contacts
+                            </div>
+                        </div>
+
+                        <!-- Google Drive Integration -->
+                        <div class="form-check mb-2">
+                            {{ form.enable_google_drive(class="form-check-input") }}
+                            <label class="form-check-label" for="{{ form.enable_google_drive.id }}">
+                                <strong>Google Drive</strong>
+                                <span class="badge bg-secondary ms-2">Personal</span>
+                            </label>
+                            <div class="small text-muted ms-4">
+                                Access your personal Google Drive files and documents
+                            </div>
+                        </div>
+
                         <div class="alert alert-info mt-3 mb-0">
                             <i class="bi bi-info-circle me-2"></i>
                             <small>
-                                No integrations are currently connected to this workspace.
+                                Personal integrations are only accessible by agents you create.
                                 Visit the <a href="{{ url_for('integrations.index') }}">Integrations page</a> to connect external data sources.
                             </small>
                         </div>
-                        {% endif %}
                     </div>
                 </div>
 

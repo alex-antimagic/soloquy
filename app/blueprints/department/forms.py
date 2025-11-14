@@ -74,5 +74,8 @@ class AgentForm(FlaskForm):
 
     # Integration Access (secure by default - admin must explicitly enable)
     enable_quickbooks = BooleanField('Enable QuickBooks Access', default=False)
+    enable_gmail = BooleanField('Enable Gmail Access', default=False)
+    enable_outlook = BooleanField('Enable Outlook Access', default=False)
+    enable_google_drive = BooleanField('Enable Google Drive Access', default=False)
 
     submit = SubmitField('Save Changes')
