@@ -181,6 +181,9 @@ def edit_agent(agent_id):
         agent.max_tokens = form.max_tokens.data
         agent.is_active = form.is_active.data
         agent.enable_quickbooks = form.enable_quickbooks.data
+        agent.enable_gmail = form.enable_gmail.data if hasattr(form, 'enable_gmail') else agent.enable_gmail
+        agent.enable_outlook = form.enable_outlook.data if hasattr(form, 'enable_outlook') else agent.enable_outlook
+        agent.enable_google_drive = form.enable_google_drive.data if hasattr(form, 'enable_google_drive') else agent.enable_google_drive
 
         db.session.commit()
 
