@@ -24,6 +24,7 @@ anthropic==0.72.0
 # Utilities
 email-validator==2.1.0
 requests==2.31.0
+psutil==6.1.0  # Process and system monitoring for MCP servers
 
 # File Storage
 cloudinary==1.41.0
