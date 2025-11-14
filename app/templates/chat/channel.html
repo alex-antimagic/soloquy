@@ -80,10 +80,16 @@
                         <div class="message {{ 'message-right' if is_from_me else 'message-left' }}">
                             <div class="message-avatar">
                                 {% if is_from_me %}
-                                    <i class="bi bi-person-square"></i>
+                                    {% if current_user.avatar_url %}
+                                        <img src="{{ current_user.avatar_url }}" alt="{{ current_user.full_name }}" class="rounded-circle" style="width: 36px; height: 36px; object-fit: cover;">
+                                    {% else %}
+                                        <i class="bi bi-person-square"></i>
+                                    {% endif %}
                                 {% elif message.is_from_agent() and message.agent and message.agent.avatar_url %}
                                     <img src="{{ message.agent.avatar_url }}" alt="{{ message.agent.name }}">
                                     <span class="avatar-status online"></span>
+                                {% elif message.sender and message.sender.avatar_url %}
+                                    <img src="{{ message.sender.avatar_url }}" alt="{{ message.sender.full_name }}" class="rounded-circle" style="width: 36px; height: 36px; object-fit: cover;">
                                 {% else %}
                                     <i class="bi bi-person-square"></i>
                                 {% endif %}
@@ -138,6 +144,10 @@
     // Notification sound
     const notificationSound = new Audio('{{ url_for("static", filename="pop.mp3") }}');
 
+    // Current user info
+    const currentUserId = {{ current_user.id }};
+    const currentUserAvatarUrl = '{{ current_user.avatar_url if current_user.avatar_url else "" }}';
+
     // Store agent avatar URLs for lookup
     const agentAvatars = {
         {% if associated_agents %}
@@ -154,7 +164,6 @@
     scrollToBottom();
 
     // Real-time message updates via Server-Sent Events (SSE)
-    const currentUserId = {{ current_user.id }};
     const conversationId = `channel_${channelSlug}`;
 
     let socket = null;
@@ -353,7 +362,9 @@
         let avatarHtml = '<i class="bi bi-person-square"></i>';
         let statusHtml = '';
 
-        if (!isFromMe && isAgent && agentAvatars[author]) {
+        if (isFromMe && currentUserAvatarUrl) {
+            avatarHtml = `<img src="${currentUserAvatarUrl}" alt="{{ current_user.full_name }}" class="rounded-circle" style="width: 36px; height: 36px; object-fit: cover;">`;
+        } else if (!isFromMe && isAgent && agentAvatars[author]) {
             avatarHtml = `<img src="${agentAvatars[author]}" alt="${author}">`;
             statusHtml = '<span class="avatar-status online"></span>';
         }

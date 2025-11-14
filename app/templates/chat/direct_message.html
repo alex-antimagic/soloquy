@@ -22,10 +22,17 @@
                         <div class="message {{ 'message-right' if is_from_me else 'message-left' }}">
                             <div class="message-avatar">
                                 {% if is_from_me %}
-                                    <i class="bi bi-person-square"></i>
+                                    {% if current_user.avatar_url %}
+                                        <img src="{{ current_user.avatar_url }}" alt="{{ current_user.full_name }}" class="rounded-circle" style="width: 36px; height: 36px; object-fit: cover;">
+                                    {% else %}
+                                        <i class="bi bi-person-square"></i>
+                                    {% endif %}
                                 {% elif is_agent and message.agent and message.agent.avatar_url %}
                                     <img src="{{ message.agent.avatar_url }}" alt="{{ message.agent.name }}">
                                     <span class="avatar-status online"></span>
+                                {% elif not is_agent and message.sender and message.sender.avatar_url %}
+                                    <img src="{{ message.sender.avatar_url }}" alt="{{ message.sender.full_name }}" class="rounded-circle" style="width: 36px; height: 36px; object-fit: cover;">
+                                    <span class="avatar-status {{ 'online' if recipient_is_online else 'offline' }}"></span>
                                 {% else %}
                                     <i class="bi bi-person-square"></i>
                                     {% if not is_agent %}
@@ -119,6 +126,7 @@
     // Conversation context
     const isAgent = {{ 'true' if is_agent else 'false' }};
     const currentUserId = {{ current_user.id }};
+    const currentUserAvatarUrl = '{{ current_user.avatar_url if current_user.avatar_url else '' }}';
     const recipientId = {{ recipient_id }};
     const recipientName = '{{ recipient_name }}';
     {% if is_agent %}
@@ -334,11 +342,19 @@
         let avatar = '<i class="bi bi-person-square"></i>';
         let statusHtml = '';
 
+        // Set avatar for current user's messages
+        if (isFromMe && currentUserAvatarUrl) {
+            avatar = `<img src="${currentUserAvatarUrl}" alt="{{ current_user.full_name }}" class="rounded-circle" style="width: 36px; height: 36px; object-fit: cover;">`;
+        }
+
         {% if is_agent %}
+        // Set avatar for agent messages
         if (!isFromMe && agentAvatarUrl) {
             avatar = `<img src="${agentAvatarUrl}" alt="${recipientName}">`;
             statusHtml = '<span class="avatar-status online"></span>';
         }
+        {% else %}
+        // For user-to-user DMs, use recipient avatar if available (would need to pass this from backend)
         {% endif %}
 
         const time = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
@@ -433,6 +449,8 @@
         if (agentAvatarUrl) {
             avatar = `<img src="${agentAvatarUrl}" alt="${recipientName}">`;
         }
+        {% else %}
+        // For user-to-user DMs, could show user avatar (would need to pass from backend)
         {% endif %}
 
         typingDiv.innerHTML = `

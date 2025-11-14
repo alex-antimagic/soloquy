@@ -88,7 +88,11 @@
                                data-conversation-id="{{ member.id }}"
                                onclick="markAsRead('user', '{{ member.id }}')">
                                 <div class="position-relative" style="flex-shrink: 0;">
-                                    <i class="bi bi-person-square rounded" style="font-size: 24px; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;"></i>
+                                    {% if member.avatar_url %}
+                                        <img src="{{ member.avatar_url }}" alt="{{ member.full_name }}" class="rounded-circle" style="width: 32px; height: 32px; object-fit: cover;">
+                                    {% else %}
+                                        <i class="bi bi-person-square rounded" style="font-size: 24px; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;"></i>
+                                    {% endif %}
                                     <span class="avatar-status {{ 'online' if member.is_online_now() else 'offline' }}"></span>
                                 </div>
                                 <span class="conversation-name" data-key="user_{{ member.id }}">{{ member.full_name }}</span>
