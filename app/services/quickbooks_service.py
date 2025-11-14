@@ -132,15 +132,23 @@ class QuickBooksService:
                 print(f"Error refreshing QuickBooks tokens: {e}")
                 raise
 
+        # Create auth client with OAuth credentials
+        auth_client = AuthClient(
+            client_id=integration.client_id,
+            client_secret=integration.client_secret,
+            environment=integration.environment or 'sandbox',
+            redirect_uri=integration.redirect_uri,
+            access_token=integration.access_token,
+            refresh_token=integration.refresh_token
+        )
+
+        # Create QuickBooks client
         client = QuickBooks(
-            auth_client=None,
+            auth_client=auth_client,
             refresh_token=integration.refresh_token,
             company_id=integration.company_id,
             minorversion=65  # API minor version
         )
-
-        client.access_token = integration.access_token
-        client.refresh_token = integration.refresh_token
 
         return client
 
