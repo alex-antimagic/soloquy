@@ -108,6 +108,10 @@ def init_socketio_events(socketio: SocketIO):
 
         was_offline = socketio_manager.user_connected(current_user.id, request.sid)
 
+        # Join user's personal room for notifications
+        user_room = f"user_{current_user.id}"
+        join_room(user_room)
+
         # Broadcast presence update if user just came online
         if was_offline:
             emit('presence', {

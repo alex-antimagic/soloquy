@@ -82,6 +82,73 @@
     <!-- Bug Report Handler -->
     {% if current_user.is_authenticated %}
     <script src="{{ url_for('static', filename='js/bug_report.js') }}"></script>
+
+    <!-- Socket.IO Initialization & Global Handlers -->
+    <script>
+        // Initialize Socket.IO connection
+        const socket = io();
+
+        // Handle new conversation notifications
+        socket.on('new_conversation', (data) => {
+            console.log('New conversation:', data);
+
+            // Add conversation to sidebar if not already present
+            const conversationType = data.type;
+            const conversationId = data.user_id || data.agent_id;
+            const existingConversation = document.querySelector(`[data-conversation-type="${conversationType}"][data-conversation-id="${conversationId}"]`);
+
+            if (!existingConversation) {
+                // Find the DM section
+                const dmSection = document.getElementById('dmSection');
+                if (dmSection) {
+                    const conversationItem = document.createElement('a');
+                    conversationItem.href = `/chat/user/${data.user_id}`;
+                    conversationItem.className = 'conversation-item';
+                    conversationItem.setAttribute('data-conversation-type', conversationType);
+                    conversationItem.setAttribute('data-conversation-id', conversationId);
+                    conversationItem.setAttribute('onclick', `markAsRead('${conversationType}', '${conversationId}')`);
+
+                    // Build avatar HTML
+                    let avatarHTML;
+                    if (data.user_avatar) {
+                        avatarHTML = `<img src="${data.user_avatar}" alt="${data.user_name}" class="rounded-circle" style="width: 32px; height: 32px; object-fit: cover;">`;
+                    } else {
+                        avatarHTML = '<i class="bi bi-person-square rounded" style="font-size: 24px; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;"></i>';
+                    }
+
+                    conversationItem.innerHTML = `
+                        <div class="position-relative" style="flex-shrink: 0;">
+                            ${avatarHTML}
+                            <span class="avatar-status ${data.is_online ? 'online' : 'offline'}"></span>
+                        </div>
+                        <span class="conversation-name" data-key="${conversationType}_${conversationId}">${data.user_name}</span>
+                        <span class="unread-badge" data-key="${conversationType}_${conversationId}">1</span>
+                    `;
+
+                    // Insert after agents, before "Add channel" button
+                    const addButton = dmSection.querySelector('.btn-add');
+                    if (addButton) {
+                        addButton.parentNode.insertBefore(conversationItem, addButton);
+                    } else {
+                        dmSection.appendChild(conversationItem);
+                    }
+
+                    // Show notification
+                    if (typeof showNotification === 'function') {
+                        showNotification(`New message from ${data.user_name}`);
+                    }
+                }
+            }
+        });
+
+        // Handle presence updates
+        socket.on('presence', (data) => {
+            const statusElements = document.querySelectorAll(`[data-conversation-id="${data.user_id}"] .avatar-status`);
+            statusElements.forEach(el => {
+                el.className = `avatar-status ${data.status}`;
+            });
+        });
+    </script>
     {% endif %}
 
     {% block extra_js %}{% endblock %}

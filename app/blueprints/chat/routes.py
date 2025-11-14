@@ -234,6 +234,23 @@ def send_message():
         user_ids = sorted([current_user.id, recipient_id])
         conversation_id = f"user_{user_ids[0]}_{user_ids[1]}"
         socketio.emit('new_message', message_data, room=conversation_id)
+
+        # Check if this is the first message in this conversation
+        from app.models.user import User
+        previous_messages = Message.get_conversation(user1_id=current_user.id, user2_id=recipient_id, limit=2)
+        if len(previous_messages) == 1:  # Only this message exists
+            # Notify recipient about new conversation
+            recipient_room = f"user_{recipient_id}"
+            recipient_user = User.query.get(recipient_id)
+            if recipient_user:
+                socketio.emit('new_conversation', {
+                    'type': 'user',
+                    'user_id': current_user.id,
+                    'user_name': current_user.full_name,
+                    'user_avatar': current_user.avatar_url,
+                    'is_online': True,
+                    'message_preview': content[:50] if content else '(image)'
+                }, room=recipient_room)
     elif agent_id:
         # User-to-agent DM
         conversation_id = f"agent_{agent_id}_user_{current_user.id}"
