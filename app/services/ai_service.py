@@ -453,30 +453,57 @@ class AIService:
         current_app.logger.info(f"Executing tool: {tool_name} with input: {tool_input}")
 
         # Find the integration for this tool
+        # We need to check which integrations the agent has enabled and try to match
         integration = None
-        if "outlook" in tool_name:
-            print(f"[MCP DEBUG] Looking for Outlook integration for user {user.id}")
-            integration = Integration.query.filter_by(
-                integration_type='outlook',
-                owner_type='user',
-                owner_id=user.id,
-                is_active=True
-            ).first()
-            print(f"[MCP DEBUG] Found Outlook integration: {integration.id if integration else None}")
-        elif "gmail" in tool_name:
+
+        # Try Outlook integration (handles emails, calendar, contacts, Teams, etc.)
+        if agent.enable_outlook:
+            print(f"[MCP DEBUG] Agent has Outlook enabled, checking for Outlook integration")
+            # Check for personal integration first (created_by matches)
+            if agent.created_by_id == user.id:
+                integration = Integration.query.filter_by(
+                    integration_type='outlook',
+                    owner_type='user',
+                    owner_id=user.id,
+                    is_active=True
+                ).first()
+                if integration:
+                    print(f"[MCP DEBUG] Found personal Outlook integration: {integration.id}")
+
+            # If not found, check workspace integration
+            if not integration:
+                integration = Integration.query.filter_by(
+                    integration_type='outlook',
+                    owner_type='tenant',
+                    owner_id=agent.department.tenant_id,
+                    is_active=True
+                ).first()
+                if integration:
+                    print(f"[MCP DEBUG] Found workspace Outlook integration: {integration.id}")
+
+        # Try Gmail integration if Outlook not found
+        if not integration and agent.enable_gmail:
+            print(f"[MCP DEBUG] Agent has Gmail enabled, checking for Gmail integration")
             integration = Integration.query.filter_by(
                 integration_type='gmail',
                 owner_type='user',
                 owner_id=user.id,
                 is_active=True
             ).first()
-        elif "drive" in tool_name:
+            if integration:
+                print(f"[MCP DEBUG] Found Gmail integration: {integration.id}")
+
+        # Try Google Drive integration
+        if not integration and agent.enable_google_drive:
+            print(f"[MCP DEBUG] Agent has Google Drive enabled, checking for Drive integration")
             integration = Integration.query.filter_by(
                 integration_type='google_drive',
                 owner_type='user',
                 owner_id=user.id,
                 is_active=True
             ).first()
+            if integration:
+                print(f"[MCP DEBUG] Found Drive integration: {integration.id}")
 
         if not integration:
             print(f"[MCP DEBUG] ERROR: No integration found for tool {tool_name}")
