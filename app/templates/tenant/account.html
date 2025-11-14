@@ -75,6 +75,14 @@
                         </div>
 
                         <div class="mb-3">
+                            <label for="title" class="form-label">Job Title <span class="text-muted">(Optional)</span></label>
+                            <input type="text" class="form-control" id="title" name="title"
+                                   value="{{ current_user.title or '' }}"
+                                   placeholder="e.g., CEO, CTO, Support Manager, Sales Rep">
+                            <div class="form-text">Your job title helps AI agents provide more contextually appropriate responses.</div>
+                        </div>
+
+                        <div class="mb-3">
                             <label class="form-label">Display Name</label>
                             <input type="text" class="form-control" value="{{ current_user.full_name }}" disabled>
                             <div class="form-text">This is how your name appears to other users.</div>

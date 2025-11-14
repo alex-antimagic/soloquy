@@ -206,7 +206,11 @@ class Agent(db.Model):
 
         # User context
         if user:
-            context_parts.append(f"You are currently assisting {user.full_name}.")
+            user_intro = f"You are currently assisting {user.full_name}"
+            if user.title:
+                user_intro += f" ({user.title})"
+            user_intro += "."
+            context_parts.append(user_intro)
 
         # Department context
         context_parts.append(f"You are {self.name}, the AI assistant for the {self.department.name} department.")

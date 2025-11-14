@@ -21,6 +21,7 @@ class User(UserMixin, db.Model):
     first_name = db.Column(db.String(80))
     last_name = db.Column(db.String(80))
     avatar_url = db.Column(db.String(255))
+    title = db.Column(db.String(100))  # Job title (CEO, CTO, Support Manager, etc.)
 
     # Status
     is_active = db.Column(db.Boolean, default=True, nullable=False)

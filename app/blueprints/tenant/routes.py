@@ -779,6 +779,7 @@ def account_settings():
             current_user.first_name = request.form.get('first_name', '').strip()
             current_user.last_name = request.form.get('last_name', '').strip()
             current_user.email = request.form.get('email', '').strip().lower()
+            current_user.title = request.form.get('title', '').strip() or None  # Store None if empty
 
             db.session.commit()
             flash('Profile updated successfully!', 'success')
