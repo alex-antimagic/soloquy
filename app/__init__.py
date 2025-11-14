@@ -94,6 +94,8 @@ def create_app(config_name='default'):
     # Import all models for Flask-Migrate
     with app.app_context():
         from app.models import user, tenant, department, agent, message
+        # Initialize MCP credentials on startup
+        _initialize_mcp_credentials(app)
 
     # Configure Flask-Login
     login_manager.login_view = 'auth.login'
@@ -170,3 +172,77 @@ def create_app(config_name='default'):
         return redirect(url_for('auth.login'))
 
     return app
+
+
+def _initialize_mcp_credentials(app):
+    """
+    Initialize MCP credential files on app startup
+
+    This ensures credential files exist on Heroku's ephemeral filesystem
+    before MCP servers start
+    """
+    import json
+    import os
+    from pathlib import Path
+
+    try:
+        # Only initialize if we're in a web dyno (not during migration or one-off commands)
+        if not os.environ.get('DYNO', '').startswith('web'):
+            return
+
+        from app.models.integration import Integration
+
+        # Get all MCP-mode integrations
+        integrations = Integration.query.filter_by(
+            integration_mode='mcp',
+            is_active=True
+        ).all()
+
+        if not integrations:
+            app.logger.info("[MCP INIT] No MCP integrations found")
+            return
+
+        # Determine base credentials directory
+        if os.path.exists('/app/var/mcp/credentials'):
+            base_dir = Path('/app/var/mcp/credentials')
+        else:
+            base_dir = Path.home() / '.mcp' / 'credentials'
+            base_dir.mkdir(parents=True, exist_ok=True)
+
+        # Write credentials for each integration
+        for integration in integrations:
+            if not all([integration.client_id, integration.client_secret,
+                       integration.access_token, integration.refresh_token]):
+                app.logger.info(f"[MCP INIT] Skipping integration {integration.id} - missing credentials")
+                continue
+
+            # Create integration-specific directory
+            creds_dir = base_dir / f'{integration.integration_type}-{integration.owner_type}-{integration.owner_id}'
+            creds_dir.mkdir(parents=True, exist_ok=True)
+
+            if integration.mcp_server_type == 'outlook':
+                # Write .env file with client credentials
+                env_file = creds_dir / '.env'
+                with open(env_file, 'w') as f:
+                    f.write(f"MS_CLIENT_ID={integration.client_id}\n")
+                    f.write(f"MS_CLIENT_SECRET={integration.client_secret}\n")
+                env_file.chmod(0o600)
+
+                # Write tokens file
+                tokens_file = creds_dir / '.outlook-mcp-tokens.json'
+                tokens = {
+                    "access_token": integration.access_token,
+                    "refresh_token": integration.refresh_token,
+                    "expires_at": None
+                }
+                with open(tokens_file, 'w') as f:
+                    json.dump(tokens, f, indent=2)
+                tokens_file.chmod(0o600)
+
+                app.logger.info(f"[MCP INIT] Wrote Outlook credentials for {integration.owner_type}-{integration.owner_id}")
+
+    except Exception as e:
+        # Don't fail app startup if credential initialization fails
+        app.logger.error(f"[MCP INIT] Failed to initialize credentials: {e}")
+        import traceback
+        app.logger.error(f"[MCP INIT] Traceback: {traceback.format_exc()}")
