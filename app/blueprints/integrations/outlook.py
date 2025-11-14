@@ -212,21 +212,24 @@ def outlook_callback(scope):
         return redirect(url_for('integrations.outlook_configure', scope=scope_type))
 
     try:
-        # Exchange code for tokens using MSAL
-        msal_app = ConfidentialClientApplication(
-            integration.client_id,
-            authority='https://login.microsoftonline.com/common',
-            client_credential=integration.client_secret
-        )
+        # Exchange code for tokens manually (avoiding MSAL frozenset bug)
+        token_url = 'https://login.microsoftonline.com/common/oauth2/v2.0/token'
 
-        result = msal_app.acquire_token_by_authorization_code(
-            code,
-            scopes=list(OUTLOOK_SCOPES),  # Ensure scopes is a list
-            redirect_uri=integration.redirect_uri
-        )
+        token_data = {
+            'client_id': integration.client_id,
+            'client_secret': integration.client_secret,
+            'code': code,
+            'redirect_uri': integration.redirect_uri,
+            'grant_type': 'authorization_code',
+            'scope': ' '.join(OUTLOOK_SCOPES)
+        }
 
-        if 'error' in result:
-            flash(f"Error acquiring token: {result.get('error_description', 'Unknown error')}", 'danger')
+        token_response = requests.post(token_url, data=token_data)
+        result = token_response.json()
+
+        if 'error' in result or token_response.status_code != 200:
+            error_desc = result.get('error_description', result.get('error', 'Unknown error'))
+            flash(f"Error acquiring token: {error_desc}", 'danger')
             return redirect(url_for('integrations.outlook_configure', scope=scope_type))
 
         # Store tokens
