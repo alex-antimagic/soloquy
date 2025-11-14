@@ -85,7 +85,7 @@ def outlook_configure():
             else f"{current_user.full_name}'s Outlook"
         )
 
-        # Build redirect URI
+        # Build redirect URI (no query params - Azure doesn't allow them)
         integration.redirect_uri = url_for(
             'integrations.outlook_callback',
             scope=scope,
@@ -167,18 +167,20 @@ def outlook_connect():
         return redirect(url_for('integrations.outlook_configure', scope=scope))
 
 
-@integrations_bp.route('/outlook/callback')
+@integrations_bp.route('/outlook/callback/<scope>')
 @login_required
 @limiter.limit("20 per minute")
-def outlook_callback():
+def outlook_callback(scope):
     """
     Handle OAuth callback from Microsoft
 
     SECURITY: Rate limited to prevent callback abuse
 
-    Query params:
-    - code: Authorization code
+    Path params:
     - scope: 'workspace' or 'user'
+
+    Query params:
+    - code: Authorization code (from Azure)
     """
     # Get authorization code
     code = request.args.get('code')
@@ -188,7 +190,7 @@ def outlook_callback():
         flash(f'Authorization failed: {error} - {error_description}', 'danger')
         return redirect(url_for('integrations.index'))
 
-    scope_type = session.get('outlook_oauth_scope', 'workspace')
+    scope_type = scope
 
     # Get integration
     owner_type = 'tenant' if scope_type == 'workspace' else 'user'

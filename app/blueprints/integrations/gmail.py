@@ -178,24 +178,26 @@ def gmail_connect():
         return redirect(url_for('integrations.gmail_configure', scope=scope))
 
 
-@integrations_bp.route('/gmail/callback')
+@integrations_bp.route('/gmail/callback/<scope>')
 @login_required
 @limiter.limit("20 per minute")
-def gmail_callback():
+def gmail_callback(scope):
     """
     Handle OAuth callback from Google
 
     SECURITY: Rate limited to prevent callback abuse
 
-    Query params:
-    - state: OAuth state token
-    - code: Authorization code
+    Path params:
     - scope: 'workspace' or 'user'
+
+    Query params:
+    - state: OAuth state token (from Google)
+    - code: Authorization code (from Google)
     """
     # Verify state
     state = request.args.get('state')
     stored_state = session.get('gmail_oauth_state')
-    scope_type = session.get('gmail_oauth_scope', 'workspace')
+    scope_type = scope
 
     if not state or state != stored_state:
         flash('Invalid OAuth state. Please try again.', 'danger')

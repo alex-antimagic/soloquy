@@ -177,24 +177,26 @@ def google_drive_connect():
         return redirect(url_for('integrations.google_drive_configure', scope=scope))
 
 
-@integrations_bp.route('/google-drive/callback')
+@integrations_bp.route('/google-drive/callback/<scope>')
 @login_required
 @limiter.limit("20 per minute")
-def google_drive_callback():
+def google_drive_callback(scope):
     """
     Handle OAuth callback from Google
 
     SECURITY: Rate limited to prevent callback abuse
 
-    Query params:
-    - state: OAuth state token
-    - code: Authorization code
+    Path params:
     - scope: 'workspace' or 'user'
+
+    Query params:
+    - state: OAuth state token (from Google)
+    - code: Authorization code (from Google)
     """
     # Verify state
     state = request.args.get('state')
     stored_state = session.get('google_drive_oauth_state')
-    scope_type = session.get('google_drive_oauth_scope', 'workspace')
+    scope_type = scope
 
     if not state or state != stored_state:
         flash('Invalid OAuth state. Please try again.', 'danger')
