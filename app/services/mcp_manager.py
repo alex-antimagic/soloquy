@@ -333,14 +333,16 @@ class MCPManager:
             else:
                 return False, f"Unknown MCP server type: {integration.mcp_server_type}"
 
-            # Start process
+            # Start process with stdin/stdout/stderr pipes for MCP communication
             process = subprocess.Popen(
                 cmd,
                 cwd=str(creds_dir),
+                stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 env=self._get_process_env(integration),
-                preexec_fn=os.setsid  # Create new process group for clean shutdown
+                preexec_fn=os.setsid,  # Create new process group for clean shutdown
+                bufsize=0  # Unbuffered for real-time communication
             )
 
             # Wait briefly to check if process started successfully
@@ -487,6 +489,24 @@ class MCPManager:
                 pass
 
         return status
+
+    def get_process(self, integration: Integration) -> Optional[subprocess.Popen]:
+        """
+        Get the subprocess.Popen object for an integration's MCP server
+
+        Args:
+            integration: Integration model instance
+
+        Returns:
+            subprocess.Popen object if process is running, None otherwise
+        """
+        process_name = self._get_process_name(integration)
+
+        # Return process if it exists and is running
+        if process_name in self.processes and self.is_process_running(process_name):
+            return self.processes[process_name]
+
+        return None
 
     def cleanup_all(self):
         """

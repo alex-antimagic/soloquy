@@ -427,7 +427,7 @@ class AIService:
 
     def _execute_mcp_tool(self, tool_name: str, tool_input: Dict, agent, user) -> Any:
         """
-        Execute an MCP tool call
+        Execute an MCP tool call via stdio communication with MCP server
 
         Args:
             tool_name: Name of the tool to execute
@@ -438,70 +438,73 @@ class AIService:
         Returns:
             Tool execution result
         """
-        # TODO: Implement actual MCP tool execution via stdio
-        # For now, return mock data based on tool name
+        from app.services.mcp_manager import mcp_manager
+        from app.services.mcp_client import MCPClient
+        from app.models.integration import Integration
 
         current_app.logger.info(f"Executing tool: {tool_name} with input: {tool_input}")
 
-        if "list_emails" in tool_name:
-            return {
-                "emails": [
-                    {
-                        "id": "email_1",
-                        "subject": "Welcome to Outlook",
-                        "from": "welcome@microsoft.com",
-                        "date": "2025-11-14",
-                        "preview": "Get started with your new Outlook account..."
-                    },
-                    {
-                        "id": "email_2",
-                        "subject": "Your weekly summary",
-                        "from": "noreply@company.com",
-                        "date": "2025-11-13",
-                        "preview": "Here's what happened this week..."
-                    }
-                ],
-                "total": 2
-            }
+        # Find the integration for this tool
+        integration = None
+        if "outlook" in tool_name:
+            integration = Integration.query.filter_by(
+                integration_type='outlook',
+                owner_type='user',
+                owner_id=user.id,
+                is_active=True
+            ).first()
+        elif "gmail" in tool_name:
+            integration = Integration.query.filter_by(
+                integration_type='gmail',
+                owner_type='user',
+                owner_id=user.id,
+                is_active=True
+            ).first()
+        elif "drive" in tool_name:
+            integration = Integration.query.filter_by(
+                integration_type='google_drive',
+                owner_type='user',
+                owner_id=user.id,
+                is_active=True
+            ).first()
 
-        elif "read_email" in tool_name:
-            email_id = tool_input.get("email_id")
-            return {
-                "id": email_id,
-                "subject": "Sample Email",
-                "from": "sender@example.com",
-                "date": "2025-11-14",
-                "body": "This is the email body content. It contains important information about your account."
-            }
+        if not integration:
+            current_app.logger.error(f"No integration found for tool {tool_name}")
+            return {"error": "Integration not found or not connected"}
 
-        elif "search" in tool_name:
-            query = tool_input.get("query", "")
-            return {
-                "results": [
-                    {
-                        "id": "result_1",
-                        "subject": f"Email matching '{query}'",
-                        "snippet": f"This email contains the keyword: {query}"
-                    }
-                ],
-                "total": 1
-            }
+        # Get the running MCP process
+        process = mcp_manager.get_process(integration)
+        if not process:
+            current_app.logger.error(f"MCP server not running for integration {integration.id}")
+            return {"error": "MCP server not running"}
 
-        elif "calendar" in tool_name:
-            return {
-                "events": [
-                    {
-                        "id": "event_1",
-                        "title": "Team Meeting",
-                        "start": "2025-11-15T10:00:00",
-                        "end": "2025-11-15T11:00:00",
-                        "location": "Conference Room A"
-                    }
-                ],
-                "total": 1
-            }
+        try:
+            # Create MCP client for this process
+            mcp_client = MCPClient(process)
 
-        return {"error": "Tool not implemented", "tool": tool_name}
+            # Initialize the connection (required by MCP protocol)
+            try:
+                init_result = mcp_client.initialize()
+                current_app.logger.info(f"MCP server initialized: {init_result}")
+            except Exception as init_error:
+                current_app.logger.warning(f"MCP initialization warning: {init_error}")
+                # Continue anyway - server might already be initialized
+
+            # Call the tool
+            result = mcp_client.call_tool(tool_name, tool_input)
+
+            current_app.logger.info(f"Tool {tool_name} executed successfully")
+
+            # Return the content from the tool result
+            # MCP returns: {"content": [...], "isError": false}
+            if isinstance(result, dict) and "content" in result:
+                return result["content"]
+
+            return result
+
+        except Exception as e:
+            current_app.logger.error(f"Error executing MCP tool {tool_name}: {e}")
+            return {"error": f"Failed to execute tool: {str(e)}"}
 
     def analyze_bug_screenshot(
         self,
