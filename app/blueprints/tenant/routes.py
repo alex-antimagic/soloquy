@@ -651,6 +651,18 @@ def create_agent():
             db.session.add(personal_dept)
             db.session.flush()
 
+            # Create department channel for personal agents
+            from app.models.channel import Channel
+            personal_channel = Channel(
+                name='Personal',
+                slug='personal',
+                department_id=personal_dept.id,
+                tenant_id=g.current_tenant.id,
+                is_department_channel=True,
+                is_private=False
+            )
+            db.session.add(personal_channel)
+
         # Create the agent
         agent = Agent(
             department_id=personal_dept.id,
