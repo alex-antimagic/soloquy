@@ -159,32 +159,42 @@ def get_mcp_tools_for_integration(integration) -> Optional[List[Dict]]:
     from app.services.mcp_manager import mcp_manager
 
     try:
-        # Check if server is running
-        status = mcp_manager.get_process_status(integration)
-        if not status.get('running'):
+        # Get the running process
+        process = mcp_manager.get_process(integration)
+        if not process:
             current_app.logger.warning(f"MCP server not running for integration {integration.id}")
-            return None
-
-        pid = status.get('pid')
-        if not pid:
-            return None
-
-        # Find the process
-        import psutil
-        try:
-            process = psutil.Process(pid)
-
-            # We need to get the actual subprocess.Popen object
-            # For now, we'll need to modify MCP manager to expose this
-            # As a workaround, we'll start the server was started successfully
-            # Let's return a simplified approach for now
-
-            # TODO: Implement proper stdio communication
-            # For now, return hardcoded tool definitions based on integration type
             return get_default_tools_for_integration_type(integration.integration_type)
 
-        except psutil.NoSuchProcess:
-            return None
+        try:
+            # Create MCP client to query tools
+            client = MCPClient(process)
+
+            # Initialize connection
+            try:
+                init_result = client.initialize()
+                current_app.logger.info(f"MCP server initialized for tool discovery: {init_result}")
+            except Exception as e:
+                current_app.logger.warning(f"MCP initialization failed during tool discovery: {e}")
+                # Fall back to default tools
+                return get_default_tools_for_integration_type(integration.integration_type)
+
+            # Get actual tool list from MCP server
+            print(f"[MCP DEBUG] Querying MCP server for available tools...")
+            mcp_tools = client.list_tools()
+            print(f"[MCP DEBUG] Got {len(mcp_tools)} tools from MCP server")
+            for tool in mcp_tools:
+                print(f"[MCP DEBUG]   MCP tool: {tool.get('name')}")
+            current_app.logger.info(f"Got {len(mcp_tools)} tools from MCP server")
+
+            # Convert to Claude format
+            claude_tools = convert_mcp_tools_to_claude(mcp_tools)
+            print(f"[MCP DEBUG] Converted to {len(claude_tools)} Claude tools")
+            return claude_tools if claude_tools else get_default_tools_for_integration_type(integration.integration_type)
+
+        except Exception as e:
+            current_app.logger.error(f"Error querying MCP tools from server: {e}")
+            # Fall back to default tools
+            return get_default_tools_for_integration_type(integration.integration_type)
 
     except Exception as e:
         current_app.logger.error(f"Error getting MCP tools: {e}")
