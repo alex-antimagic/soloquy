@@ -163,8 +163,20 @@ class AIService:
                 )
 
             if outlook_integration:
+                print(f"[MCP DEBUG] Found Outlook integration {outlook_integration.id}")
                 status = mcp_manager.get_process_status(outlook_integration)
+                print(f"[MCP DEBUG] MCP server status: {status}")
+
+                # Auto-start MCP server if not running
+                if not status.get('running'):
+                    print(f"[MCP DEBUG] MCP server not running, starting it...")
+                    success, message = mcp_manager.start_mcp_server(outlook_integration)
+                    print(f"[MCP DEBUG] Start result: success={success}, message={message}")
+                    if success:
+                        status = {'running': True}  # Update status after successful start
+
                 if status.get('running'):
+                    print(f"[MCP DEBUG] MCP server is running, adding to mcp_servers list")
                     # Log successful MCP access
                     AuditLog.log_mcp_access(
                         user_id=user.id,
@@ -181,6 +193,8 @@ class AIService:
                         'mcp_process_name': outlook_integration.get_mcp_process_name(),
                         'tools': ['outlook_list', 'outlook_read', 'outlook_send', 'outlook_search']
                     })
+                else:
+                    print(f"[MCP DEBUG] MCP server failed to start")
 
         # Google Drive MCP
         if agent.enable_google_drive:
