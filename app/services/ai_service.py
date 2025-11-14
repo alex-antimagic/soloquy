@@ -384,6 +384,7 @@ class AIService:
                 # Execute tools and collect results
                 tool_results = []
                 for tool_use in tool_uses:
+                    print(f"[MCP DEBUG] Executing tool: {tool_use.name} with input: {tool_use.input}")
                     try:
                         result = self._execute_mcp_tool(
                             tool_name=tool_use.name,
@@ -391,6 +392,7 @@ class AIService:
                             agent=agent,
                             user=user
                         )
+                        print(f"[MCP DEBUG] Tool {tool_use.name} returned: {result}")
                         tool_results.append({
                             "type": "tool_result",
                             "tool_use_id": tool_use.id,
@@ -398,6 +400,7 @@ class AIService:
                         })
                         current_app.logger.info(f"Tool {tool_use.name} executed successfully")
                     except Exception as e:
+                        print(f"[MCP DEBUG] Tool {tool_use.name} failed with error: {e}")
                         current_app.logger.error(f"Tool {tool_use.name} failed: {e}")
                         tool_results.append({
                             "type": "tool_result",
@@ -446,17 +449,20 @@ class AIService:
         from app.services.mcp_client import MCPClient
         from app.models.integration import Integration
 
+        print(f"[MCP DEBUG] _execute_mcp_tool called: tool={tool_name}, input={tool_input}")
         current_app.logger.info(f"Executing tool: {tool_name} with input: {tool_input}")
 
         # Find the integration for this tool
         integration = None
         if "outlook" in tool_name:
+            print(f"[MCP DEBUG] Looking for Outlook integration for user {user.id}")
             integration = Integration.query.filter_by(
                 integration_type='outlook',
                 owner_type='user',
                 owner_id=user.id,
                 is_active=True
             ).first()
+            print(f"[MCP DEBUG] Found Outlook integration: {integration.id if integration else None}")
         elif "gmail" in tool_name:
             integration = Integration.query.filter_by(
                 integration_type='gmail',
@@ -473,11 +479,14 @@ class AIService:
             ).first()
 
         if not integration:
+            print(f"[MCP DEBUG] ERROR: No integration found for tool {tool_name}")
             current_app.logger.error(f"No integration found for tool {tool_name}")
             return {"error": "Integration not found or not connected"}
 
         # Get the running MCP process
+        print(f"[MCP DEBUG] Getting process for integration {integration.id}")
         process = mcp_manager.get_process(integration)
+        print(f"[MCP DEBUG] Process found: {process is not None}")
         if not process:
             current_app.logger.error(f"MCP server not running for integration {integration.id}")
             return {"error": "MCP server not running"}
