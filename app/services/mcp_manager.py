@@ -582,6 +582,54 @@ class MCPManager:
             'MCP_OWNER_ID': str(integration.owner_id)
         }
 
+        # Add OAuth credentials from integration (for MCP servers that need them)
+        if integration.integration_type == 'outlook':
+            # Add Microsoft/Outlook OAuth credentials
+            if integration.client_id:
+                safe_env['MS_CLIENT_ID'] = integration.client_id
+                safe_env['OUTLOOK_CLIENT_ID'] = integration.client_id  # Some servers use this variant
+            if integration.client_secret:
+                safe_env['MS_CLIENT_SECRET'] = integration.client_secret
+                safe_env['OUTLOOK_CLIENT_SECRET'] = integration.client_secret
+            if integration.access_token:
+                safe_env['MS_ACCESS_TOKEN'] = integration.access_token
+            if integration.refresh_token:
+                safe_env['MS_REFRESH_TOKEN'] = integration.refresh_token
+            if integration.redirect_uri:
+                safe_env['MS_REDIRECT_URI'] = integration.redirect_uri
+                safe_env['REDIRECT_URI'] = integration.redirect_uri
+            current_app.logger.info(f"Added Outlook OAuth credentials to MCP environment")
+
+        elif integration.integration_type == 'gmail':
+            # Add Google OAuth credentials
+            if integration.client_id:
+                safe_env['GOOGLE_CLIENT_ID'] = integration.client_id
+            if integration.client_secret:
+                safe_env['GOOGLE_CLIENT_SECRET'] = integration.client_secret
+            if integration.access_token:
+                safe_env['GOOGLE_ACCESS_TOKEN'] = integration.access_token
+            if integration.refresh_token:
+                safe_env['GOOGLE_REFRESH_TOKEN'] = integration.refresh_token
+            if integration.redirect_uri:
+                safe_env['GOOGLE_REDIRECT_URI'] = integration.redirect_uri
+                safe_env['REDIRECT_URI'] = integration.redirect_uri
+            current_app.logger.info(f"Added Gmail OAuth credentials to MCP environment")
+
+        elif integration.integration_type == 'google_drive':
+            # Add Google OAuth credentials
+            if integration.client_id:
+                safe_env['GOOGLE_CLIENT_ID'] = integration.client_id
+            if integration.client_secret:
+                safe_env['GOOGLE_CLIENT_SECRET'] = integration.client_secret
+            if integration.access_token:
+                safe_env['GOOGLE_ACCESS_TOKEN'] = integration.access_token
+            if integration.refresh_token:
+                safe_env['GOOGLE_REFRESH_TOKEN'] = integration.refresh_token
+            if integration.redirect_uri:
+                safe_env['GOOGLE_REDIRECT_URI'] = integration.redirect_uri
+                safe_env['REDIRECT_URI'] = integration.redirect_uri
+            current_app.logger.info(f"Added Google Drive OAuth credentials to MCP environment")
+
         # Add MCP-specific configuration (whitelist approach)
         # Only allow variables that start with MCP_ or are integration-specific
         if integration.mcp_config:
