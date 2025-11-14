@@ -9,6 +9,24 @@
         </div>
     </div>
 
+    <!-- Integration Access Explanation -->
+    <div class="alert alert-info d-flex align-items-start mb-4" role="alert">
+        <i class="bi bi-info-circle-fill me-3 fs-4 flex-shrink-0"></i>
+        <div>
+            <h5 class="alert-heading mb-2">Understanding Integration Access</h5>
+            <p class="mb-2">Soloquy uses a secure integration model to protect your data:</p>
+            <ul class="mb-2 small">
+                <li><strong>Workspace Integrations</strong> (Admin-configured) - Shared accounts like <code>support@company.com</code> accessible to all workspace agents</li>
+                <li><strong>Personal Integrations</strong> (Your accounts) - Your personal Gmail, Outlook, or Drive accessible ONLY to agents YOU create</li>
+            </ul>
+            <p class="mb-0 small">
+                <i class="bi bi-shield-check text-success"></i> <strong>Security:</strong>
+                Pre-set workspace agents cannot access your personal integrations.
+                To use your personal accounts, <a href="{{ url_for('department.index') }}" class="alert-link">create your own agent</a>.
+            </p>
+        </div>
+    </div>
+
     {% if is_admin and workspace_integrations %}
     <!-- Workspace Integrations (Admin Only) -->
     <div class="mb-5">

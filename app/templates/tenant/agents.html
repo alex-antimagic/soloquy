@@ -130,6 +130,24 @@
                                                     {% endif %}
                                                 </h6>
                                                 <p class="text-muted small mb-0">{{ agent.description[:60] }}{% if agent.description and agent.description|length > 60 %}...{% endif %}</p>
+                                                <!-- Owner Information -->
+                                                <div class="mt-1">
+                                                    {% if agent.created_by_id == current_user.id %}
+                                                        <span class="badge bg-success-subtle text-success-emphasis" style="font-size: 0.7rem;"
+                                                              data-bs-toggle="tooltip"
+                                                              data-bs-placement="top"
+                                                              title="You created this agent. It can access your personal integrations (Gmail, Outlook, Drive) when you chat with it.">
+                                                            <i class="bi bi-person-check"></i> Your Agent
+                                                        </span>
+                                                    {% else %}
+                                                        <span class="badge bg-info-subtle text-info-emphasis" style="font-size: 0.7rem;"
+                                                              data-bs-toggle="tooltip"
+                                                              data-bs-placement="top"
+                                                              title="Created by {{ agent.created_by.email if agent.created_by else 'workspace admin' }}. This agent can only access workspace-level integrations, not your personal ones.">
+                                                            <i class="bi bi-building"></i> Workspace Agent
+                                                        </span>
+                                                    {% endif %}
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -147,17 +165,77 @@
                                                 <strong>Temperature:</strong><br>
                                                 <span class="ms-3">{{ agent.temperature }}</span>
                                             </div>
-                                            <div class="col-6">
+                                            <div class="col-6 mb-2">
                                                 <i class="bi bi-file-text me-1"></i>
                                                 <strong>Max Tokens:</strong><br>
                                                 <span class="ms-3">{{ agent.max_tokens }}</span>
                                             </div>
-                                            <div class="col-6">
-                                                <i class="bi bi-calendar-check me-1"></i>
-                                                <strong>Created:</strong><br>
-                                                <span class="ms-3">{{ agent.created_at.strftime('%b %d, %Y') if agent.created_at else 'N/A' }}</span>
+                                            <div class="col-6 mb-2">
+                                                <i class="bi bi-person-fill me-1"></i>
+                                                <strong>Created By:</strong><br>
+                                                <span class="ms-3">
+                                                    {% if agent.created_by_id == current_user.id %}
+                                                        You
+                                                    {% else %}
+                                                        {{ agent.created_by.email.split('@')[0] if agent.created_by else 'Admin' }}
+                                                    {% endif %}
+                                                </span>
                                             </div>
                                         </div>
+
+                                        <!-- Integration Access Info -->
+                                        {% if agent.enable_gmail or agent.enable_outlook or agent.enable_google_drive %}
+                                        <div class="mt-2 pt-2 border-top">
+                                            <div class="small">
+                                                <i class="bi bi-plug-fill me-1"></i>
+                                                <strong>Integrations:</strong><br>
+                                                <div class="ms-3 mt-1">
+                                                    {% if agent.enable_gmail %}
+                                                        <span class="badge bg-light text-dark me-1 mb-1">
+                                                            <i class="bi bi-envelope"></i> Gmail
+                                                            {% if agent.created_by_id == current_user.id %}
+                                                                <i class="bi bi-check-circle-fill text-success"
+                                                                   data-bs-toggle="tooltip"
+                                                                   title="Can access your personal Gmail"></i>
+                                                            {% else %}
+                                                                <i class="bi bi-building text-info"
+                                                                   data-bs-toggle="tooltip"
+                                                                   title="Workspace Gmail only"></i>
+                                                            {% endif %}
+                                                        </span>
+                                                    {% endif %}
+                                                    {% if agent.enable_outlook %}
+                                                        <span class="badge bg-light text-dark me-1 mb-1">
+                                                            <i class="bi bi-envelope"></i> Outlook
+                                                            {% if agent.created_by_id == current_user.id %}
+                                                                <i class="bi bi-check-circle-fill text-success"
+                                                                   data-bs-toggle="tooltip"
+                                                                   title="Can access your personal Outlook"></i>
+                                                            {% else %}
+                                                                <i class="bi bi-building text-info"
+                                                                   data-bs-toggle="tooltip"
+                                                                   title="Workspace Outlook only"></i>
+                                                            {% endif %}
+                                                        </span>
+                                                    {% endif %}
+                                                    {% if agent.enable_google_drive %}
+                                                        <span class="badge bg-light text-dark me-1 mb-1">
+                                                            <i class="bi bi-cloud"></i> Drive
+                                                            {% if agent.created_by_id == current_user.id %}
+                                                                <i class="bi bi-check-circle-fill text-success"
+                                                                   data-bs-toggle="tooltip"
+                                                                   title="Can access your personal Drive"></i>
+                                                            {% else %}
+                                                                <i class="bi bi-building text-info"
+                                                                   data-bs-toggle="tooltip"
+                                                                   title="Workspace Drive only"></i>
+                                                            {% endif %}
+                                                        </span>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% endif %}
                                     </div>
 
                                     <!-- Action Buttons -->
@@ -249,4 +327,12 @@
         background-color: rgba(255, 255, 255, 0.05);
     }
 </style>
+
+<script>
+    // Initialize Bootstrap tooltips
+    document.addEventListener('DOMContentLoaded', function() {
+        const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+        const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+    });
+</script>
 {% endblock %}
