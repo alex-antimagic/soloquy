@@ -107,7 +107,19 @@
                                     <span class="message-time">{{ message.created_at.strftime('%I:%M %p') }}</span>
                                 </div>
                                 <div class="message-content">
-                                    <div class="message-body">{{ message.content | format_message }}</div>
+                                    {% if message.content and message.content != '(image)' %}
+                                        <div class="message-body">{{ message.content | format_message }}</div>
+                                    {% endif %}
+                                    {% if message.attachment_url and message.message_type == 'image' %}
+                                        <div class="mt-2">
+                                            <a href="{{ message.attachment_url }}" target="_blank">
+                                                <img src="{{ message.attachment_url }}"
+                                                     alt="{{ message.attachment_filename or 'Image' }}"
+                                                     class="img-fluid rounded"
+                                                     style="max-width: 400px; max-height: 300px; object-fit: contain; cursor: pointer;">
+                                            </a>
+                                        </div>
+                                    {% endif %}
                                 </div>
                             </div>
                         </div>
@@ -124,15 +136,34 @@
             <div class="chat-input">
                 <form id="message-form">
                     <div class="input-group">
+                        <input type="file"
+                               id="image-input"
+                               accept="image/png,image/jpeg,image/jpg,image/gif,image/webp"
+                               style="display: none;">
+                        <button type="button" class="btn btn-outline-secondary" id="image-button" title="Attach image">
+                            <i class="bi bi-image"></i>
+                        </button>
                         <input type="text"
                                class="form-control"
                                id="message-input"
                                placeholder="Message #{{ channel.name }}..."
-                               autocomplete="off"
-                               required>
+                               autocomplete="off">
                         <button type="submit" class="btn btn-primary">
                             <i class="bi bi-send"></i> Send
                         </button>
+                    </div>
+                    <div id="image-preview" class="mt-2" style="display: none;">
+                        <div class="card">
+                            <div class="card-body p-2 d-flex align-items-center">
+                                <img id="preview-thumbnail" src="" alt="Preview" style="max-width: 80px; max-height: 80px; object-fit: cover;" class="rounded me-2">
+                                <div class="flex-grow-1">
+                                    <small id="preview-filename" class="text-muted"></small>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-danger" id="remove-image">
+                                    <i class="bi bi-x"></i>
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </form>
             </div>
@@ -359,7 +390,25 @@
     }
 
     // Add message to UI
-    function addMessageToUI(content, author, isAgent = false) {
+    function addMessageToUI(message, legacyAuthor = null, legacyIsAgent = false) {
+        // Support both new object format and legacy parameters
+        let content, author, isAgent, attachmentUrl, attachmentType, attachmentFilename;
+
+        if (typeof message === 'object' && message.content !== undefined) {
+            // New format
+            content = message.content;
+            author = message.author;
+            isAgent = message.isAgent || false;
+            attachmentUrl = message.attachment_url;
+            attachmentType = message.attachment_type;
+            attachmentFilename = message.attachment_filename;
+        } else {
+            // Legacy format
+            content = message;
+            author = legacyAuthor;
+            isAgent = legacyIsAgent;
+        }
+
         const currentUserName = '{{ current_user.full_name }}';
         const isFromMe = author === currentUserName;
 
@@ -376,6 +425,27 @@
             statusHtml = '<span class="avatar-status online"></span>';
         }
 
+        // Build image HTML if attachment exists
+        let imageHtml = '';
+        if (attachmentUrl && attachmentType === 'image/jpeg' || attachmentType === 'image/png' || attachmentType === 'image/gif' || attachmentType === 'image/webp') {
+            imageHtml = `
+                <div class="mt-2">
+                    <a href="${attachmentUrl}" target="_blank">
+                        <img src="${attachmentUrl}"
+                             alt="${attachmentFilename || 'Image'}"
+                             class="img-fluid rounded"
+                             style="max-width: 400px; max-height: 300px; object-fit: contain; cursor: pointer;">
+                    </a>
+                </div>
+            `;
+        }
+
+        // Build message body (hide if only showing image)
+        let messageBody = '';
+        if (content && content !== '(image)') {
+            messageBody = `<div class="message-body">${formatMessageContent(content)}</div>`;
+        }
+
         messageDiv.innerHTML = `
             <div class="message-avatar">${avatarHtml}${statusHtml}</div>
             <div class="message-bubble">
@@ -384,7 +454,8 @@
                     <span class="message-time">Just now</span>
                 </div>
                 <div class="message-content">
-                    <div class="message-body">${formatMessageContent(content)}</div>
+                    ${messageBody}
+                    ${imageHtml}
                 </div>
             </div>
         `;
@@ -508,12 +579,79 @@
         }, 1000);
     });
 
+    // Image upload handling
+    const imageInput = document.getElementById('image-input');
+    const imageButton = document.getElementById('image-button');
+    const imagePreview = document.getElementById('image-preview');
+    const previewThumbnail = document.getElementById('preview-thumbnail');
+    const previewFilename = document.getElementById('preview-filename');
+    const removeImageButton = document.getElementById('remove-image');
+    let uploadedImageData = null;
+
+    imageButton.addEventListener('click', () => {
+        imageInput.click();
+    });
+
+    imageInput.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        // Validate file size (10MB max)
+        if (file.size > 10 * 1024 * 1024) {
+            alert('File too large. Maximum size is 10MB.');
+            imageInput.value = '';
+            return;
+        }
+
+        // Show preview
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            previewThumbnail.src = e.target.result;
+            previewFilename.textContent = file.name;
+            imagePreview.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+
+        // Upload to server
+        const formData = new FormData();
+        formData.append('image', file);
+
+        try {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+            const response = await fetch('/chat/upload-image', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken
+                },
+                body: formData
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                uploadedImageData = data;
+            } else {
+                throw new Error('Upload failed');
+            }
+        } catch (error) {
+            console.error('Error uploading image:', error);
+            alert('Failed to upload image. Please try again.');
+            imagePreview.style.display = 'none';
+            imageInput.value = '';
+        }
+    });
+
+    removeImageButton.addEventListener('click', () => {
+        imageInput.value = '';
+        imagePreview.style.display = 'none';
+        uploadedImageData = null;
+    });
+
     // Send message
     messageForm.addEventListener('submit', async (e) => {
         e.preventDefault();
 
         const content = messageInput.value.trim();
-        if (!content) return;
+        if (!content && !uploadedImageData) return;
 
         // Clear typing status
         if (typingDebounce) clearTimeout(typingDebounce);
@@ -522,11 +660,27 @@
             sendTypingStatus(false);
         }
 
-        // Immediately add user message to UI
-        addMessageToUI(content, '{{ current_user.full_name }}', false);
+        // Immediately add user message to UI (with attachment if present)
+        const userMessage = {
+            content: content || '(image)',
+            author: '{{ current_user.full_name }}',
+            isAgent: false
+        };
+        if (uploadedImageData) {
+            userMessage.attachment_url = uploadedImageData.url;
+            userMessage.attachment_type = uploadedImageData.type;
+            userMessage.attachment_filename = uploadedImageData.filename;
+        }
+        addMessageToUI(userMessage);
 
         // Clear input immediately
         messageInput.value = '';
+
+        // Clear image preview
+        if (uploadedImageData) {
+            imageInput.value = '';
+            imagePreview.style.display = 'none';
+        }
 
         // Wait a random delay (500ms to 2000ms) before showing typing indicators
         const randomDelay = Math.random() * 1500 + 500; // 500-2000ms
@@ -540,14 +694,27 @@
 
         try {
             const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+            const requestBody = { content };
+            // Add attachment data if present
+            if (uploadedImageData) {
+                requestBody.attachment_url = uploadedImageData.url;
+                requestBody.attachment_type = uploadedImageData.type;
+                requestBody.attachment_filename = uploadedImageData.filename;
+                requestBody.attachment_size = uploadedImageData.size;
+            }
+
             const response = await fetch(`/chat/channel/${channelSlug}/send`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': csrfToken
                 },
-                body: JSON.stringify({ content })
+                body: JSON.stringify(requestBody)
             });
+
+            // Reset uploaded image data after sending
+            uploadedImageData = null;
 
             const data = await response.json();
 
