@@ -318,6 +318,25 @@ class MCPManager:
         # Get credentials directory
         creds_dir = self._get_credentials_path(integration)
 
+        # Write credentials to filesystem before starting server
+        # This ensures MCP server has latest OAuth tokens
+        try:
+            creds_data = {
+                'client_id': integration.client_id,
+                'client_secret': integration.client_secret,
+                'access_token': integration.access_token,
+                'refresh_token': integration.refresh_token,
+                'redirect_uri': integration.redirect_uri
+            }
+            # Filter out None values
+            creds_data = {k: v for k, v in creds_data.items() if v is not None}
+
+            if creds_data:
+                self.write_credentials(integration, creds_data)
+                current_app.logger.info(f"Wrote credentials for {process_name}")
+        except Exception as e:
+            current_app.logger.warning(f"Failed to write credentials for {process_name}: {e}")
+
         # Build command based on MCP server type
         try:
             if integration.mcp_server_type == 'gmail':
