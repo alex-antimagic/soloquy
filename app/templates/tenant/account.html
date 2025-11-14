@@ -19,6 +19,37 @@
                     <h5 class="mb-0"><i class="bi bi-person me-2"></i>Profile Information</h5>
                 </div>
                 <div class="card-body">
+                    <!-- Profile Picture -->
+                    <div class="mb-4 text-center">
+                        <div class="mb-3">
+                            {% if current_user.avatar_url %}
+                                <img src="{{ current_user.avatar_url }}" alt="{{ current_user.full_name }}"
+                                     id="avatar-preview"
+                                     class="rounded-circle"
+                                     style="width: 120px; height: 120px; object-fit: cover; border: 3px solid #dee2e6;">
+                            {% else %}
+                                <div id="avatar-preview" class="rounded-circle d-inline-flex align-items-center justify-content-center"
+                                     style="width: 120px; height: 120px; background-color: #e9ecef; border: 3px solid #dee2e6;">
+                                    <i class="bi bi-person-circle" style="font-size: 80px; color: #6c757d;"></i>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <input type="file" id="avatar-input" accept="image/png,image/jpeg,image/jpg,image/gif,image/webp" style="display: none;">
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="upload-avatar-button">
+                                <i class="bi bi-camera me-1"></i>Change Profile Picture
+                            </button>
+                            {% if current_user.avatar_url %}
+                                <button type="button" class="btn btn-sm btn-outline-danger ms-2" id="remove-avatar-button">
+                                    <i class="bi bi-trash me-1"></i>Remove
+                                </button>
+                            {% endif %}
+                        </div>
+                        <div id="avatar-upload-status" class="mt-2"></div>
+                    </div>
+
+                    <hr class="my-4">
+
                     <form method="POST" action="{{ url_for('tenant.account_settings') }}">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <input type="hidden" name="action" value="update_profile">
@@ -177,4 +208,110 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Avatar upload handling
+    const avatarInput = document.getElementById('avatar-input');
+    const uploadButton = document.getElementById('upload-avatar-button');
+    const removeButton = document.getElementById('remove-avatar-button');
+    const avatarPreview = document.getElementById('avatar-preview');
+    const uploadStatus = document.getElementById('avatar-upload-status');
+
+    if (uploadButton) {
+        uploadButton.addEventListener('click', () => {
+            avatarInput.click();
+        });
+    }
+
+    if (avatarInput) {
+        avatarInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            // Validate file size (10MB max)
+            if (file.size > 10 * 1024 * 1024) {
+                uploadStatus.innerHTML = '<div class="alert alert-danger alert-dismissible fade show"><i class="bi bi-exclamation-triangle me-2"></i>File too large. Maximum size is 10MB.</div>';
+                avatarInput.value = '';
+                return;
+            }
+
+            // Show uploading status
+            uploadStatus.innerHTML = '<div class="alert alert-info"><i class="bi bi-cloud-upload me-2"></i>Uploading...</div>';
+            uploadButton.disabled = true;
+
+            // Upload to server
+            const formData = new FormData();
+            formData.append('avatar', file);
+
+            try {
+                const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+                const response = await fetch('{{ url_for("tenant.upload_avatar") }}', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+
+                    // Update preview
+                    avatarPreview.outerHTML = `<img src="${data.avatar_url}" alt="{{ current_user.full_name }}" id="avatar-preview" class="rounded-circle" style="width: 120px; height: 120px; object-fit: cover; border: 3px solid #dee2e6;">`;
+
+                    uploadStatus.innerHTML = '<div class="alert alert-success alert-dismissible fade show"><i class="bi bi-check-circle me-2"></i>Profile picture updated successfully!</div>';
+
+                    // Reload page after 1.5 seconds to show remove button
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1500);
+                } else {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Upload failed');
+                }
+            } catch (error) {
+                console.error('Error uploading avatar:', error);
+                uploadStatus.innerHTML = '<div class="alert alert-danger alert-dismissible fade show"><i class="bi bi-exclamation-triangle me-2"></i>Failed to upload profile picture. Please try again.</div>';
+            } finally {
+                uploadButton.disabled = false;
+                avatarInput.value = '';
+            }
+        });
+    }
+
+    if (removeButton) {
+        removeButton.addEventListener('click', async () => {
+            if (!confirm('Are you sure you want to remove your profile picture?')) {
+                return;
+            }
+
+            uploadStatus.innerHTML = '<div class="alert alert-info"><i class="bi bi-trash me-2"></i>Removing...</div>';
+            removeButton.disabled = true;
+
+            try {
+                const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+                const response = await fetch('{{ url_for("tenant.account_settings") }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: 'action=remove_avatar&csrf_token=' + csrfToken
+                });
+
+                if (response.ok) {
+                    location.reload();
+                } else {
+                    throw new Error('Failed to remove avatar');
+                }
+            } catch (error) {
+                console.error('Error removing avatar:', error);
+                uploadStatus.innerHTML = '<div class="alert alert-danger alert-dismissible fade show"><i class="bi bi-exclamation-triangle me-2"></i>Failed to remove profile picture. Please try again.</div>';
+                removeButton.disabled = false;
+            }
+        });
+    }
+</script>
 {% endblock %}

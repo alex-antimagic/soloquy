@@ -1,4 +1,4 @@
-from flask import render_template, redirect, url_for, flash, request, session, g, jsonify
+from flask import render_template, redirect, url_for, flash, request, session, g, jsonify, current_app
 from flask_login import login_required, current_user
 from app import db
 from app.blueprints.tenant import tenant_bp
@@ -8,6 +8,7 @@ from app.models.department import Department
 from app.models.user import User
 from app.services.default_departments import create_default_departments
 from app.services.applet_manager import initialize_applets_for_tenant
+from app.services.cloudinary_service import upload_image
 
 
 @tenant_bp.route('/')
@@ -756,9 +757,63 @@ def account_settings():
                 db.session.commit()
                 flash('Password changed successfully!', 'success')
 
+        elif action == 'remove_avatar':
+            # Remove avatar
+            current_user.avatar_url = None
+            db.session.commit()
+            flash('Profile picture removed successfully!', 'success')
+
         return redirect(url_for('tenant.account_settings'))
 
     return render_template('tenant/account.html', title='Account Settings')
+
+
+@tenant_bp.route('/upload-avatar', methods=['POST'])
+@login_required
+def upload_avatar():
+    """Upload user avatar image"""
+    try:
+        # Validate file upload
+        if 'avatar' not in request.files:
+            return jsonify({'error': 'No image provided'}), 400
+
+        file = request.files['avatar']
+
+        if file.filename == '':
+            return jsonify({'error': 'No file selected'}), 400
+
+        # Validate file size
+        file.seek(0, 2)  # Seek to end
+        file_size = file.tell()
+        file.seek(0)  # Reset to beginning
+
+        max_size = current_app.config.get('MAX_FILE_SIZE', 10 * 1024 * 1024)
+        if file_size > max_size:
+            return jsonify({'error': f'File too large. Maximum size is {max_size // (1024 * 1024)}MB'}), 400
+
+        # Validate file type
+        allowed_extensions = current_app.config.get('ALLOWED_IMAGE_EXTENSIONS', {'png', 'jpg', 'jpeg', 'gif', 'webp'})
+        file_ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else ''
+
+        if file_ext not in allowed_extensions:
+            return jsonify({'error': f'Invalid file type. Allowed: {", ".join(allowed_extensions)}'}), 400
+
+        # Upload to Cloudinary
+        file.seek(0)
+        upload_result = upload_image(file, folder="avatars")
+
+        # Update user's avatar_url
+        current_user.avatar_url = upload_result['secure_url']
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'avatar_url': upload_result['secure_url']
+        })
+
+    except Exception as e:
+        current_app.logger.error(f"Error uploading avatar: {str(e)}")
+        return jsonify({'error': 'Failed to upload avatar. Please try again.'}), 500
 
 
 @tenant_bp.route('/upgrade')
