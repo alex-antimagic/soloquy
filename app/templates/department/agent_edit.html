@@ -147,6 +147,48 @@
                     </div>
                 </div>
 
+                <!-- Integration Access Section -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="bi bi-plugin me-2"></i>Integration Access</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted small mb-3">
+                            Control which external data sources this agent can access in its context.
+                        </p>
+
+                        <!-- QuickBooks Integration -->
+                        <div class="form-check mb-2">
+                            {{ form.enable_quickbooks(class="form-check-input") }}
+                            <label class="form-check-label" for="{{ form.enable_quickbooks.id }}">
+                                <strong>QuickBooks Online</strong>
+                                {% if qb_integration and qb_integration.is_active %}
+                                    <span class="badge bg-success ms-2">Connected</span>
+                                {% else %}
+                                    <span class="badge bg-secondary ms-2">Not Connected</span>
+                                {% endif %}
+                            </label>
+                            <div class="small text-muted ms-4">
+                                {% if qb_integration and qb_integration.is_active %}
+                                    Access to financial data, invoices, customers, and A/R metrics
+                                {% else %}
+                                    <a href="{{ url_for('integrations.quickbooks_configure') }}">Connect QuickBooks</a> to enable this integration
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        {% if not qb_integration or not qb_integration.is_active %}
+                        <div class="alert alert-info mt-3 mb-0">
+                            <i class="bi bi-info-circle me-2"></i>
+                            <small>
+                                No integrations are currently connected to this workspace.
+                                Visit the <a href="{{ url_for('integrations.index') }}">Integrations page</a> to connect external data sources.
+                            </small>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
                 <!-- Action Buttons -->
                 <div class="d-flex justify-content-between mb-4">
                     <a href="{{ url_for('department.view', department_id=department.id) }}" class="btn btn-secondary">

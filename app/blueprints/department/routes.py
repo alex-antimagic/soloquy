@@ -163,6 +163,13 @@ def edit_agent(agent_id):
 
     form = AgentForm(obj=agent)
 
+    # Get QuickBooks integration status for the template
+    from app.models.integration import Integration
+    qb_integration = Integration.query.filter_by(
+        tenant_id=g.current_tenant.id,
+        integration_type='quickbooks'
+    ).first()
+
     if form.validate_on_submit():
         # Update agent fields
         agent.name = form.name.data
@@ -173,6 +180,7 @@ def edit_agent(agent_id):
         agent.temperature = form.temperature.data
         agent.max_tokens = form.max_tokens.data
         agent.is_active = form.is_active.data
+        agent.enable_quickbooks = form.enable_quickbooks.data
 
         db.session.commit()
 
@@ -183,4 +191,5 @@ def edit_agent(agent_id):
                           title=f'Edit {agent.name}',
                           form=form,
                           agent=agent,
-                          department=department)
+                          department=department,
+                          qb_integration=qb_integration)

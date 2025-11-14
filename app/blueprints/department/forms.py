@@ -72,4 +72,7 @@ class AgentForm(FlaskForm):
 
     is_active = BooleanField('Agent Enabled', default=True)
 
+    # Integration Access
+    enable_quickbooks = BooleanField('Enable QuickBooks Access', default=True)
+
     submit = SubmitField('Save Changes')

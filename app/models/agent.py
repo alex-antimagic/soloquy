@@ -25,6 +25,9 @@ class Agent(db.Model):
     is_active = db.Column(db.Boolean, default=True, nullable=False)
     is_primary = db.Column(db.Boolean, default=False, nullable=False)  # Primary agent for department
 
+    # Integration access control
+    enable_quickbooks = db.Column(db.Boolean, default=True, nullable=False)  # Allow access to QuickBooks data
+
     # Timestamps
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
@@ -139,7 +142,8 @@ class Agent(db.Model):
                 is_active=True
             ).first()
 
-            if qb_integration:
+            # Only add QuickBooks data if agent has access enabled
+            if qb_integration and self.enable_quickbooks:
                 try:
                     financial_data = quickbooks_service.get_financial_summary(qb_integration)
 
