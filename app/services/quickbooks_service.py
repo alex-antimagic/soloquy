@@ -166,7 +166,7 @@ class QuickBooksService:
         """
         try:
             client = self.get_qb_client(integration)
-            company = CompanyInfo.get(qb=client)
+            company = CompanyInfo.get(integration.company_id, qb=client)
 
             return {
                 'company_name': company.CompanyName,
@@ -224,16 +224,16 @@ class QuickBooksService:
 
             # Build query based on status
             if status == 'open':
-                query = "SELECT * FROM Invoice WHERE Balance > '0' ORDER BY TxnDate DESC"
+                query = f"SELECT * FROM Invoice WHERE Balance > '0' ORDER BY TxnDate DESC MAXRESULTS {limit}"
             elif status == 'overdue':
                 today = datetime.now().strftime('%Y-%m-%d')
-                query = f"SELECT * FROM Invoice WHERE Balance > '0' AND DueDate < '{today}' ORDER BY DueDate"
+                query = f"SELECT * FROM Invoice WHERE Balance > '0' AND DueDate < '{today}' ORDER BY DueDate MAXRESULTS {limit}"
             elif status == 'paid':
-                query = "SELECT * FROM Invoice WHERE Balance = '0' ORDER BY TxnDate DESC"
+                query = f"SELECT * FROM Invoice WHERE Balance = '0' ORDER BY TxnDate DESC MAXRESULTS {limit}"
             else:
-                query = "SELECT * FROM Invoice ORDER BY TxnDate DESC"
+                query = f"SELECT * FROM Invoice ORDER BY TxnDate DESC MAXRESULTS {limit}"
 
-            invoices = Invoice.query(query, max_results=limit, qb=client)
+            invoices = Invoice.query(query, qb=client)
 
             return [{
                 'id': inv.Id,
