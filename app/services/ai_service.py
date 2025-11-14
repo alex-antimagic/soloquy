@@ -57,10 +57,10 @@ class AIService:
 
             # Check workspace Gmail first (always accessible)
             gmail_workspace = Integration.query.filter_by(
-                tenant_id=agent.tenant_id,
+                tenant_id=agent.department.tenant_id,
                 integration_type='gmail',
                 owner_type='tenant',
-                owner_id=agent.tenant_id,
+                owner_id=agent.department.tenant_id,
                 is_active=True
             ).first()
 
@@ -69,7 +69,7 @@ class AIService:
             elif can_access_personal:
                 # Only check personal if user created this agent
                 gmail_personal = Integration.query.filter_by(
-                    tenant_id=agent.tenant_id,
+                    tenant_id=agent.department.tenant_id,
                     integration_type='gmail',
                     owner_type='user',
                     owner_id=user.id,
@@ -84,7 +84,7 @@ class AIService:
                 )
                 AuditLog.log_access_denied(
                     user_id=user.id,
-                    tenant_id=g.current_tenant.id if hasattr(g, 'current_tenant') else agent.tenant_id,
+                    tenant_id=g.current_tenant.id if hasattr(g, 'current_tenant') else agent.department.tenant_id,
                     resource_type='integration',
                     resource_id=None,
                     reason='Personal Gmail access denied - agent not created by user',
@@ -98,7 +98,7 @@ class AIService:
                     # Log successful MCP access
                     AuditLog.log_mcp_access(
                         user_id=user.id,
-                        tenant_id=g.current_tenant.id if hasattr(g, 'current_tenant') else agent.tenant_id,
+                        tenant_id=g.current_tenant.id if hasattr(g, 'current_tenant') else agent.department.tenant_id,
                         agent_id=agent.id,
                         integration=gmail_integration,
                         status='success',
@@ -118,10 +118,10 @@ class AIService:
 
             # Check workspace Outlook first (always accessible)
             outlook_workspace = Integration.query.filter_by(
-                tenant_id=agent.tenant_id,
+                tenant_id=agent.department.tenant_id,
                 integration_type='outlook',
                 owner_type='tenant',
-                owner_id=agent.tenant_id,
+                owner_id=agent.department.tenant_id,
                 is_active=True
             ).first()
 
@@ -130,7 +130,7 @@ class AIService:
             elif can_access_personal:
                 # Only check personal if user created this agent
                 outlook_personal = Integration.query.filter_by(
-                    tenant_id=agent.tenant_id,
+                    tenant_id=agent.department.tenant_id,
                     integration_type='outlook',
                     owner_type='user',
                     owner_id=user.id,
@@ -145,7 +145,7 @@ class AIService:
                 )
                 AuditLog.log_access_denied(
                     user_id=user.id,
-                    tenant_id=g.current_tenant.id if hasattr(g, 'current_tenant') else agent.tenant_id,
+                    tenant_id=g.current_tenant.id if hasattr(g, 'current_tenant') else agent.department.tenant_id,
                     resource_type='integration',
                     resource_id=None,
                     reason='Personal Outlook access denied - agent not created by user',
@@ -159,7 +159,7 @@ class AIService:
                     # Log successful MCP access
                     AuditLog.log_mcp_access(
                         user_id=user.id,
-                        tenant_id=g.current_tenant.id if hasattr(g, 'current_tenant') else agent.tenant_id,
+                        tenant_id=g.current_tenant.id if hasattr(g, 'current_tenant') else agent.department.tenant_id,
                         agent_id=agent.id,
                         integration=outlook_integration,
                         status='success',
@@ -179,10 +179,10 @@ class AIService:
 
             # Check workspace Drive first (always accessible)
             drive_workspace = Integration.query.filter_by(
-                tenant_id=agent.tenant_id,
+                tenant_id=agent.department.tenant_id,
                 integration_type='google_drive',
                 owner_type='tenant',
-                owner_id=agent.tenant_id,
+                owner_id=agent.department.tenant_id,
                 is_active=True
             ).first()
 
@@ -191,7 +191,7 @@ class AIService:
             elif can_access_personal:
                 # Only check personal if user created this agent
                 drive_personal = Integration.query.filter_by(
-                    tenant_id=agent.tenant_id,
+                    tenant_id=agent.department.tenant_id,
                     integration_type='google_drive',
                     owner_type='user',
                     owner_id=user.id,
@@ -206,7 +206,7 @@ class AIService:
                 )
                 AuditLog.log_access_denied(
                     user_id=user.id,
-                    tenant_id=g.current_tenant.id if hasattr(g, 'current_tenant') else agent.tenant_id,
+                    tenant_id=g.current_tenant.id if hasattr(g, 'current_tenant') else agent.department.tenant_id,
                     resource_type='integration',
                     resource_id=None,
                     reason='Personal Drive access denied - agent not created by user',
@@ -220,7 +220,7 @@ class AIService:
                     # Log successful MCP access
                     AuditLog.log_mcp_access(
                         user_id=user.id,
-                        tenant_id=g.current_tenant.id if hasattr(g, 'current_tenant') else agent.tenant_id,
+                        tenant_id=g.current_tenant.id if hasattr(g, 'current_tenant') else agent.department.tenant_id,
                         agent_id=agent.id,
                         integration=drive_integration,
                         status='success',
