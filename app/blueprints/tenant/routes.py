@@ -724,6 +724,49 @@ def refresh_context():
     return redirect(url_for('tenant.settings'))
 
 
+@tenant_bp.route('/add-website', methods=['POST'])
+@login_required
+def add_website():
+    """Add website URL to existing workspace (post-onboarding)"""
+    if not g.current_tenant:
+        flash('Please select a workspace first.', 'warning')
+        return redirect(url_for('tenant.home'))
+
+    user_role = current_user.get_role_in_tenant(g.current_tenant.id)
+    if user_role not in ['owner', 'admin']:
+        flash('You do not have permission to add a website.', 'danger')
+        return redirect(url_for('tenant.settings'))
+
+    # Get form data
+    website_url = request.form.get('website_url', '').strip()
+    company_size = request.form.get('company_size', '').strip()
+
+    if not website_url:
+        flash('Website URL is required.', 'danger')
+        return redirect(url_for('tenant.settings'))
+
+    # Normalize website URL - add https:// if missing
+    website_url = website_url.replace('http://', '').replace('https://', '')
+    website_url = f'https://{website_url}'
+
+    # Update tenant
+    g.current_tenant.website_url = website_url
+    g.current_tenant.company_size = company_size if company_size else None
+    g.current_tenant.context_scraping_status = 'pending'
+    db.session.commit()
+
+    # Trigger business intelligence scraping
+    try:
+        from app.services.business_intelligence_service import scrape_business_context_async
+        scrape_business_context_async(g.current_tenant.id)
+        flash('Website added! Analyzing your website to personalize AI agents...', 'success')
+    except Exception as e:
+        print(f"Error starting business intelligence scraping: {e}")
+        flash('Website added, but failed to start analysis. Please try refreshing the context.', 'warning')
+
+    return redirect(url_for('tenant.settings'))
+
+
 @tenant_bp.route('/account', methods=['GET', 'POST'])
 @login_required
 def account_settings():
