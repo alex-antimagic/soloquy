@@ -27,6 +27,9 @@ class Agent(db.Model):
 
     # Integration access control (secure by default - admin must explicitly enable)
     enable_quickbooks = db.Column(db.Boolean, default=False, nullable=False)  # Allow access to QuickBooks data
+    enable_gmail = db.Column(db.Boolean, default=False, nullable=False)  # Allow access to Gmail (MCP)
+    enable_outlook = db.Column(db.Boolean, default=False, nullable=False)  # Allow access to Outlook (MCP)
+    enable_google_drive = db.Column(db.Boolean, default=False, nullable=False)  # Allow access to Google Drive (MCP)
 
     # Timestamps
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)

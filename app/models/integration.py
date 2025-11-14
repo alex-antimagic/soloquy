@@ -1,8 +1,10 @@
 """
 Integration Model
 Stores OAuth credentials and metadata for external integrations
+Supports both workspace-level (shared) and user-level (personal) integrations
 """
 from datetime import datetime
+import json
 from app import db
 from app.utils.encryption import encryption_service
 
@@ -13,7 +15,12 @@ class Integration(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     tenant_id = db.Column(db.Integer, db.ForeignKey('tenants.id'), nullable=False)
-    integration_type = db.Column(db.String(50), nullable=False)  # 'quickbooks', 'google_drive'
+    integration_type = db.Column(db.String(50), nullable=False)  # 'quickbooks', 'gmail', 'outlook', 'google_drive'
+
+    # Hybrid support: workspace-level OR user-level
+    owner_type = db.Column(db.String(20), nullable=False, default='tenant')  # 'tenant' or 'user'
+    owner_id = db.Column(db.Integer, nullable=False)  # tenant_id if owner_type='tenant', user_id if owner_type='user'
+    display_name = db.Column(db.String(100))  # e.g., "Sales Team Gmail" or "John's Personal Gmail"
 
     # Encrypted credentials
     access_token_encrypted = db.Column(db.Text)
@@ -26,6 +33,13 @@ class Integration(db.Model):
     redirect_uri = db.Column(db.String(500))  # Per-tenant OAuth redirect URI
     environment = db.Column(db.String(50))  # 'sandbox' or 'production'
 
+    # MCP-specific fields (Model Context Protocol)
+    integration_mode = db.Column(db.String(20), default='oauth')  # 'oauth' or 'mcp'
+    mcp_server_type = db.Column(db.String(50))  # 'gmail', 'outlook', 'google_drive' (npm package identifier)
+    mcp_config_encrypted = db.Column(db.Text)  # JSON configuration for MCP server (encrypted)
+    mcp_credentials_path = db.Column(db.String(500))  # Filesystem path to MCP credentials
+    mcp_process_id = db.Column(db.Integer)  # PID of running MCP server process
+
     # Timestamps
     connected_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     last_sync_at = db.Column(db.DateTime)
@@ -34,9 +48,10 @@ class Integration(db.Model):
     # Relationships
     tenant = db.relationship('Tenant', backref=db.backref('integrations', lazy='dynamic'))
 
-    # Unique constraint
+    # Unique constraint: one integration per owner (workspace or user) per type
     __table_args = (
-        db.UniqueConstraint('tenant_id', 'integration_type', name='uq_tenant_integration_type'),
+        db.UniqueConstraint('tenant_id', 'owner_type', 'owner_id', 'integration_type',
+                          name='uq_tenant_owner_integration_type'),
     )
 
     @property
@@ -99,6 +114,37 @@ class Integration(db.Model):
         else:
             self.client_secret_encrypted = None
 
+    @property
+    def mcp_config(self):
+        """Decrypt and return MCP configuration as dict"""
+        if not self.mcp_config_encrypted:
+            return None
+        decrypted = encryption_service.decrypt(self.mcp_config_encrypted)
+        return json.loads(decrypted) if decrypted else None
+
+    @mcp_config.setter
+    def mcp_config(self, value):
+        """Encrypt and store MCP configuration"""
+        if value:
+            json_str = json.dumps(value)
+            self.mcp_config_encrypted = encryption_service.encrypt(json_str)
+        else:
+            self.mcp_config_encrypted = None
+
+    def is_workspace_integration(self):
+        """Check if this is a workspace-level (shared) integration"""
+        return self.owner_type == 'tenant'
+
+    def is_user_integration(self):
+        """Check if this is a user-level (personal) integration"""
+        return self.owner_type == 'user'
+
+    def get_mcp_process_name(self):
+        """Generate unique process name for MCP server"""
+        if self.integration_mode != 'mcp':
+            return None
+        return f"{self.mcp_server_type}-{self.owner_type}-{self.owner_id}"
+
     def update_tokens(self, access_token, refresh_token=None):
         """
         Update OAuth tokens
@@ -120,4 +166,5 @@ class Integration(db.Model):
         # Note: We keep client_id and client_secret so tenant can reconnect without re-entering credentials
 
     def __repr__(self):
-        return f'<Integration {self.integration_type} for Tenant {self.tenant_id}>'
+        owner_info = f"{self.owner_type}={self.owner_id}"
+        return f'<Integration {self.integration_type} ({owner_info}) for Tenant {self.tenant_id}>'
