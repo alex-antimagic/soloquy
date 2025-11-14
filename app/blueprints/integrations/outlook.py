@@ -142,22 +142,26 @@ def outlook_connect():
         flash('Please configure Outlook credentials first.', 'warning')
         return redirect(url_for('integrations.outlook_configure', scope=scope))
 
-    # Create MSAL app
+    # Build authorization URL manually to avoid MSAL frozenset issues
     try:
-        msal_app = ConfidentialClientApplication(
-            integration.client_id,
-            authority='https://login.microsoftonline.com/common',
-            client_credential=integration.client_secret
-        )
+        import urllib.parse
 
-        # Build authorization URL
-        auth_url = msal_app.get_authorization_request_url(
-            scopes=list(OUTLOOK_SCOPES),  # Ensure scopes is a list
-            redirect_uri=integration.redirect_uri,
-            prompt='consent'  # Force consent to get refresh token
-        )
+        # Join scopes into space-separated string for OAuth
+        scopes_str = ' '.join(OUTLOOK_SCOPES)
 
-        # Store scope in session
+        # Build OAuth authorization URL
+        auth_params = {
+            'client_id': integration.client_id,
+            'response_type': 'code',
+            'redirect_uri': integration.redirect_uri,
+            'scope': scopes_str,
+            'response_mode': 'query',
+            'prompt': 'consent'  # Force consent to get refresh token
+        }
+
+        auth_url = f"https://login.microsoftonline.com/common/oauth2/v2.0/authorize?{urllib.parse.urlencode(auth_params)}"
+
+        # Store scope in session for callback
         session['outlook_oauth_scope'] = scope
 
         return redirect(auth_url)
