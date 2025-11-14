@@ -531,7 +531,10 @@ class AIService:
                 # Continue anyway - server might already be initialized
 
             # Call the tool
-            result = mcp_client.call_tool(tool_name, tool_input)
+            # Convert tool name back to MCP format (underscores -> hyphens)
+            # Claude uses 'list_emails', but MCP server expects 'list-emails'
+            mcp_tool_name = tool_name.replace("_", "-")
+            result = mcp_client.call_tool(mcp_tool_name, tool_input)
 
             current_app.logger.info(f"Tool {tool_name} executed successfully")
 

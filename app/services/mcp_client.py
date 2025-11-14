@@ -123,6 +123,9 @@ def convert_mcp_tools_to_claude(mcp_tools: List[Dict]) -> List[Dict]:
     """
     Convert MCP tool definitions to Claude's tool format
 
+    MCP tools use hyphenated names (e.g., 'list-emails'), but Claude prefers
+    underscores, so we normalize: 'list-emails' -> 'list_emails'
+
     Args:
         mcp_tools: List of MCP tool definitions
 
@@ -132,8 +135,12 @@ def convert_mcp_tools_to_claude(mcp_tools: List[Dict]) -> List[Dict]:
     claude_tools = []
 
     for mcp_tool in mcp_tools:
+        # Normalize hyphenated names to underscores for Claude
+        mcp_name = mcp_tool.get("name", "")
+        claude_name = mcp_name.replace("-", "_")
+
         claude_tool = {
-            "name": mcp_tool.get("name", ""),
+            "name": claude_name,
             "description": mcp_tool.get("description", "")
         }
 
