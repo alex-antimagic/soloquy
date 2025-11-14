@@ -355,18 +355,22 @@ class AIService:
                 print(f"[MCP DEBUG] Got {len(tools) if tools else 0} tools")
                 if tools:
                     api_params['tools'] = tools
-                    print(f"[MCP DEBUG] Added {len(tools)} tools to API params")
+                    print(f"[MCP DEBUG] Added {len(tools)} tools to API params:")
+                    for tool in tools:
+                        print(f"[MCP DEBUG]   - {tool.get('name')}: {tool.get('description')[:80]}")
                     current_app.logger.info(f"Agent {agent.name} has {len(tools)} tools available")
                 else:
-                    print(f"[MCP DEBUG] No tools returned")
+                    print(f"[MCP DEBUG] No tools returned - agent will not have email access")
 
             # Call Claude API (potentially multiple times for tool use)
             response = self.client.messages.create(**api_params)
+            print(f"[MCP DEBUG] Claude response stop_reason: {response.stop_reason}")
 
             # Handle tool use loop
             while response.stop_reason == "tool_use":
                 # Extract tool calls from response
                 tool_uses = [block for block in response.content if block.type == "tool_use"]
+                print(f"[MCP DEBUG] Claude wants to use {len(tool_uses)} tools")
 
                 if not tool_uses:
                     break
