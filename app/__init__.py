@@ -186,9 +186,8 @@ def _initialize_mcp_credentials(app):
     from pathlib import Path
 
     try:
-        # Only initialize if we're in a web dyno (not during migration or one-off commands)
-        if not os.environ.get('DYNO', '').startswith('web'):
-            return
+        print("[MCP INIT] Starting credential initialization")
+        print(f"[MCP INIT] DYNO value: {os.environ.get('DYNO', 'NOT SET')}")
 
         from app.models.integration import Integration
 
@@ -199,8 +198,10 @@ def _initialize_mcp_credentials(app):
         ).all()
 
         if not integrations:
-            app.logger.info("[MCP INIT] No MCP integrations found")
+            print("[MCP INIT] No MCP integrations found")
             return
+
+        print(f"[MCP INIT] Found {len(integrations)} MCP integrations")
 
         # Determine base credentials directory
         if os.path.exists('/app/var/mcp/credentials'):
@@ -209,11 +210,15 @@ def _initialize_mcp_credentials(app):
             base_dir = Path.home() / '.mcp' / 'credentials'
             base_dir.mkdir(parents=True, exist_ok=True)
 
+        print(f"[MCP INIT] Using credentials directory: {base_dir}")
+
         # Write credentials for each integration
         for integration in integrations:
+            print(f"[MCP INIT] Processing integration {integration.id} (type={integration.mcp_server_type})")
+
             if not all([integration.client_id, integration.client_secret,
                        integration.access_token, integration.refresh_token]):
-                app.logger.info(f"[MCP INIT] Skipping integration {integration.id} - missing credentials")
+                print(f"[MCP INIT] Skipping integration {integration.id} - missing credentials")
                 continue
 
             # Create integration-specific directory
@@ -239,10 +244,10 @@ def _initialize_mcp_credentials(app):
                     json.dump(tokens, f, indent=2)
                 tokens_file.chmod(0o600)
 
-                app.logger.info(f"[MCP INIT] Wrote Outlook credentials for {integration.owner_type}-{integration.owner_id}")
+                print(f"[MCP INIT] ✓ Wrote Outlook credentials for {integration.owner_type}-{integration.owner_id}")
 
     except Exception as e:
         # Don't fail app startup if credential initialization fails
-        app.logger.error(f"[MCP INIT] Failed to initialize credentials: {e}")
+        print(f"[MCP INIT] ERROR: Failed to initialize credentials: {e}")
         import traceback
-        app.logger.error(f"[MCP INIT] Traceback: {traceback.format_exc()}")
+        print(f"[MCP INIT] Traceback: {traceback.format_exc()}")
