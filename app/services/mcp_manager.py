@@ -221,8 +221,9 @@ class MCPManager:
                     }
                 }
 
-                with open(creds_file, 'w', mode=0o600) as f:
+                with open(creds_file, 'w') as f:
                     json.dump(oauth_creds, f, indent=2)
+                creds_file.chmod(0o600)  # Set secure permissions
 
                 # Also write tokens if available
                 if credentials.get('access_token'):
@@ -234,8 +235,9 @@ class MCPManager:
                         "client_id": credentials.get('client_id'),
                         "client_secret": credentials.get('client_secret')
                     }
-                    with open(tokens_file, 'w', mode=0o600) as f:
+                    with open(tokens_file, 'w') as f:
                         json.dump(tokens, f, indent=2)
+                    tokens_file.chmod(0o600)  # Set secure permissions
 
                 current_app.logger.info(f"Wrote Google credentials to {creds_file}")
                 return str(creds_file)
@@ -244,9 +246,10 @@ class MCPManager:
                 # Microsoft OAuth credentials in .env format
                 env_file = creds_dir / '.env'
 
-                with open(env_file, 'w', mode=0o600) as f:
+                with open(env_file, 'w') as f:
                     f.write(f"MS_CLIENT_ID={credentials.get('client_id')}\n")
                     f.write(f"MS_CLIENT_SECRET={credentials.get('client_secret')}\n")
+                env_file.chmod(0o600)  # Set secure permissions
 
                 # Outlook MCP stores tokens separately
                 if credentials.get('access_token'):
@@ -256,8 +259,9 @@ class MCPManager:
                         "refresh_token": credentials.get('refresh_token'),
                         "expires_at": credentials.get('expires_at')
                     }
-                    with open(tokens_file, 'w', mode=0o600) as f:
+                    with open(tokens_file, 'w') as f:
                         json.dump(tokens, f, indent=2)
+                    tokens_file.chmod(0o600)  # Set secure permissions
 
                 current_app.logger.info(f"Wrote Outlook credentials to {env_file}")
                 return str(env_file)
