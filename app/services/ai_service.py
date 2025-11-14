@@ -114,9 +114,12 @@ class AIService:
 
         # Outlook MCP
         if agent.enable_outlook:
+            print(f"[MCP DEBUG] Agent has enable_outlook=True")
+            print(f"[MCP DEBUG] can_access_personal={can_access_personal} (agent.created_by_id={agent.created_by_id}, user.id={user.id})")
             outlook_integration = None
 
             # Check workspace Outlook first (always accessible)
+            print(f"[MCP DEBUG] Checking workspace Outlook: tenant_id={agent.department.tenant_id}")
             outlook_workspace = Integration.query.filter_by(
                 tenant_id=agent.department.tenant_id,
                 integration_type='outlook',
@@ -124,11 +127,13 @@ class AIService:
                 owner_id=agent.department.tenant_id,
                 is_active=True
             ).first()
+            print(f"[MCP DEBUG] Workspace Outlook found: {outlook_workspace is not None}")
 
             if outlook_workspace:
                 outlook_integration = outlook_workspace
             elif can_access_personal:
                 # Only check personal if user created this agent
+                print(f"[MCP DEBUG] Checking personal Outlook: tenant_id={agent.department.tenant_id}, user_id={user.id}")
                 outlook_personal = Integration.query.filter_by(
                     tenant_id=agent.department.tenant_id,
                     integration_type='outlook',
@@ -136,8 +141,12 @@ class AIService:
                     owner_id=user.id,
                     is_active=True
                 ).first()
+                print(f"[MCP DEBUG] Personal Outlook found: {outlook_personal is not None}")
+                if outlook_personal:
+                    print(f"[MCP DEBUG] Personal Outlook details: id={outlook_personal.id}, is_active={outlook_personal.is_active}")
                 outlook_integration = outlook_personal
             else:
+                print(f"[MCP DEBUG] Cannot access personal - agent not created by user")
                 # Log denied access attempt
                 current_app.logger.warning(
                     f"MCP_ACCESS_DENIED: user={user.id} agent={agent.id} "
