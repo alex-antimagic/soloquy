@@ -285,11 +285,13 @@ def send_message():
                     tasks=agent_tasks
                 )
 
-                # Get AI response
+                # Get AI response (with MCP context if enabled)
                 ai_service = get_ai_service()
                 agent_response_text = ai_service.chat(
                     messages=api_messages,
-                    system_prompt=system_prompt
+                    system_prompt=system_prompt,
+                    agent=agent,
+                    user=current_user
                 )
 
                 # Save agent's response
@@ -633,11 +635,13 @@ def send_channel_message(slug):
             if channel.description:
                 system_prompt += f"\nChannel description: {channel.description}"
 
-            # Get AI response
+            # Get AI response (with MCP context if enabled)
             ai_service = get_ai_service()
             agent_response_text = ai_service.chat(
                 messages=api_messages,
-                system_prompt=system_prompt
+                system_prompt=system_prompt,
+                agent=agent,
+                user=current_user
             )
 
             # Save agent's response

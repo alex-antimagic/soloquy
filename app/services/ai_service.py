@@ -1,11 +1,13 @@
 """
 AI Service for Claude API Integration
 Uses Claude Haiku for fast, cost-effective agent responses
+Supports Model Context Protocol (MCP) for external data access
 """
 import os
 import json
 from anthropic import Anthropic
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any
+from flask import current_app
 
 
 class AIService:
@@ -21,13 +23,128 @@ class AIService:
 
         self.client = Anthropic(api_key=api_key)
 
+    def _build_mcp_config(self, agent, user) -> Optional[List[Dict[str, Any]]]:
+        """
+        Build MCP server configuration from agent's enabled integrations
+
+        Args:
+            agent: Agent model with integration flags (enable_gmail, etc.)
+            user: User model for checking personal integrations
+
+        Returns:
+            List of MCP server configurations for Anthropic API, or None if no MCP integrations
+        """
+        from app.models.integration import Integration
+        from app.services.mcp_manager import mcp_manager
+
+        mcp_servers = []
+
+        # Gmail MCP
+        if agent.enable_gmail:
+            # Check workspace Gmail first
+            gmail_workspace = Integration.query.filter_by(
+                tenant_id=agent.tenant_id,
+                integration_type='gmail',
+                owner_type='tenant',
+                owner_id=agent.tenant_id,
+                is_active=True
+            ).first()
+
+            # Fall back to user's personal Gmail
+            gmail_personal = Integration.query.filter_by(
+                tenant_id=agent.tenant_id,
+                integration_type='gmail',
+                owner_type='user',
+                owner_id=user.id,
+                is_active=True
+            ).first()
+
+            # Use workspace if available, otherwise use personal
+            gmail_integration = gmail_workspace or gmail_personal
+
+            if gmail_integration:
+                status = mcp_manager.get_process_status(gmail_integration)
+                if status.get('running'):
+                    # MCP server is running, add to configuration
+                    # The MCP server communicates via stdin/stdout, so we reference it by process
+                    mcp_servers.append({
+                        'name': f'gmail_{gmail_integration.owner_type}',
+                        'integration_id': gmail_integration.id,
+                        'mcp_process_name': gmail_integration.get_mcp_process_name(),
+                        'tools': ['gmail_list', 'gmail_read', 'gmail_send', 'gmail_search', 'gmail_labels']
+                    })
+
+        # Outlook MCP
+        if agent.enable_outlook:
+            outlook_workspace = Integration.query.filter_by(
+                tenant_id=agent.tenant_id,
+                integration_type='outlook',
+                owner_type='tenant',
+                owner_id=agent.tenant_id,
+                is_active=True
+            ).first()
+
+            outlook_personal = Integration.query.filter_by(
+                tenant_id=agent.tenant_id,
+                integration_type='outlook',
+                owner_type='user',
+                owner_id=user.id,
+                is_active=True
+            ).first()
+
+            outlook_integration = outlook_workspace or outlook_personal
+
+            if outlook_integration:
+                status = mcp_manager.get_process_status(outlook_integration)
+                if status.get('running'):
+                    mcp_servers.append({
+                        'name': f'outlook_{outlook_integration.owner_type}',
+                        'integration_id': outlook_integration.id,
+                        'mcp_process_name': outlook_integration.get_mcp_process_name(),
+                        'tools': ['outlook_list', 'outlook_read', 'outlook_send', 'outlook_search']
+                    })
+
+        # Google Drive MCP
+        if agent.enable_google_drive:
+            drive_workspace = Integration.query.filter_by(
+                tenant_id=agent.tenant_id,
+                integration_type='google_drive',
+                owner_type='tenant',
+                owner_id=agent.tenant_id,
+                is_active=True
+            ).first()
+
+            drive_personal = Integration.query.filter_by(
+                tenant_id=agent.tenant_id,
+                integration_type='google_drive',
+                owner_type='user',
+                owner_id=user.id,
+                is_active=True
+            ).first()
+
+            drive_integration = drive_workspace or drive_personal
+
+            if drive_integration:
+                status = mcp_manager.get_process_status(drive_integration)
+                if status.get('running'):
+                    mcp_servers.append({
+                        'name': f'drive_{drive_integration.owner_type}',
+                        'integration_id': drive_integration.id,
+                        'mcp_process_name': drive_integration.get_mcp_process_name(),
+                        'tools': ['drive_list', 'drive_read', 'drive_write', 'drive_search', 'drive_create']
+                    })
+
+        return mcp_servers if mcp_servers else None
+
     def chat(
         self,
         messages: List[Dict[str, str]],
         system_prompt: str,
         model: Optional[str] = None,
         max_tokens: int = 1024,
-        temperature: float = 1.0
+        temperature: float = 1.0,
+        agent=None,
+        user=None
     ) -> str:
         """
         Send a chat message to Claude and get a response.
@@ -38,6 +155,8 @@ class AIService:
             model: Model to use (defaults to Haiku)
             max_tokens: Maximum tokens in response
             temperature: Sampling temperature (0-1)
+            agent: Agent model (for MCP integration support)
+            user: User model (for MCP integration support)
 
         Returns:
             The AI's response text
@@ -46,13 +165,29 @@ class AIService:
             model = self.DEFAULT_MODEL
 
         try:
-            response = self.client.messages.create(
-                model=model,
-                max_tokens=max_tokens,
-                temperature=temperature,
-                system=system_prompt,
-                messages=messages
-            )
+            # Build API call parameters
+            api_params = {
+                'model': model,
+                'max_tokens': max_tokens,
+                'temperature': temperature,
+                'system': system_prompt,
+                'messages': messages
+            }
+
+            # Add MCP context to system prompt if agent has MCP integrations enabled
+            if agent and user:
+                mcp_servers = self._build_mcp_config(agent, user)
+                if mcp_servers:
+                    # Append MCP availability info to system prompt
+                    mcp_info = "\n\nAvailable MCP Integrations:\n"
+                    for server in mcp_servers:
+                        mcp_info += f"- {server['name']}: {', '.join(server['tools'])}\n"
+                    api_params['system'] = system_prompt + mcp_info
+
+                    # Log MCP context for debugging
+                    current_app.logger.info(f"Agent {agent.name} using MCP: {[s['name'] for s in mcp_servers]}")
+
+            response = self.client.messages.create(**api_params)
 
             # Extract text from response
             if response.content and len(response.content) > 0:
@@ -199,7 +334,9 @@ Priority guidelines:
         system_prompt: str,
         model: Optional[str] = None,
         max_tokens: int = 1024,
-        temperature: float = 1.0
+        temperature: float = 1.0,
+        agent=None,
+        user=None
     ):
         """
         Stream a chat response from Claude.
@@ -210,6 +347,8 @@ Priority guidelines:
             model: Model to use (defaults to Haiku)
             max_tokens: Maximum tokens in response
             temperature: Sampling temperature (0-1)
+            agent: Agent model (for MCP integration support)
+            user: User model (for MCP integration support)
 
         Yields:
             Text chunks as they arrive from the API
@@ -218,13 +357,29 @@ Priority guidelines:
             model = self.DEFAULT_MODEL
 
         try:
-            with self.client.messages.stream(
-                model=model,
-                max_tokens=max_tokens,
-                temperature=temperature,
-                system=system_prompt,
-                messages=messages
-            ) as stream:
+            # Build API call parameters
+            stream_params = {
+                'model': model,
+                'max_tokens': max_tokens,
+                'temperature': temperature,
+                'system': system_prompt,
+                'messages': messages
+            }
+
+            # Add MCP context to system prompt if agent has MCP integrations enabled
+            if agent and user:
+                mcp_servers = self._build_mcp_config(agent, user)
+                if mcp_servers:
+                    # Append MCP availability info to system prompt
+                    mcp_info = "\n\nAvailable MCP Integrations:\n"
+                    for server in mcp_servers:
+                        mcp_info += f"- {server['name']}: {', '.join(server['tools'])}\n"
+                    stream_params['system'] = system_prompt + mcp_info
+
+                    # Log MCP context for debugging
+                    current_app.logger.info(f"Agent {agent.name} streaming with MCP: {[s['name'] for s in mcp_servers]}")
+
+            with self.client.messages.stream(**stream_params) as stream:
                 for text in stream.text_stream:
                     yield text
 
