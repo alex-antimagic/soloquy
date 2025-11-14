@@ -30,17 +30,37 @@
                     <div class="mt-3">
                         {% if integration.available %}
                             {% if integration.connected %}
-                                <div class="d-flex align-items-center gap-2">
+                                <div class="d-flex align-items-center gap-2 flex-wrap">
                                     <span class="badge bg-success"><i class="bi bi-check-circle"></i> Connected</span>
                                     <button class="btn btn-outline-danger btn-sm"
                                             onclick="disconnectIntegration('{{ integration.name }}', '{{ url_for(integration.disconnect_url) }}')">
                                         <i class="bi bi-x-circle"></i> Disconnect
                                     </button>
+                                    {% if integration.configure_url %}
+                                        <a href="{{ url_for(integration.configure_url) }}" class="btn btn-outline-secondary btn-sm">
+                                            <i class="bi bi-gear"></i> Settings
+                                        </a>
+                                    {% endif %}
                                 </div>
-                            {% else %}
-                                <a href="{{ url_for(integration.connect_url) }}" class="btn btn-primary btn-sm">
-                                    <i class="bi bi-plug"></i> Connect
+                            {% elif integration.get('configured') %}
+                                <div class="d-flex align-items-center gap-2 flex-wrap">
+                                    <a href="{{ url_for(integration.connect_url) }}" class="btn btn-primary btn-sm">
+                                        <i class="bi bi-plug"></i> Connect
+                                    </a>
+                                    {% if integration.configure_url %}
+                                        <a href="{{ url_for(integration.configure_url) }}" class="btn btn-outline-secondary btn-sm">
+                                            <i class="bi bi-gear"></i> Settings
+                                        </a>
+                                    {% endif %}
+                                </div>
+                            {% elif integration.configure_url %}
+                                <a href="{{ url_for(integration.configure_url) }}" class="btn btn-warning btn-sm">
+                                    <i class="bi bi-wrench"></i> Configure
                                 </a>
+                            {% else %}
+                                <button class="btn btn-outline-secondary btn-sm" disabled>
+                                    <i class="bi bi-exclamation-circle"></i> Configuration Required
+                                </button>
                             {% endif %}
                         {% else %}
                             <button class="btn btn-outline-secondary btn-sm" disabled>

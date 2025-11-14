@@ -1,0 +1,132 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('integrations.index') }}">Integrations</a></li>
+                    <li class="breadcrumb-item active">Configure QuickBooks</li>
+                </ol>
+            </nav>
+            <h1 class="h3 mb-2">Configure QuickBooks OAuth</h1>
+            <p class="text-muted">Enter your QuickBooks OAuth application credentials to enable integration</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-body">
+                    <form method="POST">
+                        {{ csrf_token_field() }}
+
+                        <div class="mb-3">
+                            <label for="client_id" class="form-label">Client ID <span class="text-danger">*</span></label>
+                            <input type="text"
+                                   class="form-control font-monospace"
+                                   id="client_id"
+                                   name="client_id"
+                                   value="{{ integration.client_id if integration else '' }}"
+                                   required
+                                   placeholder="Your QuickBooks OAuth Client ID">
+                            <small class="form-text text-muted">
+                                Get this from your QuickBooks Developer app at
+                                <a href="https://developer.intuit.com/app/developer/myapps" target="_blank">developer.intuit.com</a>
+                            </small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="client_secret" class="form-label">Client Secret <span class="text-danger">*</span></label>
+                            <input type="password"
+                                   class="form-control font-monospace"
+                                   id="client_secret"
+                                   name="client_secret"
+                                   value="{{ integration.client_secret if integration else '' }}"
+                                   required
+                                   placeholder="Your QuickBooks OAuth Client Secret">
+                            <small class="form-text text-muted">
+                                This secret is encrypted before storage and never exposed.
+                            </small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="redirect_uri" class="form-label">Redirect URI</label>
+                            <input type="url"
+                                   class="form-control font-monospace"
+                                   id="redirect_uri"
+                                   name="redirect_uri"
+                                   value="{{ integration.redirect_uri if integration else url_for('integrations.quickbooks_callback', _external=True) }}"
+                                   placeholder="{{ url_for('integrations.quickbooks_callback', _external=True) }}">
+                            <small class="form-text text-muted">
+                                Leave blank to use default: <code>{{ url_for('integrations.quickbooks_callback', _external=True) }}</code>
+                            </small>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="environment" class="form-label">Environment</label>
+                            <select class="form-select" id="environment" name="environment">
+                                <option value="sandbox" {% if integration and integration.environment == 'sandbox' %}selected{% endif %}>
+                                    Sandbox (Testing)
+                                </option>
+                                <option value="production" {% if integration and integration.environment == 'production' %}selected{% endif %}>
+                                    Production (Live Data)
+                                </option>
+                            </select>
+                            <small class="form-text text-muted">
+                                Use Sandbox for testing with sample data, Production for live QuickBooks company data.
+                            </small>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-save"></i> Save Credentials
+                            </button>
+                            <a href="{{ url_for('integrations.index') }}" class="btn btn-outline-secondary">
+                                Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">How to Get QuickBooks OAuth Credentials</h5>
+                </div>
+                <div class="card-body">
+                    <ol>
+                        <li class="mb-2">
+                            Go to <a href="https://developer.intuit.com/app/developer/myapps" target="_blank">QuickBooks Developer Portal</a>
+                        </li>
+                        <li class="mb-2">
+                            Create a new app or select an existing one
+                        </li>
+                        <li class="mb-2">
+                            Navigate to "Keys & OAuth" section
+                        </li>
+                        <li class="mb-2">
+                            Copy your <strong>Client ID</strong> and <strong>Client Secret</strong>
+                        </li>
+                        <li class="mb-2">
+                            Add this redirect URI to your QuickBooks app:
+                            <code class="d-block mt-1 p-2 bg-light">{{ url_for('integrations.quickbooks_callback', _external=True) }}</code>
+                        </li>
+                        <li class="mb-2">
+                            Select the scopes: <strong>Accounting</strong>
+                        </li>
+                        <li>
+                            Paste your credentials above and click "Save Credentials"
+                        </li>
+                    </ol>
+                    <div class="alert alert-info mt-3">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>Security:</strong> Your credentials are encrypted and stored securely. Only your workspace can access them.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

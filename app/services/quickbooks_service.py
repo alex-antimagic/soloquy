@@ -17,29 +17,28 @@ class QuickBooksService:
 
     def __init__(self):
         """Initialize QuickBooks service"""
-        self.client_id = os.environ.get('QUICKBOOKS_CLIENT_ID')
-        self.client_secret = os.environ.get('QUICKBOOKS_CLIENT_SECRET')
-        self.redirect_uri = os.environ.get('QUICKBOOKS_REDIRECT_URI', 'http://localhost:5000/integrations/quickbooks/callback')
-        self.environment = os.environ.get('QUICKBOOKS_ENVIRONMENT', 'sandbox')  # 'sandbox' or 'production'
+        # Note: Credentials are now stored per-tenant in the Integration model
+        # This class no longer reads from environment variables
+        pass
 
-        if not self.client_id or not self.client_secret:
-            print("Warning: QuickBooks credentials not configured. QuickBooks integration will be disabled.")
-
-    def get_authorization_url(self):
+    def get_authorization_url(self, integration):
         """
         Get OAuth authorization URL for QuickBooks
 
+        Args:
+            integration: Integration model instance with OAuth credentials
+
         Returns:
-            str: Authorization URL to redirect user to
+            tuple: (auth_url, state_token)
         """
-        if not self.client_id:
+        if not integration or not integration.client_id or not integration.client_secret:
             raise ValueError("QuickBooks credentials not configured")
 
         auth_client = AuthClient(
-            client_id=self.client_id,
-            client_secret=self.client_secret,
-            environment=self.environment,
-            redirect_uri=self.redirect_uri
+            client_id=integration.client_id,
+            client_secret=integration.client_secret,
+            environment=integration.environment or 'sandbox',
+            redirect_uri=integration.redirect_uri
         )
 
         scopes = [Scopes.ACCOUNTING]
@@ -47,11 +46,12 @@ class QuickBooksService:
 
         return auth_url, auth_client.state_token
 
-    def exchange_code_for_tokens(self, auth_code, realm_id, state_token):
+    def exchange_code_for_tokens(self, integration, auth_code, realm_id, state_token):
         """
         Exchange authorization code for access and refresh tokens
 
         Args:
+            integration: Integration model instance with OAuth credentials
             auth_code: Authorization code from OAuth callback
             realm_id: Company ID (realm_id) from OAuth callback
             state_token: State token to verify request
@@ -59,11 +59,14 @@ class QuickBooksService:
         Returns:
             dict: Dictionary with access_token, refresh_token, and company_id
         """
+        if not integration or not integration.client_id or not integration.client_secret:
+            raise ValueError("QuickBooks credentials not configured")
+
         auth_client = AuthClient(
-            client_id=self.client_id,
-            client_secret=self.client_secret,
-            environment=self.environment,
-            redirect_uri=self.redirect_uri,
+            client_id=integration.client_id,
+            client_secret=integration.client_secret,
+            environment=integration.environment or 'sandbox',
+            redirect_uri=integration.redirect_uri,
             state_token=state_token
         )
 
@@ -75,24 +78,30 @@ class QuickBooksService:
             'company_id': realm_id
         }
 
-    def refresh_tokens(self, refresh_token):
+    def refresh_tokens(self, integration):
         """
         Refresh access token using refresh token
 
         Args:
-            refresh_token: Refresh token from integration
+            integration: Integration model instance with OAuth credentials and refresh token
 
         Returns:
             dict: Dictionary with new access_token and refresh_token
         """
+        if not integration or not integration.client_id or not integration.client_secret:
+            raise ValueError("QuickBooks credentials not configured")
+
+        if not integration.refresh_token:
+            raise ValueError("No refresh token available")
+
         auth_client = AuthClient(
-            client_id=self.client_id,
-            client_secret=self.client_secret,
-            environment=self.environment,
-            redirect_uri=self.redirect_uri
+            client_id=integration.client_id,
+            client_secret=integration.client_secret,
+            environment=integration.environment or 'sandbox',
+            redirect_uri=integration.redirect_uri
         )
 
-        auth_client.refresh(refresh_token=refresh_token)
+        auth_client.refresh(refresh_token=integration.refresh_token)
 
         return {
             'access_token': auth_client.access_token,
@@ -109,11 +118,14 @@ class QuickBooksService:
         Returns:
             QuickBooks: Authenticated QuickBooks client
         """
+        if not integration or not integration.client_id or not integration.client_secret:
+            raise ValueError("QuickBooks credentials not configured")
+
         # Check if token needs refresh (tokens expire after 1 hour)
         if integration.last_sync_at and \
            datetime.utcnow() - integration.last_sync_at > timedelta(minutes=50):
             try:
-                tokens = self.refresh_tokens(integration.refresh_token)
+                tokens = self.refresh_tokens(integration)
                 integration.update_tokens(tokens['access_token'], tokens['refresh_token'])
                 db.session.commit()
             except Exception as e:

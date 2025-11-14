@@ -2,12 +2,75 @@
 QuickBooks Integration Routes
 Handles OAuth flow and QuickBooks connection management
 """
-from flask import request, redirect, url_for, flash, jsonify, session, g
+from flask import request, redirect, url_for, flash, jsonify, session, g, render_template
 from flask_login import login_required, current_user
 from app.blueprints.integrations import integrations_bp
 from app.services.quickbooks_service import quickbooks_service
 from app.models.integration import Integration
 from app import db
+
+
+@integrations_bp.route('/quickbooks/configure', methods=['GET', 'POST'])
+@login_required
+def quickbooks_configure():
+    """Configure QuickBooks OAuth credentials for this tenant"""
+    if not g.current_tenant:
+        flash('Please select a workspace first.', 'warning')
+        return redirect(url_for('tenant.home'))
+
+    # Check if user is admin
+    if not current_user.is_admin(g.current_tenant.id):
+        flash('Only workspace administrators can configure integrations.', 'danger')
+        return redirect(url_for('integrations.index'))
+
+    # Get or create integration record
+    integration = Integration.query.filter_by(
+        tenant_id=g.current_tenant.id,
+        integration_type='quickbooks'
+    ).first()
+
+    if request.method == 'POST':
+        try:
+            client_id = request.form.get('client_id', '').strip()
+            client_secret = request.form.get('client_secret', '').strip()
+            redirect_uri = request.form.get('redirect_uri', '').strip()
+            environment = request.form.get('environment', 'sandbox')
+
+            # Validate inputs
+            if not client_id or not client_secret:
+                flash('Client ID and Client Secret are required.', 'danger')
+                return render_template('integrations/quickbooks_configure.html',
+                                     integration=integration)
+
+            # Default redirect URI if not provided
+            if not redirect_uri:
+                redirect_uri = url_for('integrations.quickbooks_callback', _external=True)
+
+            if not integration:
+                # Create new integration
+                integration = Integration(
+                    tenant_id=g.current_tenant.id,
+                    integration_type='quickbooks'
+                )
+                db.session.add(integration)
+
+            # Update credentials
+            integration.client_id = client_id
+            integration.client_secret = client_secret
+            integration.redirect_uri = redirect_uri
+            integration.environment = environment
+
+            db.session.commit()
+
+            flash('QuickBooks credentials saved successfully! You can now connect.', 'success')
+            return redirect(url_for('integrations.index'))
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error saving credentials: {str(e)}', 'danger')
+
+    return render_template('integrations/quickbooks_configure.html',
+                         integration=integration)
 
 
 @integrations_bp.route('/quickbooks/connect')
@@ -19,7 +82,17 @@ def quickbooks_connect():
         return redirect(url_for('tenant.home'))
 
     try:
-        auth_url, state_token = quickbooks_service.get_authorization_url()
+        # Get integration record to retrieve OAuth credentials
+        integration = Integration.query.filter_by(
+            tenant_id=g.current_tenant.id,
+            integration_type='quickbooks'
+        ).first()
+
+        if not integration or not integration.client_id or not integration.client_secret:
+            flash('Please configure your QuickBooks OAuth credentials first.', 'warning')
+            return redirect(url_for('integrations.quickbooks_configure'))
+
+        auth_url, state_token = quickbooks_service.get_authorization_url(integration)
 
         # Store state token in session for verification
         session['qb_state_token'] = state_token
@@ -65,36 +138,29 @@ def quickbooks_callback():
         return redirect(url_for('integrations.index'))
 
     try:
-        # Exchange code for tokens
-        tokens = quickbooks_service.exchange_code_for_tokens(
-            auth_code,
-            realm_id,
-            stored_state
-        )
-
-        # Check if integration already exists
+        # Get integration record (should already exist with credentials from configure step)
         integration = Integration.query.filter_by(
             tenant_id=g.current_tenant.id,
             integration_type='quickbooks'
         ).first()
 
-        if integration:
-            # Update existing integration
-            integration.update_tokens(tokens['access_token'], tokens['refresh_token'])
-            integration.company_id = tokens['company_id']
-            integration.is_active = True
-            message = 'QuickBooks connection updated successfully!'
-        else:
-            # Create new integration
-            integration = Integration(
-                tenant_id=g.current_tenant.id,
-                integration_type='quickbooks',
-                company_id=tokens['company_id']
-            )
-            integration.access_token = tokens['access_token']
-            integration.refresh_token = tokens['refresh_token']
-            db.session.add(integration)
-            message = 'QuickBooks connected successfully!'
+        if not integration or not integration.client_id or not integration.client_secret:
+            flash('QuickBooks credentials not found. Please configure first.', 'danger')
+            return redirect(url_for('integrations.quickbooks_configure'))
+
+        # Exchange code for tokens
+        tokens = quickbooks_service.exchange_code_for_tokens(
+            integration,
+            auth_code,
+            realm_id,
+            stored_state
+        )
+
+        # Update integration with tokens and company ID
+        integration.update_tokens(tokens['access_token'], tokens['refresh_token'])
+        integration.company_id = tokens['company_id']
+        integration.is_active = True
+        message = 'QuickBooks connected successfully!'
 
         db.session.commit()
 

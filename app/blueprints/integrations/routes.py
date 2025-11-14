@@ -10,12 +10,16 @@ def index():
 
     # Check QuickBooks connection status
     qb_integration = None
+    qb_configured = False
     if g.current_tenant:
         qb_integration = Integration.query.filter_by(
             tenant_id=g.current_tenant.id,
-            integration_type='quickbooks',
-            is_active=True
+            integration_type='quickbooks'
         ).first()
+
+        # Check if OAuth credentials are configured
+        if qb_integration:
+            qb_configured = bool(qb_integration.client_id and qb_integration.client_secret)
 
     # Define available integrations with their status
     integrations = [
@@ -25,10 +29,12 @@ def index():
             'logo': 'quickbooks.svg',
             'category': 'Accounting',
             'available': True,
-            'connected': qb_integration is not None,
-            'connect_url': 'integrations.quickbooks_connect' if not qb_integration else None,
+            'connected': qb_integration is not None and qb_integration.is_active,
+            'configured': qb_configured,
+            'configure_url': 'integrations.quickbooks_configure',
+            'connect_url': 'integrations.quickbooks_connect' if qb_configured else None,
             'status_url': 'integrations.quickbooks_status',
-            'disconnect_url': 'integrations.quickbooks_disconnect' if qb_integration else None
+            'disconnect_url': 'integrations.quickbooks_disconnect' if qb_integration and qb_integration.is_active else None
         },
         {
             'name': 'Salesforce',
