@@ -23,242 +23,6 @@ class AIService:
 
         self.client = Anthropic(api_key=api_key)
 
-    def _build_mcp_config(self, agent, user) -> Optional[List[Dict[str, Any]]]:
-        """
-        Build MCP server configuration from agent's enabled integrations
-
-        SECURITY: Personal integrations are ONLY accessible if:
-        - The agent was created by the current user, OR
-        - The integration belongs to the current user
-
-        Workspace integrations are always accessible (admin-controlled).
-
-        Args:
-            agent: Agent model with integration flags (enable_gmail, etc.)
-            user: User model for checking personal integrations
-
-        Returns:
-            List of MCP server configurations for Anthropic API, or None if no MCP integrations
-        """
-        from app.models.integration import Integration
-        from app.models.audit_log import AuditLog
-        from app.services.mcp_manager import mcp_manager
-        from flask import request, g
-
-        mcp_servers = []
-
-        # Determine if current user can access personal integrations from this agent
-        # Rule: Agent must be created by current user to access their personal integrations
-        can_access_personal = (agent.created_by_id == user.id)
-
-        # Gmail MCP
-        if agent.enable_gmail:
-            gmail_integration = None
-
-            # Check workspace Gmail first (always accessible)
-            gmail_workspace = Integration.query.filter_by(
-                tenant_id=agent.department.tenant_id,
-                integration_type='gmail',
-                owner_type='tenant',
-                owner_id=agent.department.tenant_id,
-                is_active=True
-            ).first()
-
-            if gmail_workspace:
-                gmail_integration = gmail_workspace
-            elif can_access_personal:
-                # Only check personal if user created this agent
-                gmail_personal = Integration.query.filter_by(
-                    tenant_id=agent.department.tenant_id,
-                    integration_type='gmail',
-                    owner_type='user',
-                    owner_id=user.id,
-                    is_active=True
-                ).first()
-                gmail_integration = gmail_personal
-            else:
-                # Log denied access attempt
-                current_app.logger.warning(
-                    f"MCP_ACCESS_DENIED: user={user.id} agent={agent.id} "
-                    f"integration_type=gmail reason=agent_not_created_by_user"
-                )
-                AuditLog.log_access_denied(
-                    user_id=user.id,
-                    tenant_id=g.current_tenant.id if hasattr(g, 'current_tenant') else agent.department.tenant_id,
-                    resource_type='integration',
-                    resource_id=None,
-                    reason='Personal Gmail access denied - agent not created by user',
-                    agent_id=agent.id,
-                    ip_address=request.remote_addr if request else None
-                )
-
-            if gmail_integration:
-                status = mcp_manager.get_process_status(gmail_integration)
-                if status.get('running'):
-                    # Log successful MCP access
-                    AuditLog.log_mcp_access(
-                        user_id=user.id,
-                        tenant_id=g.current_tenant.id if hasattr(g, 'current_tenant') else agent.department.tenant_id,
-                        agent_id=agent.id,
-                        integration=gmail_integration,
-                        status='success',
-                        ip_address=request.remote_addr if request else None
-                    )
-
-                    mcp_servers.append({
-                        'name': f'gmail_{gmail_integration.owner_type}',
-                        'integration_id': gmail_integration.id,
-                        'mcp_process_name': gmail_integration.get_mcp_process_name(),
-                        'tools': ['gmail_list', 'gmail_read', 'gmail_send', 'gmail_search', 'gmail_labels']
-                    })
-
-        # Outlook MCP
-        if agent.enable_outlook:
-            print(f"[MCP DEBUG] Agent has enable_outlook=True")
-            print(f"[MCP DEBUG] can_access_personal={can_access_personal} (agent.created_by_id={agent.created_by_id}, user.id={user.id})")
-            outlook_integration = None
-
-            # Check workspace Outlook first (always accessible)
-            print(f"[MCP DEBUG] Checking workspace Outlook: tenant_id={agent.department.tenant_id}")
-            outlook_workspace = Integration.query.filter_by(
-                tenant_id=agent.department.tenant_id,
-                integration_type='outlook',
-                owner_type='tenant',
-                owner_id=agent.department.tenant_id,
-                is_active=True
-            ).first()
-            print(f"[MCP DEBUG] Workspace Outlook found: {outlook_workspace is not None}")
-
-            if outlook_workspace:
-                outlook_integration = outlook_workspace
-            elif can_access_personal:
-                # Only check personal if user created this agent
-                print(f"[MCP DEBUG] Checking personal Outlook: tenant_id={agent.department.tenant_id}, user_id={user.id}")
-                outlook_personal = Integration.query.filter_by(
-                    tenant_id=agent.department.tenant_id,
-                    integration_type='outlook',
-                    owner_type='user',
-                    owner_id=user.id,
-                    is_active=True
-                ).first()
-                print(f"[MCP DEBUG] Personal Outlook found: {outlook_personal is not None}")
-                if outlook_personal:
-                    print(f"[MCP DEBUG] Personal Outlook details: id={outlook_personal.id}, is_active={outlook_personal.is_active}")
-                outlook_integration = outlook_personal
-            else:
-                print(f"[MCP DEBUG] Cannot access personal - agent not created by user")
-                # Log denied access attempt
-                current_app.logger.warning(
-                    f"MCP_ACCESS_DENIED: user={user.id} agent={agent.id} "
-                    f"integration_type=outlook reason=agent_not_created_by_user"
-                )
-                AuditLog.log_access_denied(
-                    user_id=user.id,
-                    tenant_id=g.current_tenant.id if hasattr(g, 'current_tenant') else agent.department.tenant_id,
-                    resource_type='integration',
-                    resource_id=None,
-                    reason='Personal Outlook access denied - agent not created by user',
-                    agent_id=agent.id,
-                    ip_address=request.remote_addr if request else None
-                )
-
-            if outlook_integration:
-                print(f"[MCP DEBUG] Found Outlook integration {outlook_integration.id}")
-                status = mcp_manager.get_process_status(outlook_integration)
-                print(f"[MCP DEBUG] MCP server status: {status}")
-
-                # Auto-start MCP server if not running
-                if not status.get('running'):
-                    print(f"[MCP DEBUG] MCP server not running, starting it...")
-                    success, message = mcp_manager.start_mcp_server(outlook_integration)
-                    print(f"[MCP DEBUG] Start result: success={success}, message={message}")
-                    if success:
-                        status = {'running': True}  # Update status after successful start
-
-                if status.get('running'):
-                    print(f"[MCP DEBUG] MCP server is running, adding to mcp_servers list")
-                    # Log successful MCP access
-                    AuditLog.log_mcp_access(
-                        user_id=user.id,
-                        tenant_id=g.current_tenant.id if hasattr(g, 'current_tenant') else agent.department.tenant_id,
-                        agent_id=agent.id,
-                        integration=outlook_integration,
-                        status='success',
-                        ip_address=request.remote_addr if request else None
-                    )
-
-                    mcp_servers.append({
-                        'name': f'outlook_{outlook_integration.owner_type}',
-                        'integration_id': outlook_integration.id,
-                        'mcp_process_name': outlook_integration.get_mcp_process_name(),
-                        'tools': ['outlook_list', 'outlook_read', 'outlook_send', 'outlook_search']
-                    })
-                else:
-                    print(f"[MCP DEBUG] MCP server failed to start")
-
-        # Google Drive MCP
-        if agent.enable_google_drive:
-            drive_integration = None
-
-            # Check workspace Drive first (always accessible)
-            drive_workspace = Integration.query.filter_by(
-                tenant_id=agent.department.tenant_id,
-                integration_type='google_drive',
-                owner_type='tenant',
-                owner_id=agent.department.tenant_id,
-                is_active=True
-            ).first()
-
-            if drive_workspace:
-                drive_integration = drive_workspace
-            elif can_access_personal:
-                # Only check personal if user created this agent
-                drive_personal = Integration.query.filter_by(
-                    tenant_id=agent.department.tenant_id,
-                    integration_type='google_drive',
-                    owner_type='user',
-                    owner_id=user.id,
-                    is_active=True
-                ).first()
-                drive_integration = drive_personal
-            else:
-                # Log denied access attempt
-                current_app.logger.warning(
-                    f"MCP_ACCESS_DENIED: user={user.id} agent={agent.id} "
-                    f"integration_type=google_drive reason=agent_not_created_by_user"
-                )
-                AuditLog.log_access_denied(
-                    user_id=user.id,
-                    tenant_id=g.current_tenant.id if hasattr(g, 'current_tenant') else agent.department.tenant_id,
-                    resource_type='integration',
-                    resource_id=None,
-                    reason='Personal Drive access denied - agent not created by user',
-                    agent_id=agent.id,
-                    ip_address=request.remote_addr if request else None
-                )
-
-            if drive_integration:
-                status = mcp_manager.get_process_status(drive_integration)
-                if status.get('running'):
-                    # Log successful MCP access
-                    AuditLog.log_mcp_access(
-                        user_id=user.id,
-                        tenant_id=g.current_tenant.id if hasattr(g, 'current_tenant') else agent.department.tenant_id,
-                        agent_id=agent.id,
-                        integration=drive_integration,
-                        status='success',
-                        ip_address=request.remote_addr if request else None
-                    )
-
-                    mcp_servers.append({
-                        'name': f'drive_{drive_integration.owner_type}',
-                        'integration_id': drive_integration.id,
-                        'mcp_process_name': drive_integration.get_mcp_process_name(),
-                        'tools': ['drive_list', 'drive_read', 'drive_write', 'drive_search', 'drive_create']
-                    })
-
-        return mcp_servers if mcp_servers else None
-
     def _get_outlook_tools(self) -> List[Dict]:
         """
         Get static Outlook tool definitions for direct Graph API calls
@@ -344,63 +108,6 @@ class AIService:
             }
         ]
 
-    def _get_mcp_tools(self, agent, user) -> Optional[List[Dict]]:
-        """
-        Get Claude-compatible tool definitions from enabled MCP integrations
-
-        Args:
-            agent: Agent model with integration flags
-            user: User model for checking access
-
-        Returns:
-            List of tool definitions, or None if no tools available
-        """
-        from app.models.integration import Integration
-        from app.services.mcp_client import get_mcp_tools_for_integration
-
-        print(f"[MCP DEBUG] _get_mcp_tools called for agent {agent.id}")
-        print(f"[MCP DEBUG] Agent flags: gmail={agent.enable_gmail}, outlook={agent.enable_outlook}, drive={agent.enable_google_drive}")
-
-        all_tools = []
-        mcp_servers = self._build_mcp_config(agent, user)
-
-        print(f"[MCP DEBUG] _build_mcp_config returned: {mcp_servers}")
-
-        if not mcp_servers:
-            print(f"[MCP DEBUG] No MCP servers configured")
-            return None
-
-        # Collect tools from all enabled integrations
-        for server_config in mcp_servers:
-            integration_id = server_config.get('integration_id')
-            print(f"[MCP DEBUG] Processing server config: {server_config}")
-            if not integration_id:
-                print(f"[MCP DEBUG] No integration_id in server config")
-                continue
-
-            integration = Integration.query.get(integration_id)
-            if not integration:
-                print(f"[MCP DEBUG] Integration {integration_id} not found")
-                continue
-
-            print(f"[MCP DEBUG] Getting tools for integration {integration.integration_type}")
-
-            # Use direct Graph API for Outlook (bypass MCP)
-            if integration.integration_type == 'outlook':
-                tools = self._get_outlook_tools()
-                print(f"[OUTLOOK] Using {len(tools)} static Outlook tools (direct Graph API)")
-            else:
-                # Use MCP for other integrations (Gmail, Drive)
-                tools = get_mcp_tools_for_integration(integration)
-
-            print(f"[MCP DEBUG] Got {len(tools) if tools else 0} tools from {integration.integration_type}")
-            if tools:
-                all_tools.extend(tools)
-                current_app.logger.info(f"Loaded {len(tools)} tools from {integration.integration_type}")
-
-        print(f"[MCP DEBUG] Total tools collected: {len(all_tools)}")
-        return all_tools if all_tools else None
-
     def chat(
         self,
         messages: List[Dict[str, str]],
@@ -440,20 +147,15 @@ class AIService:
                 'messages': messages
             }
 
-            # Get MCP tools if agent has integrations enabled
+            # Get Outlook tools if agent has Outlook enabled
             tools = None
-            if agent and user:
-                print(f"[MCP DEBUG] Getting tools for agent {agent.id} user {user.id}")
-                tools = self._get_mcp_tools(agent, user)
-                print(f"[MCP DEBUG] Got {len(tools) if tools else 0} tools")
+            if agent and user and agent.enable_outlook:
+                print(f"[OUTLOOK] Getting Outlook tools for agent {agent.id}")
+                tools = self._get_outlook_tools()
+                print(f"[OUTLOOK] Got {len(tools)} Outlook tools")
                 if tools:
                     api_params['tools'] = tools
-                    print(f"[MCP DEBUG] Added {len(tools)} tools to API params:")
-                    for tool in tools:
-                        print(f"[MCP DEBUG]   - {tool.get('name')}: {tool.get('description')[:80]}")
-                    current_app.logger.info(f"Agent {agent.name} has {len(tools)} tools available")
-                else:
-                    print(f"[MCP DEBUG] No tools returned - agent will not have email access")
+                    current_app.logger.info(f"Agent {agent.name} has {len(tools)} Outlook tools available")
 
             # Call Claude API (potentially multiple times for tool use)
             response = self.client.messages.create(**api_params)
@@ -477,15 +179,15 @@ class AIService:
                 # Execute tools and collect results
                 tool_results = []
                 for tool_use in tool_uses:
-                    print(f"[MCP DEBUG] Executing tool: {tool_use.name} with input: {tool_use.input}")
+                    print(f"[OUTLOOK] Executing tool: {tool_use.name} with input: {tool_use.input}")
                     try:
-                        result = self._execute_mcp_tool(
+                        result = self._execute_outlook_tool(
                             tool_name=tool_use.name,
                             tool_input=tool_use.input,
                             agent=agent,
                             user=user
                         )
-                        print(f"[MCP DEBUG] Tool {tool_use.name} returned: {result}")
+                        print(f"[OUTLOOK] Tool {tool_use.name} returned: {result}")
                         tool_results.append({
                             "type": "tool_result",
                             "tool_use_id": tool_use.id,
@@ -607,139 +309,6 @@ class AIService:
         except Exception as e:
             current_app.logger.error(f"Error executing Outlook tool {tool_name}: {e}")
             return {"error": f"Failed to execute {tool_name}: {str(e)}"}
-
-    def _execute_mcp_tool(self, tool_name: str, tool_input: Dict, agent, user) -> Any:
-        """
-        Execute an MCP tool call via stdio communication with MCP server
-
-        Args:
-            tool_name: Name of the tool to execute
-            tool_input: Tool input parameters
-            agent: Agent making the request
-            user: User context
-
-        Returns:
-            Tool execution result
-        """
-        from app.services.mcp_manager import mcp_manager
-        from app.services.mcp_client import MCPClient
-        from app.models.integration import Integration
-
-        print(f"[MCP DEBUG] _execute_mcp_tool called: tool={tool_name}, input={tool_input}")
-        current_app.logger.info(f"Executing tool: {tool_name} with input: {tool_input}")
-
-        # Route Outlook tools to direct Graph API (bypassing MCP complexity)
-        if tool_name.startswith('outlook_'):
-            return self._execute_outlook_tool(tool_name, tool_input, agent, user)
-
-        # Find the integration for this tool
-        # We need to check which integrations the agent has enabled and try to match
-        integration = None
-
-        # Try Outlook integration (handles emails, calendar, contacts, Teams, etc.)
-        if agent.enable_outlook:
-            print(f"[MCP DEBUG] Agent has Outlook enabled, checking for Outlook integration")
-            # Check for personal integration first (created_by matches)
-            if agent.created_by_id == user.id:
-                integration = Integration.query.filter_by(
-                    integration_type='outlook',
-                    owner_type='user',
-                    owner_id=user.id,
-                    is_active=True
-                ).first()
-                if integration:
-                    print(f"[MCP DEBUG] Found personal Outlook integration: {integration.id}")
-
-            # If not found, check workspace integration
-            if not integration:
-                integration = Integration.query.filter_by(
-                    integration_type='outlook',
-                    owner_type='tenant',
-                    owner_id=agent.department.tenant_id,
-                    is_active=True
-                ).first()
-                if integration:
-                    print(f"[MCP DEBUG] Found workspace Outlook integration: {integration.id}")
-
-        # Try Gmail integration if Outlook not found
-        if not integration and agent.enable_gmail:
-            print(f"[MCP DEBUG] Agent has Gmail enabled, checking for Gmail integration")
-            integration = Integration.query.filter_by(
-                integration_type='gmail',
-                owner_type='user',
-                owner_id=user.id,
-                is_active=True
-            ).first()
-            if integration:
-                print(f"[MCP DEBUG] Found Gmail integration: {integration.id}")
-
-        # Try Google Drive integration
-        if not integration and agent.enable_google_drive:
-            print(f"[MCP DEBUG] Agent has Google Drive enabled, checking for Drive integration")
-            integration = Integration.query.filter_by(
-                integration_type='google_drive',
-                owner_type='user',
-                owner_id=user.id,
-                is_active=True
-            ).first()
-            if integration:
-                print(f"[MCP DEBUG] Found Drive integration: {integration.id}")
-
-        if not integration:
-            print(f"[MCP DEBUG] ERROR: No integration found for tool {tool_name}")
-            current_app.logger.error(f"No integration found for tool {tool_name}")
-            return {"error": "Integration not found or not connected"}
-
-        # Get the running MCP process, start if not running
-        print(f"[MCP DEBUG] Getting process for integration {integration.id}")
-        process = mcp_manager.get_process(integration)
-        print(f"[MCP DEBUG] Process found: {process is not None}")
-
-        if not process:
-            # Server not running, start it with OAuth credentials
-            current_app.logger.info(f"MCP server not running, starting it for integration {integration.id}")
-            success, message = mcp_manager.start_mcp_server(integration)
-
-            if not success:
-                current_app.logger.error(f"Failed to start MCP server: {message}")
-                return {"error": f"Failed to start MCP server: {message}"}
-
-            # Get the newly started process
-            process = mcp_manager.get_process(integration)
-            if not process:
-                current_app.logger.error("MCP server failed to start properly")
-                return {"error": "MCP server failed to start"}
-
-        try:
-            # Create MCP client for this process
-            mcp_client = MCPClient(process)
-
-            # Initialize the connection (required by MCP protocol)
-            try:
-                init_result = mcp_client.initialize()
-                current_app.logger.info(f"MCP server initialized: {init_result}")
-            except Exception as init_error:
-                current_app.logger.warning(f"MCP initialization warning: {init_error}")
-                # Continue anyway - server might already be initialized
-
-            # Call the tool
-            # Convert tool name back to MCP format (underscores -> hyphens)
-            # Claude uses 'list_emails', but MCP server expects 'list-emails'
-            mcp_tool_name = tool_name.replace("_", "-")
-            result = mcp_client.call_tool(mcp_tool_name, tool_input)
-
-            current_app.logger.info(f"Tool {tool_name} executed successfully")
-
-            # Return the content from the tool result
-            # MCP returns: {"content": [...], "isError": false}
-            if isinstance(result, dict) and "content" in result:
-                return result["content"]
-
-            return result
-
-        except Exception as e:
-            current_app.logger.error(f"Error executing MCP tool {tool_name}: {e}")
-            return {"error": f"Failed to execute tool: {str(e)}"}
 
     def analyze_bug_screenshot(
         self,
@@ -907,19 +476,6 @@ Priority guidelines:
                 'system': system_prompt,
                 'messages': messages
             }
-
-            # Add MCP context to system prompt if agent has MCP integrations enabled
-            if agent and user:
-                mcp_servers = self._build_mcp_config(agent, user)
-                if mcp_servers:
-                    # Append MCP availability info to system prompt
-                    mcp_info = "\n\nAvailable MCP Integrations:\n"
-                    for server in mcp_servers:
-                        mcp_info += f"- {server['name']}: {', '.join(server['tools'])}\n"
-                    stream_params['system'] = system_prompt + mcp_info
-
-                    # Log MCP context for debugging
-                    current_app.logger.info(f"Agent {agent.name} streaming with MCP: {[s['name'] for s in mcp_servers]}")
 
             with self.client.messages.stream(**stream_params) as stream:
                 for text in stream.text_stream:
