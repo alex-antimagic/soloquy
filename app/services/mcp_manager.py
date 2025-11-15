@@ -245,15 +245,19 @@ class MCPManager:
             elif integration.mcp_server_type == 'outlook':
                 # Microsoft OAuth credentials in .env format
                 env_file = creds_dir / '.env'
+                print(f"[MCP CREDS] Writing Outlook credentials to {creds_dir}")
+                print(f"[MCP CREDS] .env file path: {env_file}")
 
                 with open(env_file, 'w') as f:
                     f.write(f"MS_CLIENT_ID={credentials.get('client_id')}\n")
                     f.write(f"MS_CLIENT_SECRET={credentials.get('client_secret')}\n")
                 env_file.chmod(0o600)  # Set secure permissions
+                print(f"[MCP CREDS] ✓ Wrote .env file")
 
                 # Outlook MCP stores tokens separately
                 if credentials.get('access_token'):
                     tokens_file = creds_dir / '.outlook-mcp-tokens.json'
+                    print(f"[MCP CREDS] tokens file path: {tokens_file}")
                     tokens = {
                         "access_token": credentials.get('access_token'),
                         "refresh_token": credentials.get('refresh_token'),
@@ -262,8 +266,11 @@ class MCPManager:
                     with open(tokens_file, 'w') as f:
                         json.dump(tokens, f, indent=2)
                     tokens_file.chmod(0o600)  # Set secure permissions
+                    print(f"[MCP CREDS] ✓ Wrote tokens file")
+                else:
+                    print(f"[MCP CREDS] ⚠ No access_token found, skipping tokens file")
 
-                current_app.logger.info(f"Wrote Outlook credentials to {env_file}")
+                print(f"[MCP CREDS] All Outlook credential files written successfully")
                 return str(env_file)
 
             else:
@@ -369,6 +376,8 @@ class MCPManager:
                 return False, f"Unknown MCP server type: {integration.mcp_server_type}"
 
             # Start process with stdin/stdout/stderr pipes for MCP communication
+            print(f"[MCP PROCESS] Starting MCP server in directory: {creds_dir}")
+            print(f"[MCP PROCESS] Command: {' '.join(cmd)}")
             process = subprocess.Popen(
                 cmd,
                 cwd=str(creds_dir),
@@ -379,6 +388,7 @@ class MCPManager:
                 preexec_fn=os.setsid,  # Create new process group for clean shutdown
                 bufsize=0  # Unbuffered for real-time communication
             )
+            print(f"[MCP PROCESS] Process started with PID: {process.pid}")
 
             # Wait briefly to check if process started successfully
             time.sleep(2)
