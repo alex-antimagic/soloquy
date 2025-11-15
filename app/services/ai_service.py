@@ -259,6 +259,91 @@ class AIService:
 
         return mcp_servers if mcp_servers else None
 
+    def _get_outlook_tools(self) -> List[Dict]:
+        """
+        Get static Outlook tool definitions for direct Graph API calls
+
+        Returns:
+            List of Outlook tool definitions
+        """
+        return [
+            {
+                "name": "outlook_list_emails",
+                "description": "List recent emails from Outlook inbox",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "max_results": {
+                            "type": "number",
+                            "description": "Maximum number of emails to return (default: 10)",
+                            "default": 10
+                        }
+                    }
+                }
+            },
+            {
+                "name": "outlook_read_email",
+                "description": "Read the full content of a specific email by ID",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "email_id": {
+                            "type": "string",
+                            "description": "The ID of the email to read"
+                        }
+                    },
+                    "required": ["email_id"]
+                }
+            },
+            {
+                "name": "outlook_search_emails",
+                "description": "Search emails by keyword in subject or body",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "Search query text"
+                        },
+                        "max_results": {
+                            "type": "number",
+                            "description": "Maximum results to return (default: 10)",
+                            "default": 10
+                        }
+                    },
+                    "required": ["query"]
+                }
+            },
+            {
+                "name": "outlook_send_email",
+                "description": "Compose and send a new email",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "to": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "List of recipient email addresses"
+                        },
+                        "subject": {
+                            "type": "string",
+                            "description": "Email subject line"
+                        },
+                        "body": {
+                            "type": "string",
+                            "description": "Email body content"
+                        },
+                        "cc": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "Optional list of CC recipients"
+                        }
+                    },
+                    "required": ["to", "subject", "body"]
+                }
+            }
+        ]
+
     def _get_mcp_tools(self, agent, user) -> Optional[List[Dict]]:
         """
         Get Claude-compatible tool definitions from enabled MCP integrations
@@ -299,7 +384,15 @@ class AIService:
                 continue
 
             print(f"[MCP DEBUG] Getting tools for integration {integration.integration_type}")
-            tools = get_mcp_tools_for_integration(integration)
+
+            # Use direct Graph API for Outlook (bypass MCP)
+            if integration.integration_type == 'outlook':
+                tools = self._get_outlook_tools()
+                print(f"[OUTLOOK] Using {len(tools)} static Outlook tools (direct Graph API)")
+            else:
+                # Use MCP for other integrations (Gmail, Drive)
+                tools = get_mcp_tools_for_integration(integration)
+
             print(f"[MCP DEBUG] Got {len(tools) if tools else 0} tools from {integration.integration_type}")
             if tools:
                 all_tools.extend(tools)
@@ -432,6 +525,89 @@ class AIService:
             print(f"Error calling Claude API: {e}")
             raise
 
+    def _execute_outlook_tool(self, tool_name: str, tool_input: Dict, agent, user) -> Any:
+        """
+        Execute Outlook tool using direct Microsoft Graph API
+
+        Args:
+            tool_name: Name of the tool (outlook_list_emails, etc.)
+            tool_input: Tool input parameters
+            agent: Agent making the request
+            user: User context
+
+        Returns:
+            Tool execution result
+        """
+        from app.services.outlook_service import OutlookGraphService
+        from app.models.integration import Integration
+
+        print(f"[OUTLOOK] Executing tool: {tool_name} with input: {tool_input}")
+
+        # Find Outlook integration
+        integration = None
+        if agent.created_by_id == user.id:
+            integration = Integration.query.filter_by(
+                integration_type='outlook',
+                owner_type='user',
+                owner_id=user.id,
+                is_active=True
+            ).first()
+
+        if not integration:
+            integration = Integration.query.filter_by(
+                integration_type='outlook',
+                owner_type='tenant',
+                owner_id=agent.department.tenant_id,
+                is_active=True
+            ).first()
+
+        if not integration or not integration.access_token:
+            return {"error": "Outlook not connected. Please connect your Outlook account in Settings > Integrations."}
+
+        # Create Outlook service with access token
+        outlook = OutlookGraphService(integration.access_token)
+
+        try:
+            # Route to appropriate method
+            if tool_name == 'outlook_list_emails':
+                max_results = tool_input.get('max_results', 10)
+                emails = outlook.list_emails(max_results=max_results)
+                return {"emails": emails, "count": len(emails)}
+
+            elif tool_name == 'outlook_read_email':
+                email_id = tool_input.get('email_id')
+                if not email_id:
+                    return {"error": "email_id parameter is required"}
+                email = outlook.read_email(email_id)
+                return {"email": email}
+
+            elif tool_name == 'outlook_search_emails':
+                query = tool_input.get('query')
+                if not query:
+                    return {"error": "query parameter is required"}
+                max_results = tool_input.get('max_results', 10)
+                emails = outlook.search_emails(query, max_results=max_results)
+                return {"emails": emails, "count": len(emails)}
+
+            elif tool_name == 'outlook_send_email':
+                to = tool_input.get('to', [])
+                subject = tool_input.get('subject', '')
+                body = tool_input.get('body', '')
+                cc = tool_input.get('cc')
+
+                if not to or not isinstance(to, list):
+                    return {"error": "to parameter must be a list of email addresses"}
+
+                result = outlook.send_email(to, subject, body, cc=cc)
+                return result
+
+            else:
+                return {"error": f"Unknown Outlook tool: {tool_name}"}
+
+        except Exception as e:
+            current_app.logger.error(f"Error executing Outlook tool {tool_name}: {e}")
+            return {"error": f"Failed to execute {tool_name}: {str(e)}"}
+
     def _execute_mcp_tool(self, tool_name: str, tool_input: Dict, agent, user) -> Any:
         """
         Execute an MCP tool call via stdio communication with MCP server
@@ -451,6 +627,10 @@ class AIService:
 
         print(f"[MCP DEBUG] _execute_mcp_tool called: tool={tool_name}, input={tool_input}")
         current_app.logger.info(f"Executing tool: {tool_name} with input: {tool_input}")
+
+        # Route Outlook tools to direct Graph API (bypassing MCP complexity)
+        if tool_name.startswith('outlook_'):
+            return self._execute_outlook_tool(tool_name, tool_input, agent, user)
 
         # Find the integration for this tool
         # We need to check which integrations the agent has enabled and try to match
