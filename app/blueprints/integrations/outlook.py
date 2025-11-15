@@ -8,7 +8,6 @@ from flask_login import login_required, current_user
 from app import db, limiter
 from app.blueprints.integrations import integrations_bp
 from app.models.integration import Integration
-from app.services.mcp_manager import mcp_manager
 from msal import ConfidentialClientApplication
 import requests
 
@@ -237,26 +236,11 @@ def outlook_callback(scope):
         integration.refresh_token = result.get('refresh_token')
         integration.is_active = True
 
-        # Write credentials to filesystem for MCP server
-        creds_data = {
-            'client_id': integration.client_id,
-            'client_secret': integration.client_secret,
-            'access_token': result['access_token'],
-            'refresh_token': result.get('refresh_token'),
-            'expires_at': result.get('expires_in')  # Seconds until expiration
-        }
+        success = True
+        message = "Connected successfully"
 
-        mcp_manager.write_credentials(integration, creds_data)
-
-        # Start MCP server
-        success, message = mcp_manager.start_mcp_server(integration)
-
-        if success:
-            db.session.commit()
-            flash(f'Outlook connected successfully! {message}', 'success')
-        else:
-            flash(f'Outlook connected but MCP server failed to start: {message}', 'warning')
-            db.session.commit()
+        db.session.commit()
+        flash(f'Outlook connected successfully! {message}', 'success')
 
         # Clear session
         session.pop('outlook_oauth_scope', None)
@@ -302,12 +286,6 @@ def outlook_disconnect():
         return redirect(url_for('integrations.index'))
 
     try:
-        # Stop MCP server
-        mcp_manager.stop_mcp_server(integration)
-
-        # Cleanup credentials
-        mcp_manager.cleanup_credentials(integration)
-
         # Deactivate integration
         integration.deactivate()
         db.session.commit()
@@ -348,8 +326,6 @@ def outlook_status():
     if not integration:
         return jsonify({'error': 'Integration not found'}), 404
 
-    status = mcp_manager.get_process_status(integration)
-
     return jsonify({
         'integration': {
             'id': integration.id,
@@ -357,5 +333,5 @@ def outlook_status():
             'is_active': integration.is_active,
             'owner_type': integration.owner_type
         },
-        'server': status
+        'server': {'status': 'active' if integration.is_active else 'inactive'}
     })
