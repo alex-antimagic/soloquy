@@ -510,13 +510,25 @@ class AIService:
             current_app.logger.error(f"No integration found for tool {tool_name}")
             return {"error": "Integration not found or not connected"}
 
-        # Get the running MCP process
+        # Get the running MCP process, start if not running
         print(f"[MCP DEBUG] Getting process for integration {integration.id}")
         process = mcp_manager.get_process(integration)
         print(f"[MCP DEBUG] Process found: {process is not None}")
+
         if not process:
-            current_app.logger.error(f"MCP server not running for integration {integration.id}")
-            return {"error": "MCP server not running"}
+            # Server not running, start it with OAuth credentials
+            current_app.logger.info(f"MCP server not running, starting it for integration {integration.id}")
+            success, message = mcp_manager.start_mcp_server(integration)
+
+            if not success:
+                current_app.logger.error(f"Failed to start MCP server: {message}")
+                return {"error": f"Failed to start MCP server: {message}"}
+
+            # Get the newly started process
+            process = mcp_manager.get_process(integration)
+            if not process:
+                current_app.logger.error("MCP server failed to start properly")
+                return {"error": "MCP server failed to start"}
 
         try:
             # Create MCP client for this process
