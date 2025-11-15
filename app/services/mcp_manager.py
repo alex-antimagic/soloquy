@@ -258,10 +258,16 @@ class MCPManager:
                 if credentials.get('access_token'):
                     tokens_file = creds_dir / '.outlook-mcp-tokens.json'
                     print(f"[MCP CREDS] tokens file path: {tokens_file}")
+
+                    # Calculate expires_at as Unix timestamp (current time + 1 hour)
+                    # Microsoft access tokens typically last 1 hour (3600 seconds)
+                    expires_at_timestamp = int(time.time()) + 3600
+                    print(f"[MCP CREDS] Setting expires_at to: {expires_at_timestamp} (current time + 3600s)")
+
                     tokens = {
                         "access_token": credentials.get('access_token'),
                         "refresh_token": credentials.get('refresh_token'),
-                        "expires_at": credentials.get('expires_at')
+                        "expires_at": expires_at_timestamp
                     }
                     with open(tokens_file, 'w') as f:
                         json.dump(tokens, f, indent=2)
