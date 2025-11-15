@@ -317,11 +317,11 @@ class MCPManager:
         # Write credentials to filesystem BEFORE checking if already running
         # This ensures MCP server always has latest OAuth tokens, even if process is running
         try:
-            current_app.logger.info(f"[MCP START] Preparing credentials for {process_name}")
-            current_app.logger.info(f"[MCP START] client_id present: {integration.client_id is not None}")
-            current_app.logger.info(f"[MCP START] client_secret present: {integration.client_secret is not None}")
-            current_app.logger.info(f"[MCP START] access_token present: {integration.access_token is not None}")
-            current_app.logger.info(f"[MCP START] refresh_token present: {integration.refresh_token is not None}")
+            print(f"[MCP START] Preparing credentials for {process_name}")
+            print(f"[MCP START] client_id present: {integration.client_id is not None}")
+            print(f"[MCP START] client_secret present: {integration.client_secret is not None}")
+            print(f"[MCP START] access_token present: {integration.access_token is not None}")
+            print(f"[MCP START] refresh_token present: {integration.refresh_token is not None}")
 
             creds_data = {
                 'client_id': integration.client_id,
@@ -332,22 +332,22 @@ class MCPManager:
             }
             # Filter out None values
             creds_data = {k: v for k, v in creds_data.items() if v is not None}
-            current_app.logger.info(f"[MCP START] Credentials after filtering: {list(creds_data.keys())}")
+            print(f"[MCP START] Credentials after filtering: {list(creds_data.keys())}")
 
             if creds_data:
                 self.write_credentials(integration, creds_data)
-                current_app.logger.info(f"[MCP START] ✓ Wrote credentials for {process_name}")
+                print(f"[MCP START] ✓ Wrote credentials for {process_name}")
 
                 # If server is already running, restart it to pick up new credentials
                 if process_name in self.processes and self.is_process_running(process_name):
-                    current_app.logger.info(f"[MCP START] Server already running, restarting to load new credentials...")
+                    print(f"[MCP START] Server already running, restarting to load new credentials...")
                     self.stop_mcp_server(process_name)
             else:
-                current_app.logger.warning(f"[MCP START] No credentials to write for {process_name} - all values were None")
+                print(f"[MCP START] No credentials to write for {process_name} - all values were None")
         except Exception as e:
-            current_app.logger.error(f"[MCP START] Failed to write credentials for {process_name}: {e}")
+            print(f"[MCP START] Failed to write credentials for {process_name}: {e}")
             import traceback
-            current_app.logger.error(f"[MCP START] Traceback: {traceback.format_exc()}")
+            print(f"[MCP START] Traceback: {traceback.format_exc()}")
 
         # Check if already running (after potential restart above)
         if process_name in self.processes and self.is_process_running(process_name):
