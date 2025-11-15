@@ -629,6 +629,9 @@ class MCPManager:
 
         # Add OAuth credentials from integration (for MCP servers that need them)
         if integration.integration_type == 'outlook':
+            # Disable test mode to use OAuth credentials instead of localhost:3333 auth flow
+            safe_env['USE_TEST_MODE'] = 'false'
+
             # Add Microsoft/Outlook OAuth credentials
             if integration.client_id:
                 safe_env['MS_CLIENT_ID'] = integration.client_id
@@ -643,6 +646,8 @@ class MCPManager:
             if integration.redirect_uri:
                 safe_env['MS_REDIRECT_URI'] = integration.redirect_uri
                 safe_env['REDIRECT_URI'] = integration.redirect_uri
+
+            print(f"[MCP ENV] Set USE_TEST_MODE=false to disable localhost auth")
             current_app.logger.info(f"Added Outlook OAuth credentials to MCP environment")
 
         elif integration.integration_type == 'gmail':
