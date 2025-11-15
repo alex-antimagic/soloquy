@@ -382,15 +382,18 @@ class MCPManager:
                 return False, f"Unknown MCP server type: {integration.mcp_server_type}"
 
             # Start process with stdin/stdout/stderr pipes for MCP communication
+            env = self._get_process_env(integration)
             print(f"[MCP PROCESS] Starting MCP server in directory: {creds_dir}")
             print(f"[MCP PROCESS] Command: {' '.join(cmd)}")
+            print(f"[MCP PROCESS] HOME environment: {env.get('HOME')}")
+            print(f"[MCP PROCESS] USE_TEST_MODE: {env.get('USE_TEST_MODE')}")
             process = subprocess.Popen(
                 cmd,
                 cwd=str(creds_dir),
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                env=self._get_process_env(integration),
+                env=env,
                 preexec_fn=os.setsid,  # Create new process group for clean shutdown
                 bufsize=0  # Unbuffered for real-time communication
             )
