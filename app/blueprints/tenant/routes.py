@@ -342,7 +342,9 @@ def wizard():
             return jsonify({'error': 'Failed to create workspace. Please try again.'}), 500
 
     # GET request - show wizard
-    return render_template('tenant/wizard.html', title='Create Your Workspace')
+    # Pass user's plan to skip plan selection step
+    user_plan = current_user.plan or 'free'
+    return render_template('tenant/wizard.html', title='Create Your Workspace', user_plan=user_plan)
 
 
 @tenant_bp.route('/invite', methods=['GET', 'POST'])

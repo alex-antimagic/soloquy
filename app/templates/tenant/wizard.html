@@ -10,12 +10,13 @@
 
         <!-- Progress Stepper -->
         <div class="wizard-stepper">
-            <div class="stepper-item active" data-step="1">
+            <!-- Step 1 (Plan) hidden - user already has a plan -->
+            <div class="stepper-item active" data-step="1" style="display: none;">
                 <div class="stepper-circle">1</div>
                 <div class="stepper-label">Plan</div>
             </div>
-            <div class="stepper-line"></div>
-            <div class="stepper-item" data-step="2">
+            <div class="stepper-line" style="display: none;"></div>
+            <div class="stepper-item active" data-step="2">
                 <div class="stepper-circle">2</div>
                 <div class="stepper-label">Template</div>
             </div>
@@ -43,8 +44,8 @@
 
         <!-- Wizard Steps -->
         <div class="wizard-steps">
-            <!-- Step 1: Choose Plan -->
-            <div class="wizard-step active" data-step="1">
+            <!-- Step 1: Choose Plan (hidden - user already has a plan) -->
+            <div class="wizard-step" data-step="1" style="display: none;">
                 <h3 class="step-title">Choose Your Plan</h3>
                 <p class="step-description">Select the plan that works best for you</p>
 
@@ -90,7 +91,7 @@
             </div>
 
             <!-- Step 2: Template Selection -->
-            <div class="wizard-step" data-step="2">
+            <div class="wizard-step active" data-step="2">
                 <h3 class="step-title">Choose a Template</h3>
                 <p class="step-description">Pick the workspace type that fits your needs</p>
 
@@ -812,10 +813,10 @@
 <script>
 // Wizard state
 const wizardState = {
-    currentStep: 1,
+    currentStep: 2,  // Skip plan selection - user already has a plan
     totalSteps: 6,
     data: {
-        plan: 'free',
+        plan: '{{ user_plan }}',  // Pre-populate with user's existing plan
         template: null,
         name: '',
         slug: '',
