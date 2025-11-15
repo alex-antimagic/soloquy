@@ -256,9 +256,6 @@ class MCPManager:
 
                 # Outlook MCP stores tokens separately
                 if credentials.get('access_token'):
-                    tokens_file = creds_dir / '.outlook-mcp-tokens.json'
-                    print(f"[MCP CREDS] tokens file path: {tokens_file}")
-
                     # Calculate expires_at as Unix timestamp (current time + 1 hour)
                     # Microsoft access tokens typically last 1 hour (3600 seconds)
                     expires_at_timestamp = int(time.time()) + 3600
@@ -269,10 +266,28 @@ class MCPManager:
                         "refresh_token": credentials.get('refresh_token'),
                         "expires_at": expires_at_timestamp
                     }
+
+                    # Write to standard location in creds directory
+                    tokens_file = creds_dir / '.outlook-mcp-tokens.json'
+                    print(f"[MCP CREDS] Writing tokens to: {tokens_file}")
                     with open(tokens_file, 'w') as f:
                         json.dump(tokens, f, indent=2)
                     tokens_file.chmod(0o600)  # Set secure permissions
                     print(f"[MCP CREDS] ✓ Wrote tokens file")
+
+                    # ALSO write to home directory location as fallback
+                    # In case Node.js os.homedir() doesn't respect HOME env var
+                    import os
+                    home_dir = os.path.expanduser('~')
+                    home_tokens_file = Path(home_dir) / '.outlook-mcp-tokens.json'
+                    print(f"[MCP CREDS] Also writing tokens to system home: {home_tokens_file}")
+                    try:
+                        with open(home_tokens_file, 'w') as f:
+                            json.dump(tokens, f, indent=2)
+                        home_tokens_file.chmod(0o600)
+                        print(f"[MCP CREDS] ✓ Wrote tokens to system home directory")
+                    except Exception as e:
+                        print(f"[MCP CREDS] ⚠ Could not write to system home: {e}")
                 else:
                     print(f"[MCP CREDS] ⚠ No access_token found, skipping tokens file")
 
