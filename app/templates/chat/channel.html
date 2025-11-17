@@ -204,32 +204,32 @@
     // Real-time message updates via Server-Sent Events (SSE)
     const conversationId = `channel_${channelSlug}`;
 
-    let socket = null;
+    let channelSocket = null;
 
     function connectSocket() {
         // Close any existing connection
-        if (socket) {
+        if (channelSocket) {
             console.log('Closing existing Socket.IO connection');
-            socket.disconnect();
-            socket = null;
+            channelSocket.disconnect();
+            channelSocket = null;
         }
 
         console.log('Opening new Socket.IO connection:', conversationId);
-        socket = io({
+        channelSocket = io({
             transports: ['websocket', 'polling']
         });
 
-        socket.on('connect', () => {
+        channelSocket.on('connect', () => {
             console.log('Socket.IO connected');
             // Join the conversation room
-            socket.emit('join_conversation', { conversation_id: conversationId });
+            channelSocket.emit('join_conversation', { conversation_id: conversationId });
         });
 
-        socket.on('joined', (data) => {
+        channelSocket.on('joined', (data) => {
             console.log('Joined conversation:', data);
         });
 
-        socket.on('new_message', (messageData) => {
+        channelSocket.on('new_message', (messageData) => {
             console.log('Received new message:', messageData);
 
             // Only add if message is from someone else (sender already sees their own message)
@@ -246,7 +246,7 @@
             }
         });
 
-        socket.on('typing', (typingData) => {
+        channelSocket.on('typing', (typingData) => {
             console.log('Typing:', typingData);
 
             if (typingData.is_typing) {
@@ -256,11 +256,11 @@
             }
         });
 
-        socket.on('disconnect', () => {
+        channelSocket.on('disconnect', () => {
             console.log('Socket.IO disconnected');
         });
 
-        socket.on('connect_error', (error) => {
+        channelSocket.on('connect_error', (error) => {
             console.error('Socket.IO connection error:', error);
         });
     }
@@ -271,10 +271,10 @@
     // Cleanup function to close connections
     function cleanupConnections() {
         console.log('Cleaning up Socket.IO connections');
-        if (socket) {
-            socket.emit('leave_conversation', { conversation_id: conversationId });
-            socket.disconnect();
-            socket = null;
+        if (channelSocket) {
+            channelSocket.emit('leave_conversation', { conversation_id: conversationId });
+            channelSocket.disconnect();
+            channelSocket = null;
         }
     }
 
@@ -557,8 +557,8 @@
     let isCurrentlyTyping = false;
 
     function sendTypingStatus(isTyping) {
-        if (socket && socket.connected) {
-            socket.emit('typing', {
+        if (channelSocket && channelSocket.connected) {
+            channelSocket.emit('typing', {
                 conversation_id: conversationId,
                 is_typing: isTyping
             });
