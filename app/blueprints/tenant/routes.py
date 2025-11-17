@@ -51,11 +51,10 @@ def home():
             Agent.is_active == True
         ).count()
 
-        # Calculate messages count (last 30 days)
-        thirty_days_ago = datetime.utcnow() - timedelta(days=30)
-        message_count = db.session.query(Message).join(Department).filter(
-            Department.tenant_id == g.current_tenant.id,
-            Message.created_at >= thirty_days_ago
+        # Calculate active tasks count (pending + in_progress)
+        active_tasks_count = db.session.query(Task).filter(
+            Task.tenant_id == g.current_tenant.id,
+            Task.status.in_(['pending', 'in_progress'])
         ).count()
 
         # Get task statistics (if tasks applet enabled)
@@ -89,23 +88,8 @@ def home():
 
             deal_pipeline = [{'stage': name, 'amount': float(amount or 0)} for name, amount in pipeline_data]
 
-        # Get recent activity (last 10 items)
+        # Get recent activity (last 10 items) - team collaboration only
         try:
-            # Get recent messages
-            recent_messages = db.session.query(Message).join(Department).filter(
-                Department.tenant_id == g.current_tenant.id
-            ).order_by(Message.created_at.desc()).limit(5).all()
-
-            for msg in recent_messages:
-                sender_name = msg.sender.full_name if msg.sender else (msg.agent.name if msg.agent else 'Unknown')
-                recent_activity.append({
-                    'type': 'message',
-                    'icon': 'chat-dots',
-                    'text': f'{sender_name} sent a message',
-                    'time': msg.created_at,
-                    'url': url_for('chat.agent_chat', agent_id=msg.agent_id) if msg.agent_id else None
-                })
-
             # Get recent tasks (if enabled)
             if is_applet_enabled(g.current_tenant.id, 'tasks') or is_applet_enabled(g.current_tenant.id, 'projects'):
                 recent_tasks = db.session.query(Task).filter(
@@ -113,12 +97,34 @@ def home():
                 ).order_by(Task.created_at.desc()).limit(5).all()
 
                 for task in recent_tasks:
+                    assignee_name = 'Unassigned'
+                    if task.assigned_to_user:
+                        assignee_name = task.assigned_to_user.full_name
+                    elif task.assigned_to_agent:
+                        assignee_name = task.assigned_to_agent.name
+
                     recent_activity.append({
                         'type': 'task',
                         'icon': 'check2-square',
-                        'text': f'Task created: {task.title}',
+                        'text': f'{assignee_name}: {task.title}',
                         'time': task.created_at,
                         'url': url_for('tasks.index')
+                    })
+
+            # Get recent deals (if CRM enabled)
+            if is_applet_enabled(g.current_tenant.id, 'crm'):
+                from app.models.deal import Deal
+                recent_deals = db.session.query(Deal).filter(
+                    Deal.tenant_id == g.current_tenant.id
+                ).order_by(Deal.created_at.desc()).limit(5).all()
+
+                for deal in recent_deals:
+                    recent_activity.append({
+                        'type': 'deal',
+                        'icon': 'currency-dollar',
+                        'text': f'Deal created: {deal.title} (${deal.amount:,.0f})',
+                        'time': deal.created_at,
+                        'url': url_for('crm.deal_detail', deal_id=deal.id)
                     })
 
             # Sort by time and limit to 10
@@ -132,7 +138,7 @@ def home():
                            tenants=tenants,
                            departments=departments,
                            total_agents=total_agents,
-                           message_count=message_count,
+                           active_tasks_count=active_tasks_count,
                            task_stats=task_stats,
                            deal_pipeline=deal_pipeline,
                            recent_activity=recent_activity)

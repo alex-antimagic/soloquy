@@ -78,11 +78,11 @@
                     <div class="card-body">
                         <div class="d-flex align-items-center">
                             <div class="flex-shrink-0">
-                                <i class="bi bi-chat-dots fs-2 text-warning"></i>
+                                <i class="bi bi-check2-circle fs-2 text-warning"></i>
                             </div>
                             <div class="flex-grow-1 ms-3">
-                                <h6 class="mb-0 text-muted">Messages</h6>
-                                <h3 class="mb-0">{{ message_count }}</h3>
+                                <h6 class="mb-0 text-muted">Active Tasks</h6>
+                                <h3 class="mb-0">{{ active_tasks_count }}</h3>
                             </div>
                         </div>
                     </div>
@@ -167,15 +167,15 @@
                         <h5 class="mb-0">Quick Actions</h5>
                     </div>
                     <div class="list-group list-group-flush">
-                        <a href="{{ url_for('tenant.agents') }}" class="list-group-item list-group-item-action">
-                            <i class="bi bi-robot me-2"></i> Chat with Agent
-                        </a>
                         <a href="{{ url_for('tenant.settings') }}" class="list-group-item list-group-item-action">
                             <i class="bi bi-person-plus me-2"></i> Invite Team Member
                         </a>
                         {% if 'tasks' in enabled_applets or 'projects' in enabled_applets %}
                         <a href="{{ url_for('tasks.index') }}" class="list-group-item list-group-item-action">
                             <i class="bi bi-check2-square me-2"></i> Create Task
+                        </a>
+                        <a href="{{ url_for('projects.index') }}" class="list-group-item list-group-item-action">
+                            <i class="bi bi-kanban me-2"></i> Create Project
                         </a>
                         {% endif %}
                         {% if 'crm' in enabled_applets %}
