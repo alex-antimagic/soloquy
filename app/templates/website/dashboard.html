@@ -1,0 +1,126 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>Website Builder</h1>
+            <p class="text-muted">Manage your AI-powered website</p>
+        </div>
+        <div class="col-auto">
+            {% if website.is_published %}
+            <a href="/w/{{ current_tenant.slug }}" target="_blank" class="btn btn-success">
+                <i class="bi bi-eye"></i> View Website
+            </a>
+            {% else %}
+            <span class="badge bg-warning">Unpublished</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2 text-muted">Total Pages</h6>
+                    <h2 class="card-title">{{ total_pages }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2 text-muted">Published Pages</h6>
+                    <h2 class="card-title">{{ published_pages }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2 text-muted">Forms</h6>
+                    <h2 class="card-title">{{ total_forms }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2 text-muted">Form Submissions</h6>
+                    <h2 class="card-title">{{ total_submissions }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Quick Actions</h5>
+                </div>
+                <div class="list-group list-group-flush">
+                    <a href="{{ url_for('website.create_page') }}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-file-earmark-plus"></i> Create New Page
+                    </a>
+                    <a href="{{ url_for('website.pages') }}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-files"></i> Manage Pages
+                    </a>
+                    <a href="{{ url_for('website.theme') }}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-palette"></i> Customize Theme
+                    </a>
+                    <a href="{{ url_for('website.forms') }}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-ui-checks"></i> Manage Forms
+                    </a>
+                    <a href="{{ url_for('website.settings') }}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-gear"></i> Website Settings
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Website Information</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-4">Website Title:</dt>
+                        <dd class="col-sm-8">{{ website.title }}</dd>
+
+                        <dt class="col-sm-4">Status:</dt>
+                        <dd class="col-sm-8">
+                            {% if website.is_published %}
+                            <span class="badge bg-success">Published</span>
+                            {% else %}
+                            <span class="badge bg-warning">Draft</span>
+                            {% endif %}
+                        </dd>
+
+                        <dt class="col-sm-4">Public URL:</dt>
+                        <dd class="col-sm-8">
+                            {% if website.custom_domain and website.domain_verified %}
+                            <a href="https://{{ website.custom_domain }}" target="_blank">{{ website.custom_domain }}</a>
+                            {% else %}
+                            <a href="/w/{{ current_tenant.slug }}" target="_blank">/w/{{ current_tenant.slug }}</a>
+                            {% endif %}
+                        </dd>
+
+                        <dt class="col-sm-4">SEO Indexable:</dt>
+                        <dd class="col-sm-8">
+                            {% if website.is_indexable %}
+                            <i class="bi bi-check-circle text-success"></i> Yes
+                            {% else %}
+                            <i class="bi bi-x-circle text-danger"></i> No
+                            {% endif %}
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

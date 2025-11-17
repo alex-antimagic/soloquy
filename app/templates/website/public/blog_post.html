@@ -1,0 +1,67 @@
+{% extends "website/public/base.html" %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <article>
+                <header class="mb-5">
+                    <h1 class="display-4 mb-3">{{ post.title }}</h1>
+                    <div class="text-muted mb-4">
+                        <i class="bi bi-calendar3"></i> {{ post.published_at.strftime('%B %d, %Y') if post.published_at }}
+                        {% if post.agent %}
+                        <span class="ms-3"><i class="bi bi-robot"></i> Written by AI</span>
+                        {% elif post.created_by %}
+                        <span class="ms-3"><i class="bi bi-person"></i> {{ post.created_by.full_name }}</span>
+                        {% endif %}
+                    </div>
+                </header>
+
+                {% if post.content_json and post.content_json.sections %}
+                {% for section in post.content_json.sections %}
+                <div class="section mb-4">
+                    {% if section.type == 'text' %}
+                    <div class="content">
+                        {% if section.heading %}
+                        <h2>{{ section.heading }}</h2>
+                        {% endif %}
+                        <div>{{ section.content|safe }}</div>
+                    </div>
+
+                    {% elif section.type == 'image' %}
+                    <div class="text-center my-4">
+                        <img src="{{ section.url }}" alt="{{ section.alt }}" class="img-fluid rounded">
+                        {% if section.caption %}
+                        <p class="text-muted mt-2">{{ section.caption }}</p>
+                        {% endif %}
+                    </div>
+
+                    {% elif section.type == 'quote' %}
+                    <blockquote class="blockquote border-start border-4 border-primary ps-4 py-3 my-4">
+                        <p class="mb-0">{{ section.text }}</p>
+                        {% if section.author %}
+                        <footer class="blockquote-footer mt-2">{{ section.author }}</footer>
+                        {% endif %}
+                    </blockquote>
+
+                    {% endif %}
+                </div>
+                {% endfor %}
+                {% else %}
+                <div class="text-muted">
+                    <p>Content not available.</p>
+                </div>
+                {% endif %}
+            </article>
+
+            <hr class="my-5">
+
+            <div class="text-center">
+                <a href="/w/{{ tenant.slug }}/blog" class="btn btn-outline-primary">
+                    <i class="bi bi-arrow-left"></i> Back to Blog
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

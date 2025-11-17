@@ -1,0 +1,44 @@
+{% extends "website/public/base.html" %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row">
+        <div class="col-lg-10 mx-auto">
+            <h1 class="display-4 mb-5">Blog</h1>
+
+            {% if posts %}
+            <div class="row">
+                {% for post in posts %}
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100">
+                        {% if post.content_json and post.content_json.featured_image %}
+                        <img src="{{ post.content_json.featured_image }}" class="card-img-top" alt="{{ post.title }}">
+                        {% endif %}
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                <a href="/w/{{ tenant.slug }}/blog/{{ post.slug }}">{{ post.title }}</a>
+                            </h5>
+                            <p class="card-text text-muted">
+                                {{ post.meta_description or post.content_json.excerpt if post.content_json }}
+                            </p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted">
+                                    {{ post.published_at.strftime('%B %d, %Y') if post.published_at }}
+                                </small>
+                                <a href="/w/{{ tenant.slug }}/blog/{{ post.slug }}" class="btn btn-sm btn-outline-primary">Read more</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center text-muted py-5">
+                <i class="bi bi-journal-text display-1"></i>
+                <p class="lead mt-3">No blog posts yet.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

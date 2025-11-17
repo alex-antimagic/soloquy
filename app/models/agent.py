@@ -31,6 +31,7 @@ class Agent(db.Model):
     enable_gmail = db.Column(db.Boolean, default=False, nullable=False)  # Allow access to Gmail (MCP)
     enable_outlook = db.Column(db.Boolean, default=False, nullable=False)  # Allow access to Outlook (MCP)
     enable_google_drive = db.Column(db.Boolean, default=False, nullable=False)  # Allow access to Google Drive (MCP)
+    enable_website_builder = db.Column(db.Boolean, default=False, nullable=False)  # Allow AI to create/edit website content
 
     # Timestamps
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)

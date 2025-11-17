@@ -1,0 +1,80 @@
+{% extends "website/public/base.html" %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row">
+        <div class="col-lg-10 mx-auto">
+            <article>
+                <h1 class="display-4 mb-4">{{ page.title }}</h1>
+
+                {% if page.content_json and page.content_json.sections %}
+                <!-- Render page content from JSON -->
+                {% for section in page.content_json.sections %}
+                <div class="section mb-5">
+                    {% if section.type == 'hero' %}
+                    <!-- Hero Section -->
+                    <div class="text-center py-5">
+                        <h2 class="display-5">{{ section.heading }}</h2>
+                        <p class="lead">{{ section.subheading }}</p>
+                        {% if section.cta_text and section.cta_url %}
+                        <a href="{{ section.cta_url }}" class="btn btn-primary btn-lg mt-3">{{ section.cta_text }}</a>
+                        {% endif %}
+                    </div>
+
+                    {% elif section.type == 'text' %}
+                    <!-- Text Section -->
+                    <div class="content">
+                        {% if section.heading %}
+                        <h2>{{ section.heading }}</h2>
+                        {% endif %}
+                        <div>{{ section.content|safe }}</div>
+                    </div>
+
+                    {% elif section.type == 'image' %}
+                    <!-- Image Section -->
+                    <div class="text-center">
+                        <img src="{{ section.url }}" alt="{{ section.alt }}" class="img-fluid rounded">
+                        {% if section.caption %}
+                        <p class="text-muted mt-2">{{ section.caption }}</p>
+                        {% endif %}
+                    </div>
+
+                    {% elif section.type == 'features' %}
+                    <!-- Features Section -->
+                    <div class="row">
+                        {% for feature in section.features %}
+                        <div class="col-md-4 mb-4">
+                            <div class="text-center">
+                                {% if feature.icon %}
+                                <i class="bi bi-{{ feature.icon }} display-4 text-primary mb-3"></i>
+                                {% endif %}
+                                <h4>{{ feature.title }}</h4>
+                                <p class="text-muted">{{ feature.description }}</p>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    {% elif section.type == 'cta' %}
+                    <!-- Call to Action Section -->
+                    <div class="text-center bg-light p-5 rounded">
+                        <h3>{{ section.heading }}</h3>
+                        <p class="lead">{{ section.subheading }}</p>
+                        <a href="{{ section.button_url }}" class="btn btn-primary btn-lg">{{ section.button_text }}</a>
+                    </div>
+
+                    {% endif %}
+                </div>
+                {% endfor %}
+                {% else %}
+                <!-- Empty page placeholder -->
+                <div class="text-center text-muted py-5">
+                    <i class="bi bi-file-earmark-text display-1"></i>
+                    <p class="lead mt-3">This page is under construction.</p>
+                </div>
+                {% endif %}
+            </article>
+        </div>
+    </div>
+</div>
+{% endblock %}

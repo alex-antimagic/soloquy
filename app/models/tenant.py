@@ -31,6 +31,7 @@ class Tenant(db.Model):
     # Relationships
     memberships = db.relationship('TenantMembership', back_populates='tenant', lazy='dynamic', cascade='all, delete-orphan')
     departments = db.relationship('Department', back_populates='tenant', lazy='dynamic', cascade='all, delete-orphan')
+    website = db.relationship('Website', back_populates='tenant', uselist=False, cascade='all, delete-orphan')
     # Note: projects and tasks relationships are defined by backrefs in their respective models
     # but we need to ensure cascade delete by manually deleting them in the delete route
 

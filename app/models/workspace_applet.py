@@ -59,6 +59,11 @@ class WorkspaceApplet(db.Model):
             'name': 'Integrations',
             'description': 'Connect third-party tools and services',
             'icon': 'plug'
+        },
+        'website': {
+            'name': 'Website Builder',
+            'description': 'AI-powered website hosting with custom domains and SEO',
+            'icon': 'globe'
         }
     }
 

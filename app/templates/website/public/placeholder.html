@@ -1,0 +1,17 @@
+{% extends "website/public/base.html" %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row">
+        <div class="col-lg-8 mx-auto text-center">
+            <i class="bi bi-tools display-1 text-muted mb-4"></i>
+            <h1 class="display-4">Website Coming Soon</h1>
+            <p class="lead text-muted">{{ website.title }} is currently being built. Check back soon!</p>
+
+            {% if website.description %}
+            <p class="mt-4">{{ website.description }}</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
