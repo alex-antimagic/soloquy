@@ -1,0 +1,144 @@
+/**
+ * Unified Search Dropdown Styles
+ * Integrates with Bootstrap 5 dark theme
+ */
+
+/* Search container positioning */
+.search-container {
+    position: relative;
+}
+
+/* Search results dropdown */
+#searchResultsDropdown {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    margin-top: 0.5rem;
+    background: var(--bs-dark);
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0.375rem;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.5);
+    max-height: 500px;
+    overflow-y: auto;
+    z-index: 1050;
+    min-width: 400px;
+}
+
+#searchResultsDropdown.show {
+    display: block;
+}
+
+/* Custom scrollbar for dropdown */
+#searchResultsDropdown::-webkit-scrollbar {
+    width: 8px;
+}
+
+#searchResultsDropdown::-webkit-scrollbar-track {
+    background: var(--bs-dark);
+}
+
+#searchResultsDropdown::-webkit-scrollbar-thumb {
+    background: var(--bs-secondary);
+    border-radius: 4px;
+}
+
+#searchResultsDropdown::-webkit-scrollbar-thumb:hover {
+    background: var(--bs-gray-600);
+}
+
+/* Section header */
+.search-section-header {
+    padding: 0.75rem 1rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--bs-secondary);
+    letter-spacing: 0.5px;
+    border-top: 1px solid var(--bs-border-color);
+}
+
+.search-section:first-child .search-section-header {
+    border-top: none;
+}
+
+/* Result item */
+.search-result-item {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    color: var(--bs-body-color);
+    text-decoration: none;
+    border-left: 3px solid transparent;
+    transition: all 0.2s ease;
+}
+
+.search-result-item:hover,
+.search-result-item:focus {
+    background: rgba(255, 255, 255, 0.05);
+    border-left-color: var(--bs-primary);
+    outline: none;
+}
+
+.result-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.result-title {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--bs-light);
+    margin-bottom: 0.25rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.result-meta {
+    font-size: 0.75rem;
+    color: var(--bs-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.result-meta .badge {
+    font-size: 0.65rem;
+    padding: 0.2em 0.4em;
+    margin-right: 0.25rem;
+    vertical-align: middle;
+}
+
+/* Loading state */
+.search-loading {
+    padding: 2rem 1rem;
+    text-align: center;
+    color: var(--bs-secondary);
+    font-size: 0.9rem;
+}
+
+/* Empty state */
+.search-empty {
+    padding: 3rem 1rem;
+    text-align: center;
+}
+
+.search-empty i {
+    opacity: 0.5;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    #searchResultsDropdown {
+        min-width: 100%;
+        max-width: calc(100vw - 2rem);
+    }
+}
+
+/* Focus indicator for accessibility */
+.search-result-item:focus-visible {
+    outline: 2px solid var(--bs-primary);
+    outline-offset: -2px;
+}
