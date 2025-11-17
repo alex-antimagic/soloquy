@@ -736,21 +736,12 @@
             const data = await response.json();
 
             // Remove typing indicators for mentioned agents only
+            // Agent responses will come via Socket.IO, so we don't add them here
             mentionedAgentNames.forEach(agentName => {
                 removeTypingIndicator(agentName);
             });
 
-            if (data.success) {
-                // Show agent responses with a brief typing indicator
-                if (data.agent_responses && data.agent_responses.length > 0) {
-                    for (const agentResp of data.agent_responses) {
-                        addTypingIndicator(agentResp.agent_name);
-                        await new Promise(resolve => setTimeout(resolve, 500));
-                        removeTypingIndicator(agentResp.agent_name);
-                        addMessageToUI(agentResp.content, agentResp.agent_name, true);
-                    }
-                }
-            } else {
+            if (!data.success) {
                 alert('Failed to send message: ' + (data.error || 'Unknown error'));
             }
         } catch (error) {
