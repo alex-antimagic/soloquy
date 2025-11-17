@@ -85,7 +85,7 @@ def home():
             ).join(Deal, Deal.stage_id == DealStage.id).filter(
                 Deal.tenant_id == g.current_tenant.id,
                 Deal.status == 'open'
-            ).group_by(DealStage.name, DealStage.order).order_by(DealStage.order).all()
+            ).group_by(DealStage.name, DealStage.position).order_by(DealStage.position).all()
 
             deal_pipeline = [{'stage': name, 'amount': float(amount or 0)} for name, amount in pipeline_data]
 
