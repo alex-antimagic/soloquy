@@ -81,11 +81,19 @@ def apply_inline_formatting(text):
     """
     Apply markdown-style inline formatting to escaped HTML text.
     Supports:
+    - @mentions (users and agents)
     - **bold** or __bold__
     - *italic* or _italic_
     - `code`
     - ~~strikethrough~~
     """
+    # @Mentions: @username or @agentname (FIRST - before other formatting)
+    text = re.sub(
+        r'@(\w+)',
+        r'<span class="mention" data-mention="\1">@\1</span>',
+        text
+    )
+
     # Bold: **text** or __text__
     text = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', text)
     text = re.sub(r'__(.+?)__', r'<strong>\1</strong>', text)

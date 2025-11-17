@@ -611,19 +611,9 @@ def send_channel_message(slug):
     # Determine which agents should respond
     responding_agents = []
 
-    # 1. Always add explicitly mentioned agents
+    # Only add explicitly mentioned agents (via @mentions)
     for agent in mentioned_agents:
         if agent not in responding_agents:
-            responding_agents.append(agent)
-
-    # 2. Check for proactive participation (smart mode)
-    # For agents associated with the channel (via department)
-    for agent in associated_agents:
-        if agent in mentioned_agents:
-            continue  # Already added
-
-        # Use Claude Haiku to detect if agent should proactively respond
-        if should_agent_respond_proactively(agent, content, channel):
             responding_agents.append(agent)
 
     # Generate responses from agents
@@ -709,43 +699,6 @@ def send_channel_message(slug):
         'timestamp': message.created_at.isoformat(),
         'agent_responses': agent_responses
     })
-
-
-def should_agent_respond_proactively(agent, message_content, channel):
-    """
-    Use Claude Haiku to determine if agent should proactively respond.
-    Smart hybrid mode: responds to relevance, questions, and keywords.
-    """
-    try:
-        ai_service = get_ai_service()
-
-        detection_prompt = f"""Analyze this message in the #{channel.name} channel and determine if the {agent.name} agent should respond.
-
-Agent role: {agent.description if hasattr(agent, 'description') and agent.description else agent.name}
-Department: {agent.department.name if agent.department else 'None'}
-Message: "{message_content}"
-
-The agent should respond if:
-1. The message asks a question related to their department or expertise
-2. The message mentions topics relevant to their role
-3. The message indicates urgency or need for assistance in their area
-4. The message discusses tasks or issues they could help with
-
-Return ONLY "yes" or "no"."""
-
-        response = ai_service.chat(
-            messages=[{'role': 'user', 'content': detection_prompt}],
-            system_prompt="You are a relevance detection assistant. Respond only with 'yes' or 'no'.",
-            model='claude-haiku-4-5-20251001',
-            max_tokens=10,
-            temperature=0
-        ).strip().lower()
-
-        return response == 'yes'
-
-    except Exception as e:
-        print(f"Error in proactive response detection: {e}")
-        return False  # Default to not responding if detection fails
 
 
 # === Channel Management ===

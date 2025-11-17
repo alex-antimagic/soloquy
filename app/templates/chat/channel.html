@@ -182,6 +182,20 @@
     // Notification sound
     const notificationSound = new Audio('{{ url_for("static", filename="pop.mp3") }}');
 
+    // Extract agent names mentioned in message content
+    function extractMentionedAgents(messageContent) {
+        const mentionPattern = /@(\w+)/g;
+        const mentions = [...messageContent.matchAll(mentionPattern)].map(m => m[1]);
+        const channelAgentNames = Object.keys(agentAvatars);
+
+        // Match mentions against channel agents (case-insensitive partial match)
+        return mentions.filter(mention => {
+            return channelAgentNames.some(agentName =>
+                agentName.toLowerCase().includes(mention.toLowerCase())
+            );
+        });
+    }
+
     // Current user info
     const currentUserId = {{ current_user.id }};
     const currentUserAvatarUrl = '{{ current_user.avatar_url if current_user.avatar_url else "" }}';
@@ -682,15 +696,18 @@
             imagePreview.style.display = 'none';
         }
 
-        // Wait a random delay (500ms to 2000ms) before showing typing indicators
-        const randomDelay = Math.random() * 1500 + 500; // 500-2000ms
-        await new Promise(resolve => setTimeout(resolve, randomDelay));
+        // Extract mentioned agent names from message content
+        const mentionedAgentNames = extractMentionedAgents(content);
 
-        // Show typing indicators for all channel agents
-        const channelAgentNames = Object.keys(agentAvatars);
-        channelAgentNames.forEach(agentName => {
-            addTypingIndicator(agentName);
-        });
+        // Only show typing indicators for mentioned agents
+        if (mentionedAgentNames.length > 0) {
+            const randomDelay = Math.random() * 1500 + 500; // 500-2000ms
+            await new Promise(resolve => setTimeout(resolve, randomDelay));
+
+            mentionedAgentNames.forEach(agentName => {
+                addTypingIndicator(agentName);
+            });
+        }
 
         try {
             const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
@@ -718,8 +735,8 @@
 
             const data = await response.json();
 
-            // Remove all typing indicators
-            channelAgentNames.forEach(agentName => {
+            // Remove typing indicators for mentioned agents only
+            mentionedAgentNames.forEach(agentName => {
                 removeTypingIndicator(agentName);
             });
 
@@ -738,8 +755,8 @@
             }
         } catch (error) {
             console.error('Error sending message:', error);
-            // Remove all typing indicators on error
-            channelAgentNames.forEach(agentName => {
+            // Remove typing indicators for mentioned agents only
+            mentionedAgentNames.forEach(agentName => {
                 removeTypingIndicator(agentName);
             });
             alert('Failed to send message');
@@ -847,6 +864,46 @@
             alert('Failed to add agent. Please try again.');
         }
     }
+
+    // @Mention tooltip functionality
+    let mentionTooltip = null;
+
+    // Handle mention hover
+    messagesContainer.addEventListener('mouseover', (e) => {
+        const mention = e.target.closest('.mention');
+        if (!mention) return;
+
+        const mentionName = mention.getAttribute('data-mention');
+
+        // Create tooltip if it doesn't exist
+        if (!mentionTooltip) {
+            mentionTooltip = document.createElement('div');
+            mentionTooltip.className = 'mention-tooltip';
+            document.body.appendChild(mentionTooltip);
+        }
+
+        // Check if it's an agent or user
+        const isAgent = agentAvatars.hasOwnProperty(mentionName);
+        mentionTooltip.textContent = isAgent
+            ? `${mentionName} (AI Agent)`
+            : `@${mentionName}`;
+
+        // Position tooltip
+        const rect = mention.getBoundingClientRect();
+        mentionTooltip.style.left = `${rect.left + rect.width / 2}px`;
+        mentionTooltip.style.top = `${rect.top - 35}px`;
+        mentionTooltip.style.transform = 'translateX(-50%)';
+
+        // Show tooltip
+        setTimeout(() => mentionTooltip.classList.add('show'), 100);
+    });
+
+    // Hide tooltip on mouseout
+    messagesContainer.addEventListener('mouseout', (e) => {
+        if (!e.target.closest('.mention') && mentionTooltip) {
+            mentionTooltip.classList.remove('show');
+        }
+    });
 </script>
 
 <!-- Add Member Modal -->
