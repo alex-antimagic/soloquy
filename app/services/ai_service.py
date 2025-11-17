@@ -158,8 +158,8 @@ class AIService:
                         },
                         "is_online_meeting": {
                             "type": "boolean",
-                            "description": "Whether to create a Teams online meeting (default: false)",
-                            "default": false
+                            "description": "Whether to create a Teams online meeting (default: False)",
+                            "default": False
                         }
                     },
                     "required": ["subject", "start", "end"]
