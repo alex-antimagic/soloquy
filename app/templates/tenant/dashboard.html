@@ -1,5 +1,10 @@
 {% extends "layouts/base.html" %}
 
+{% block extra_css %}
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid">
     {% if not current_tenant %}
@@ -61,7 +66,7 @@
                             </div>
                             <div class="flex-grow-1 ms-3">
                                 <h6 class="mb-0 text-muted">AI Agents</h6>
-                                <h3 class="mb-0">0</h3>
+                                <h3 class="mb-0">{{ total_agents }}</h3>
                             </div>
                         </div>
                     </div>
@@ -77,7 +82,7 @@
                             </div>
                             <div class="flex-grow-1 ms-3">
                                 <h6 class="mb-0 text-muted">Messages</h6>
-                                <h3 class="mb-0">0</h3>
+                                <h3 class="mb-0">{{ message_count }}</h3>
                             </div>
                         </div>
                     </div>
@@ -85,15 +90,73 @@
             </div>
         </div>
 
-        <!-- Quick Actions -->
+        <!-- Charts and Actions -->
         <div class="row g-3">
             <div class="col-md-8">
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h5 class="mb-0">Analytics</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <!-- Tasks Overview Chart -->
+                            {% if task_stats and (task_stats.pending + task_stats.in_progress + task_stats.completed) > 0 %}
+                            <div class="col-md-6 mb-3">
+                                <h6 class="text-muted mb-3">Tasks Overview</h6>
+                                <canvas id="tasksChart" style="max-height: 250px;"></canvas>
+                            </div>
+                            {% endif %}
+
+                            <!-- CRM Pipeline Chart -->
+                            {% if deal_pipeline and deal_pipeline|length > 0 %}
+                            <div class="col-md-6 mb-3">
+                                <h6 class="text-muted mb-3">Sales Pipeline</h6>
+                                <canvas id="pipelineChart" style="max-height: 250px;"></canvas>
+                            </div>
+                            {% endif %}
+
+                            {% if not task_stats and not deal_pipeline %}
+                            <div class="col-12">
+                                <p class="text-muted text-center py-4">
+                                    <i class="bi bi-graph-up fs-1 d-block mb-2"></i>
+                                    No analytics data yet. Start by creating tasks or deals!
+                                </p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Activity -->
                 <div class="card">
                     <div class="card-header">
                         <h5 class="mb-0">Recent Activity</h5>
                     </div>
                     <div class="card-body">
-                        <p class="text-muted">No recent activity yet. Start by creating departments and inviting team members!</p>
+                        {% if recent_activity %}
+                        <div class="list-group list-group-flush">
+                            {% for activity in recent_activity %}
+                            <div class="list-group-item px-0">
+                                <div class="d-flex align-items-start">
+                                    <div class="flex-shrink-0 me-3">
+                                        <i class="bi bi-{{ activity.icon }} text-primary"></i>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        {% if activity.url %}
+                                        <a href="{{ activity.url }}" class="text-decoration-none">{{ activity.text }}</a>
+                                        {% else %}
+                                        <span>{{ activity.text }}</span>
+                                        {% endif %}
+                                        <br>
+                                        <small class="text-muted">{{ activity.time.strftime('%b %d, %Y at %I:%M %p') }}</small>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <p class="text-muted mb-0">No recent activity yet. Start by creating departments and inviting team members!</p>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -104,22 +167,151 @@
                         <h5 class="mb-0">Quick Actions</h5>
                     </div>
                     <div class="list-group list-group-flush">
-                        <a href="{{ url_for('department.index') }}" class="list-group-item list-group-item-action">
-                            <i class="bi bi-plus-circle me-2"></i> Create Department
+                        <a href="{{ url_for('tenant.agents') }}" class="list-group-item list-group-item-action">
+                            <i class="bi bi-robot me-2"></i> Chat with Agent
                         </a>
-                        <a href="#" class="list-group-item list-group-item-action">
+                        <a href="{{ url_for('tenant.settings') }}" class="list-group-item list-group-item-action">
                             <i class="bi bi-person-plus me-2"></i> Invite Team Member
                         </a>
+                        {% if 'tasks' in enabled_applets or 'projects' in enabled_applets %}
                         <a href="{{ url_for('tasks.index') }}" class="list-group-item list-group-item-action">
                             <i class="bi bi-check2-square me-2"></i> Create Task
                         </a>
-                        <a href="{{ url_for('crm.index') }}" class="list-group-item list-group-item-action">
+                        {% endif %}
+                        {% if 'crm' in enabled_applets %}
+                        <a href="{{ url_for('crm.contacts') }}" class="list-group-item list-group-item-action">
                             <i class="bi bi-person-vcard me-2"></i> Add Contact
                         </a>
+                        <a href="{{ url_for('crm.deals') }}" class="list-group-item list-group-item-action">
+                            <i class="bi bi-currency-dollar me-2"></i> Create Deal
+                        </a>
+                        {% endif %}
                     </div>
                 </div>
             </div>
         </div>
     {% endif %}
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Initialize charts
+document.addEventListener('DOMContentLoaded', function() {
+    // Tasks Overview Donut Chart
+    {% if task_stats and (task_stats.pending + task_stats.in_progress + task_stats.completed) > 0 %}
+    const tasksCtx = document.getElementById('tasksChart');
+    if (tasksCtx) {
+        new Chart(tasksCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Pending', 'In Progress', 'Completed'],
+                datasets: [{
+                    data: [
+                        {{ task_stats.pending }},
+                        {{ task_stats.in_progress }},
+                        {{ task_stats.completed }}
+                    ],
+                    backgroundColor: [
+                        'rgba(255, 193, 7, 0.8)',  // warning/yellow
+                        'rgba(13, 110, 253, 0.8)',  // primary/blue
+                        'rgba(25, 135, 84, 0.8)'   // success/green
+                    ],
+                    borderColor: [
+                        'rgba(255, 193, 7, 1)',
+                        'rgba(13, 110, 253, 1)',
+                        'rgba(25, 135, 84, 1)'
+                    ],
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: '#adb5bd',
+                            padding: 15
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.parsed || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((value / total) * 100).toFixed(1);
+                                return `${label}: ${value} (${percentage}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    {% endif %}
+
+    // CRM Sales Pipeline Bar Chart
+    {% if deal_pipeline and deal_pipeline|length > 0 %}
+    const pipelineCtx = document.getElementById('pipelineChart');
+    if (pipelineCtx) {
+        new Chart(pipelineCtx, {
+            type: 'bar',
+            data: {
+                labels: {{ deal_pipeline|map(attribute='stage')|list|tojson }},
+                datasets: [{
+                    label: 'Deal Value ($)',
+                    data: {{ deal_pipeline|map(attribute='amount')|list|tojson }},
+                    backgroundColor: 'rgba(13, 110, 253, 0.8)',
+                    borderColor: 'rgba(13, 110, 253, 1)',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                indexAxis: 'y',  // Horizontal bar chart
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const value = context.parsed.x;
+                                return `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            color: '#adb5bd',
+                            callback: function(value) {
+                                return '$' + value.toLocaleString('en-US');
+                            }
+                        }
+                    },
+                    y: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            color: '#adb5bd'
+                        }
+                    }
+                }
+            }
+        });
+    }
+    {% endif %}
+});
+</script>
 {% endblock %}

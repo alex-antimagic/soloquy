@@ -15,6 +15,13 @@ from app.services.cloudinary_service import upload_image
 @login_required
 def home():
     """Main dashboard - shows current tenant overview"""
+    from datetime import datetime, timedelta
+    from sqlalchemy import func
+    from app.models.agent import Agent
+    from app.models.message import Message
+    from app.models.task import Task
+    from app.services.applet_manager import is_applet_enabled
+
     # Get user's tenants
     tenants = current_user.get_tenants()
 
@@ -29,13 +36,106 @@ def home():
 
     # Get departments for current tenant
     departments = []
+    total_agents = 0
+    message_count = 0
+    task_stats = {}
+    deal_pipeline = []
+    recent_activity = []
+
     if g.current_tenant:
         departments = g.current_tenant.get_departments()
+
+        # Calculate total active agents across all departments
+        total_agents = db.session.query(Agent).join(Department).filter(
+            Department.tenant_id == g.current_tenant.id,
+            Agent.is_active == True
+        ).count()
+
+        # Calculate messages count (last 30 days)
+        thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+        message_count = db.session.query(Message).join(Department).filter(
+            Department.tenant_id == g.current_tenant.id,
+            Message.created_at >= thirty_days_ago
+        ).count()
+
+        # Get task statistics (if tasks applet enabled)
+        if is_applet_enabled(g.current_tenant.id, 'tasks') or is_applet_enabled(g.current_tenant.id, 'projects'):
+            task_data = db.session.query(
+                Task.status, func.count(Task.id)
+            ).filter(
+                Task.tenant_id == g.current_tenant.id
+            ).group_by(Task.status).all()
+
+            task_stats = {
+                'pending': 0,
+                'in_progress': 0,
+                'completed': 0
+            }
+            for status, count in task_data:
+                if status in task_stats:
+                    task_stats[status] = count
+
+        # Get deal pipeline (if CRM applet enabled)
+        if is_applet_enabled(g.current_tenant.id, 'crm'):
+            from app.models.deal import Deal
+            from app.models.deal_stage import DealStage
+
+            pipeline_data = db.session.query(
+                DealStage.name, func.sum(Deal.amount)
+            ).join(Deal, Deal.stage_id == DealStage.id).filter(
+                Deal.tenant_id == g.current_tenant.id,
+                Deal.status == 'open'
+            ).group_by(DealStage.name, DealStage.order).order_by(DealStage.order).all()
+
+            deal_pipeline = [{'stage': name, 'amount': float(amount or 0)} for name, amount in pipeline_data]
+
+        # Get recent activity (last 10 items)
+        try:
+            # Get recent messages
+            recent_messages = db.session.query(Message).join(Department).filter(
+                Department.tenant_id == g.current_tenant.id
+            ).order_by(Message.created_at.desc()).limit(5).all()
+
+            for msg in recent_messages:
+                sender_name = msg.sender.full_name if msg.sender else (msg.agent.name if msg.agent else 'Unknown')
+                recent_activity.append({
+                    'type': 'message',
+                    'icon': 'chat-dots',
+                    'text': f'{sender_name} sent a message',
+                    'time': msg.created_at,
+                    'url': url_for('chat.agent_chat', agent_id=msg.agent_id) if msg.agent_id else None
+                })
+
+            # Get recent tasks (if enabled)
+            if is_applet_enabled(g.current_tenant.id, 'tasks') or is_applet_enabled(g.current_tenant.id, 'projects'):
+                recent_tasks = db.session.query(Task).filter(
+                    Task.tenant_id == g.current_tenant.id
+                ).order_by(Task.created_at.desc()).limit(5).all()
+
+                for task in recent_tasks:
+                    recent_activity.append({
+                        'type': 'task',
+                        'icon': 'check2-square',
+                        'text': f'Task created: {task.title}',
+                        'time': task.created_at,
+                        'url': url_for('tasks.index')
+                    })
+
+            # Sort by time and limit to 10
+            recent_activity = sorted(recent_activity, key=lambda x: x['time'], reverse=True)[:10]
+        except Exception as e:
+            print(f"Error fetching recent activity: {e}")
+            recent_activity = []
 
     return render_template('tenant/dashboard.html',
                            title='Dashboard',
                            tenants=tenants,
-                           departments=departments)
+                           departments=departments,
+                           total_agents=total_agents,
+                           message_count=message_count,
+                           task_stats=task_stats,
+                           deal_pipeline=deal_pipeline,
+                           recent_activity=recent_activity)
 
 
 @tenant_bp.route('/switch/<int:tenant_id>')
