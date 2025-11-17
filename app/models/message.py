@@ -81,6 +81,7 @@ class Message(db.Model):
         import re
         from app.models.agent import Agent
         from app.models.user import User
+        from app.models.channel import Channel
 
         # Find all @mentions in the content
         mention_pattern = r'@(\w+)'
@@ -91,10 +92,15 @@ class Message(db.Model):
         if not mentions:
             return result
 
+        # Load channel if we have a channel_id but channel relationship not loaded
+        channel = self.channel
+        if not channel and self.channel_id:
+            channel = Channel.query.get(self.channel_id)
+
         # Try to match mentions with agents and users
-        if self.channel:
+        if channel:
             # Get channel's associated agents (directly or through department)
-            channel_agents = self.channel.get_associated_agents() if hasattr(self.channel, 'get_associated_agents') else []
+            channel_agents = channel.get_associated_agents() if hasattr(channel, 'get_associated_agents') else []
 
             for mention_name in mentions:
                 # First, try to find matching agent among channel's agents
