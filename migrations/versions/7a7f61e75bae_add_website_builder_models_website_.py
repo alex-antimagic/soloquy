@@ -143,16 +143,16 @@ def upgrade():
         batch_op.create_index(batch_op.f('ix_form_submissions_created_at'), ['created_at'], unique=False)
         batch_op.create_index(batch_op.f('ix_form_submissions_form_id'), ['form_id'], unique=False)
 
-    with op.batch_alter_table('invitations', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('idx_invitations_email'))
-        batch_op.drop_index(batch_op.f('idx_invitations_token'))
-
-    op.drop_table('invitations')
-    with op.batch_alter_table('read_receipts', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_read_receipts_message_id'))
-        batch_op.drop_index(batch_op.f('ix_read_receipts_user_id'))
-
-    op.drop_table('read_receipts')
+    # Skip dropping invitations and read_receipts tables - they don't exist in production
+    # These were incorrectly detected by Alembic autogenerate
+    # with op.batch_alter_table('invitations', schema=None) as batch_op:
+    #     batch_op.drop_index(batch_op.f('idx_invitations_email'))
+    #     batch_op.drop_index(batch_op.f('idx_invitations_token'))
+    # op.drop_table('invitations')
+    # with op.batch_alter_table('read_receipts', schema=None) as batch_op:
+    #     batch_op.drop_index(batch_op.f('ix_read_receipts_message_id'))
+    #     batch_op.drop_index(batch_op.f('ix_read_receipts_user_id'))
+    # op.drop_table('read_receipts')
     with op.batch_alter_table('agents', schema=None) as batch_op:
         batch_op.add_column(sa.Column('enable_website_builder', sa.Boolean(), nullable=False, server_default='false'))
 
