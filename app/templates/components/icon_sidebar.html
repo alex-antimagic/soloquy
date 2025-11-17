@@ -5,32 +5,26 @@
         <!-- Home -->
         <a href="{{ url_for('tenant.home') }}"
            class="icon-sidebar-item {% if request.endpoint == 'tenant.home' %}active{% endif %}"
-           data-bs-toggle="tooltip"
-           data-bs-placement="right"
-           title="Home"
            data-view="home">
             <i class="bi bi-house-door"></i>
+            <span class="icon-label">Home</span>
         </a>
 
         <!-- Dashboards -->
         <button type="button"
                 class="icon-sidebar-item"
-                data-bs-toggle="tooltip"
-                data-bs-placement="right"
-                title="Dashboards"
                 data-view="dashboards"
                 onclick="switchContentView('dashboards')">
             <i class="bi bi-grid-3x3-gap"></i>
+            <span class="icon-label">Dashboards</span>
         </button>
 
         <!-- AI Agents -->
         <a href="{{ url_for('tenant.agents') }}"
            class="icon-sidebar-item {% if request.endpoint == 'tenant.agents' %}active{% endif %}"
-           data-bs-toggle="tooltip"
-           data-bs-placement="right"
-           title="AI Agents"
            data-view="agents">
             <i class="bi bi-robot"></i>
+            <span class="icon-label">Agents</span>
         </a>
 
         <div class="icon-sidebar-divider"></div>
@@ -39,11 +33,9 @@
         {% if 'projects' in enabled_applets or 'tasks' in enabled_applets %}
         <a href="{{ url_for('projects.index') }}"
            class="icon-sidebar-item {% if 'projects' in request.endpoint %}active{% endif %}"
-           data-bs-toggle="tooltip"
-           data-bs-placement="right"
-           title="Tasks & Projects"
            data-view="projects">
             <i class="bi bi-kanban"></i>
+            <span class="icon-label">Tasks</span>
         </a>
         {% endif %}
 
@@ -51,12 +43,10 @@
         {% if 'crm' in enabled_applets %}
         <button type="button"
                 class="icon-sidebar-item {% if 'crm' in request.endpoint %}active{% endif %}"
-                data-bs-toggle="tooltip"
-                data-bs-placement="right"
-                title="CRM"
                 data-view="crm"
                 onclick="switchContentView('crm')">
             <i class="bi bi-people"></i>
+            <span class="icon-label">CRM</span>
         </button>
         {% endif %}
 
@@ -64,11 +54,9 @@
         {% if 'support' in enabled_applets %}
         <a href="{{ url_for('support.index') }}"
            class="icon-sidebar-item {% if 'support' in request.endpoint %}active{% endif %}"
-           data-bs-toggle="tooltip"
-           data-bs-placement="right"
-           title="Support"
            data-view="support">
             <i class="bi bi-headset"></i>
+            <span class="icon-label">Support</span>
         </a>
         {% endif %}
 
@@ -76,11 +64,9 @@
         {% if 'website' in enabled_applets %}
         <a href="{{ url_for('website.dashboard') }}"
            class="icon-sidebar-item {% if 'website' in request.endpoint %}active{% endif %}"
-           data-bs-toggle="tooltip"
-           data-bs-placement="right"
-           title="Website"
            data-view="website">
             <i class="bi bi-globe"></i>
+            <span class="icon-label">Website</span>
         </a>
         {% endif %}
 
@@ -88,11 +74,9 @@
         {% if 'integrations' in enabled_applets %}
         <a href="{{ url_for('integrations.index') }}"
            class="icon-sidebar-item {% if 'integrations' in request.endpoint %}active{% endif %}"
-           data-bs-toggle="tooltip"
-           data-bs-placement="right"
-           title="Integrations"
            data-view="integrations">
             <i class="bi bi-plug"></i>
+            <span class="icon-label">Apps</span>
         </a>
         {% endif %}
     </div>
@@ -103,11 +87,9 @@
 
         <!-- Settings -->
         <a href="{{ url_for('tenant.settings') }}"
-           class="icon-sidebar-item {% if request.endpoint == 'tenant.settings' %}active{% endif %}"
-           data-bs-toggle="tooltip"
-           data-bs-placement="right"
-           title="Settings">
+           class="icon-sidebar-item {% if request.endpoint == 'tenant.settings' %}active{% endif %}">
             <i class="bi bi-gear"></i>
+            <span class="icon-label">Settings</span>
         </a>
 
         <!-- User Profile -->
