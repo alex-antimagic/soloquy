@@ -12,10 +12,11 @@ from msal import ConfidentialClientApplication
 import requests
 
 
-# Outlook OAuth Scopes (read/send emails, manage folders)
+# Outlook OAuth Scopes (read/send emails, manage calendar)
 OUTLOOK_SCOPES = [
     'https://graph.microsoft.com/Mail.ReadWrite',
     'https://graph.microsoft.com/Mail.Send',
+    'https://graph.microsoft.com/Calendars.ReadWrite',
     'offline_access'
 ]
 
