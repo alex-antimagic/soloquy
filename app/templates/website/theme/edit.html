@@ -1,0 +1,153 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>Theme Customization</h1>
+            <p class="text-muted">Customize colors, fonts, and layout</p>
+        </div>
+        <div class="col-auto">
+            {% if website.is_published %}
+            <a href="/w/{{ current_tenant.slug }}" target="_blank" class="btn btn-outline-primary">
+                <i class="bi bi-eye"></i> Preview Website
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('website.theme') }}">
+                        {{ form.hidden_tag() }}
+
+                        <h5 class="mb-3">Theme Preset</h5>
+                        <div class="mb-4">
+                            {{ form.theme_name.label(class="form-label") }}
+                            {{ form.theme_name(class="form-select") }}
+                            <small class="form-text text-muted">Choose a pre-built theme or customize below</small>
+                        </div>
+
+                        <hr>
+
+                        <h5 class="mb-3">Colors</h5>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                {{ form.primary_color.label(class="form-label") }}
+                                <div class="input-group">
+                                    {{ form.primary_color(class="form-control", type="color") }}
+                                    {{ form.primary_color(class="form-control", placeholder="#667eea") }}
+                                </div>
+                                {% if form.primary_color.errors %}
+                                <div class="invalid-feedback d-block">{{ form.primary_color.errors[0] }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.secondary_color.label(class="form-label") }}
+                                <div class="input-group">
+                                    {{ form.secondary_color(class="form-control", type="color") }}
+                                    {{ form.secondary_color(class="form-control", placeholder="#764ba2") }}
+                                </div>
+                                {% if form.secondary_color.errors %}
+                                <div class="invalid-feedback d-block">{{ form.secondary_color.errors[0] }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                {{ form.background_color.label(class="form-label") }}
+                                <div class="input-group">
+                                    {{ form.background_color(class="form-control", type="color") }}
+                                    {{ form.background_color(class="form-control", placeholder="#ffffff") }}
+                                </div>
+                                {% if form.background_color.errors %}
+                                <div class="invalid-feedback d-block">{{ form.background_color.errors[0] }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.text_color.label(class="form-label") }}
+                                <div class="input-group">
+                                    {{ form.text_color(class="form-control", type="color") }}
+                                    {{ form.text_color(class="form-control", placeholder="#333333") }}
+                                </div>
+                                {% if form.text_color.errors %}
+                                <div class="invalid-feedback d-block">{{ form.text_color.errors[0] }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <h5 class="mb-3">Typography</h5>
+
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                {{ form.heading_font.label(class="form-label") }}
+                                {{ form.heading_font(class="form-control", placeholder="Inter") }}
+                                <small class="form-text text-muted">Google Font name</small>
+                                {% if form.heading_font.errors %}
+                                <div class="invalid-feedback d-block">{{ form.heading_font.errors[0] }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.body_font.label(class="form-label") }}
+                                {{ form.body_font(class="form-control", placeholder="Inter") }}
+                                <small class="form-text text-muted">Google Font name</small>
+                                {% if form.body_font.errors %}
+                                <div class="invalid-feedback d-block">{{ form.body_font.errors[0] }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i> Save Theme
+                            </button>
+                            <a href="{{ url_for('website.dashboard') }}" class="btn btn-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">Popular Google Fonts</h6>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled small mb-0">
+                        <li class="mb-2"><strong>Inter</strong> - Modern, clean</li>
+                        <li class="mb-2"><strong>Roboto</strong> - Versatile, neutral</li>
+                        <li class="mb-2"><strong>Poppins</strong> - Friendly, rounded</li>
+                        <li class="mb-2"><strong>Playfair Display</strong> - Elegant, serif</li>
+                        <li class="mb-2"><strong>Montserrat</strong> - Bold, geometric</li>
+                        <li class="mb-2"><strong>Open Sans</strong> - Clean, readable</li>
+                        <li class="mb-2"><strong>Lato</strong> - Professional, simple</li>
+                    </ul>
+                    <a href="https://fonts.google.com" target="_blank" class="btn btn-sm btn-outline-primary mt-2">
+                        Browse Google Fonts
+                    </a>
+                </div>
+            </div>
+
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="mb-0">Current Theme Preview</h6>
+                </div>
+                <div class="card-body">
+                    <div class="p-3 border rounded" style="background-color: {{ website.theme.background_color }}; color: {{ website.theme.text_color }};">
+                        <h4 style="color: {{ website.theme.primary_color }}; font-family: {{ website.theme.heading_font }}, sans-serif;">Heading Example</h4>
+                        <p style="font-family: {{ website.theme.body_font }}, sans-serif;">This is body text using your selected font and color.</p>
+                        <button class="btn btn-sm" style="background-color: {{ website.theme.primary_color }}; color: white;">Primary Button</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

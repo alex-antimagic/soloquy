@@ -1,0 +1,160 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>Edit Form</h1>
+            <p class="text-muted">{{ web_form.name }}</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('website.edit_form', form_id=web_form.id) }}">
+                        {{ form.hidden_tag() }}
+
+                        <div class="mb-3">
+                            {{ form.name.label(class="form-label") }}
+                            {{ form.name(class="form-control") }}
+                            {% if form.name.errors %}
+                            <div class="invalid-feedback d-block">{{ form.name.errors[0] }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Form Key</label>
+                            <input type="text" class="form-control" value="{{ web_form.form_key }}" disabled>
+                            <small class="form-text text-muted">Form key cannot be changed after creation</small>
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.description.label(class="form-label") }}
+                            {{ form.description(class="form-control", rows="2") }}
+                            {% if form.description.errors %}
+                            <div class="invalid-feedback d-block">{{ form.description.errors[0] }}</div>
+                            {% endif %}
+                        </div>
+
+                        <hr>
+
+                        <h5 class="mb-3">Submission Settings</h5>
+
+                        <div class="mb-3">
+                            {{ form.success_message.label(class="form-label") }}
+                            {{ form.success_message(class="form-control", rows="2") }}
+                            {% if form.success_message.errors %}
+                            <div class="invalid-feedback d-block">{{ form.success_message.errors[0] }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.redirect_url.label(class="form-label") }}
+                            {{ form.redirect_url(class="form-control") }}
+                            <small class="form-text text-muted">Optional: Redirect to a thank you page</small>
+                            {% if form.redirect_url.errors %}
+                            <div class="invalid-feedback d-block">{{ form.redirect_url.errors[0] }}</div>
+                            {% endif %}
+                        </div>
+
+                        <hr>
+
+                        <h5 class="mb-3">CRM Integration</h5>
+
+                        <div class="mb-3 form-check">
+                            {{ form.create_lead(class="form-check-input") }}
+                            {{ form.create_lead.label(class="form-check-label") }}
+                        </div>
+
+                        <hr>
+
+                        <h5 class="mb-3">Notifications</h5>
+
+                        <div class="mb-3">
+                            {{ form.notification_emails.label(class="form-label") }}
+                            {{ form.notification_emails(class="form-control") }}
+                            <small class="form-text text-muted">Comma-separated email addresses</small>
+                            {% if form.notification_emails.errors %}
+                            <div class="invalid-feedback d-block">{{ form.notification_emails.errors[0] }}</div>
+                            {% endif %}
+                        </div>
+
+                        <hr>
+
+                        <h5 class="mb-3">Security</h5>
+
+                        <div class="mb-3 form-check">
+                            {{ form.require_captcha(class="form-check-input") }}
+                            {{ form.require_captcha.label(class="form-check-label") }}
+                        </div>
+
+                        <div class="mb-3 form-check">
+                            {{ form.is_active(class="form-check-input") }}
+                            {{ form.is_active.label(class="form-check-label") }}
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i> Save Changes
+                            </button>
+                            <a href="{{ url_for('website.forms') }}" class="btn btn-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">Form Stats</h6>
+                </div>
+                <div class="card-body">
+                    <dl class="mb-0">
+                        <dt>Total Submissions</dt>
+                        <dd>{{ web_form.submissions.count() }}</dd>
+
+                        <dt>Status</dt>
+                        <dd>
+                            {% if web_form.is_active %}
+                            <span class="badge bg-success">Active</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Inactive</span>
+                            {% endif %}
+                        </dd>
+
+                        <dt>Form URL</dt>
+                        <dd><code>/w/{{ current_tenant.slug }}/form/{{ web_form.form_key }}</code></dd>
+                    </dl>
+                </div>
+            </div>
+
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="mb-0">Form Fields</h6>
+                </div>
+                <div class="card-body">
+                    {% if web_form.fields %}
+                    <ul class="list-unstyled mb-0">
+                        {% for field in web_form.fields %}
+                        <li class="mb-2">
+                            <strong>{{ field.label }}</strong>
+                            <br>
+                            <small class="text-muted">
+                                Type: {{ field.type }}
+                                {% if field.required %}<span class="badge bg-danger">Required</span>{% endif %}
+                            </small>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="text-muted mb-0">No fields defined</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

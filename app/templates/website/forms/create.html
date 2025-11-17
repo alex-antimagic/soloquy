@@ -1,0 +1,132 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>Create Form</h1>
+            <p class="text-muted">Create a lead capture form for your website</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('website.create_form') }}">
+                        {{ form.hidden_tag() }}
+
+                        <div class="mb-3">
+                            {{ form.name.label(class="form-label") }}
+                            {{ form.name(class="form-control", placeholder="Contact Us") }}
+                            {% if form.name.errors %}
+                            <div class="invalid-feedback d-block">{{ form.name.errors[0] }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.form_key.label(class="form-label") }}
+                            {{ form.form_key(class="form-control", placeholder="contact-us") }}
+                            <small class="form-text text-muted">Used in the form URL (lowercase, hyphens only)</small>
+                            {% if form.form_key.errors %}
+                            <div class="invalid-feedback d-block">{{ form.form_key.errors[0] }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.description.label(class="form-label") }}
+                            {{ form.description(class="form-control", rows="2", placeholder="Brief description of this form") }}
+                            {% if form.description.errors %}
+                            <div class="invalid-feedback d-block">{{ form.description.errors[0] }}</div>
+                            {% endif %}
+                        </div>
+
+                        <hr>
+
+                        <h5 class="mb-3">Submission Settings</h5>
+
+                        <div class="mb-3">
+                            {{ form.success_message.label(class="form-label") }}
+                            {{ form.success_message(class="form-control", rows="2", placeholder="Thank you! We'll be in touch soon.") }}
+                            {% if form.success_message.errors %}
+                            <div class="invalid-feedback d-block">{{ form.success_message.errors[0] }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.redirect_url.label(class="form-label") }}
+                            {{ form.redirect_url(class="form-control", placeholder="https://example.com/thank-you") }}
+                            <small class="form-text text-muted">Optional: Redirect to a thank you page</small>
+                            {% if form.redirect_url.errors %}
+                            <div class="invalid-feedback d-block">{{ form.redirect_url.errors[0] }}</div>
+                            {% endif %}
+                        </div>
+
+                        <hr>
+
+                        <h5 class="mb-3">CRM Integration</h5>
+
+                        <div class="mb-3 form-check">
+                            {{ form.create_lead(class="form-check-input", checked=true) }}
+                            {{ form.create_lead.label(class="form-check-label") }}
+                            <small class="form-text text-muted d-block">Automatically create leads in CRM from form submissions</small>
+                        </div>
+
+                        <hr>
+
+                        <h5 class="mb-3">Notifications</h5>
+
+                        <div class="mb-3">
+                            {{ form.notification_emails.label(class="form-label") }}
+                            {{ form.notification_emails(class="form-control", placeholder="admin@example.com, sales@example.com") }}
+                            <small class="form-text text-muted">Comma-separated email addresses</small>
+                            {% if form.notification_emails.errors %}
+                            <div class="invalid-feedback d-block">{{ form.notification_emails.errors[0] }}</div>
+                            {% endif %}
+                        </div>
+
+                        <hr>
+
+                        <h5 class="mb-3">Security</h5>
+
+                        <div class="mb-3 form-check">
+                            {{ form.require_captcha(class="form-check-input", checked=true) }}
+                            {{ form.require_captcha.label(class="form-check-label") }}
+                            <small class="form-text text-muted d-block">Require CAPTCHA to prevent spam</small>
+                        </div>
+
+                        <div class="mb-3 form-check">
+                            {{ form.is_active(class="form-check-input", checked=true) }}
+                            {{ form.is_active.label(class="form-check-label") }}
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i> Create Form
+                            </button>
+                            <a href="{{ url_for('website.forms') }}" class="btn btn-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">Default Form Fields</h6>
+                </div>
+                <div class="card-body">
+                    <p class="small text-muted">New forms are created with these default fields:</p>
+                    <ul class="list-unstyled small">
+                        <li><i class="bi bi-check-circle text-success"></i> Name (text, required)</li>
+                        <li><i class="bi bi-check-circle text-success"></i> Email (email, required)</li>
+                        <li><i class="bi bi-check-circle text-success"></i> Message (textarea, required)</li>
+                    </ul>
+                    <p class="small text-muted">You can customize fields after creating the form.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

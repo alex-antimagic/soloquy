@@ -1,0 +1,97 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>Create Page</h1>
+            <p class="text-muted">Add a new page to your website</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('website.create_page') }}">
+                        {{ form.hidden_tag() }}
+
+                        <div class="mb-3">
+                            {{ form.page_type.label(class="form-label") }}
+                            {{ form.page_type(class="form-select") }}
+                            {% if form.page_type.errors %}
+                            <div class="invalid-feedback d-block">{{ form.page_type.errors[0] }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.title.label(class="form-label") }}
+                            {{ form.title(class="form-control", placeholder="My Awesome Page") }}
+                            {% if form.title.errors %}
+                            <div class="invalid-feedback d-block">{{ form.title.errors[0] }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.slug.label(class="form-label") }}
+                            <div class="input-group">
+                                <span class="input-group-text">/w/{{ current_tenant.slug }}/</span>
+                                {{ form.slug(class="form-control", placeholder="my-awesome-page") }}
+                            </div>
+                            <small class="form-text text-muted">URL-friendly version of the title (lowercase, hyphens only)</small>
+                            {% if form.slug.errors %}
+                            <div class="invalid-feedback d-block">{{ form.slug.errors[0] }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.meta_description.label(class="form-label") }}
+                            {{ form.meta_description(class="form-control", rows="3", placeholder="A brief description for search engines...") }}
+                            <small class="form-text text-muted">Recommended: 150-160 characters</small>
+                            {% if form.meta_description.errors %}
+                            <div class="invalid-feedback d-block">{{ form.meta_description.errors[0] }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3 form-check">
+                            {{ form.is_published(class="form-check-input") }}
+                            {{ form.is_published.label(class="form-check-label") }}
+                            <small class="form-text text-muted d-block">Publish immediately (you can edit content later)</small>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i> Create Page
+                            </button>
+                            <a href="{{ url_for('website.pages') }}" class="btn btn-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">Page Types</h6>
+                </div>
+                <div class="card-body">
+                    <dl>
+                        <dt>Home Page</dt>
+                        <dd class="text-muted small">Main landing page with hero section and features</dd>
+
+                        <dt>Blog Post</dt>
+                        <dd class="text-muted small">Article-style content with publication date</dd>
+
+                        <dt>Landing Page</dt>
+                        <dd class="text-muted small">Conversion-focused page with forms and CTAs</dd>
+
+                        <dt>Custom Page</dt>
+                        <dd class="text-muted small">Flexible page for any purpose (About, Contact, etc.)</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,166 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>Website Settings</h1>
+            <p class="text-muted">Configure SEO, analytics, and publishing</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('website.settings') }}">
+                        {{ form.hidden_tag() }}
+
+                        <h5 class="mb-3">General</h5>
+
+                        <div class="mb-3">
+                            {{ form.title.label(class="form-label") }}
+                            {{ form.title(class="form-control") }}
+                            {% if form.title.errors %}
+                            <div class="invalid-feedback d-block">{{ form.title.errors[0] }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-4">
+                            {{ form.description.label(class="form-label") }}
+                            {{ form.description(class="form-control", rows="3") }}
+                            <small class="form-text text-muted">Brief description of your website</small>
+                            {% if form.description.errors %}
+                            <div class="invalid-feedback d-block">{{ form.description.errors[0] }}</div>
+                            {% endif %}
+                        </div>
+
+                        <hr>
+
+                        <h5 class="mb-3">Publishing</h5>
+
+                        <div class="mb-3 form-check">
+                            {{ form.is_published(class="form-check-input") }}
+                            {{ form.is_published.label(class="form-check-label") }}
+                            <small class="form-text text-muted d-block">Make your website visible to the public</small>
+                        </div>
+
+                        <div class="mb-4 form-check">
+                            {{ form.is_indexable(class="form-check-input") }}
+                            {{ form.is_indexable.label(class="form-check-label") }}
+                            <small class="form-text text-muted d-block">Allow search engines to index your website</small>
+                        </div>
+
+                        <hr>
+
+                        <h5 class="mb-3">Analytics</h5>
+
+                        <div class="mb-4">
+                            {{ form.google_analytics_property_id.label(class="form-label") }}
+                            {{ form.google_analytics_property_id(class="form-control", placeholder="G-XXXXXXXXXX") }}
+                            <small class="form-text text-muted">
+                                Enter your Google Analytics 4 property ID.
+                                <a href="https://analytics.google.com" target="_blank">Get your property ID</a>
+                            </small>
+                            {% if form.google_analytics_property_id.errors %}
+                            <div class="invalid-feedback d-block">{{ form.google_analytics_property_id.errors[0] }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i> Save Settings
+                            </button>
+                            <a href="{{ url_for('website.dashboard') }}" class="btn btn-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">Website URLs</h6>
+                </div>
+                <div class="card-body">
+                    <dl class="mb-0">
+                        <dt>Public URL</dt>
+                        <dd>
+                            {% if website.custom_domain and website.domain_verified %}
+                            <a href="https://{{ website.custom_domain }}" target="_blank">https://{{ website.custom_domain }}</a>
+                            {% else %}
+                            <a href="/w/{{ current_tenant.slug }}" target="_blank">/w/{{ current_tenant.slug }}</a>
+                            {% endif %}
+                        </dd>
+
+                        <dt>Status</dt>
+                        <dd>
+                            {% if website.is_published %}
+                            <span class="badge bg-success">Published</span>
+                            {% else %}
+                            <span class="badge bg-warning">Draft</span>
+                            {% endif %}
+                        </dd>
+
+                        {% if website.published_at %}
+                        <dt>Published Since</dt>
+                        <dd>{{ website.published_at.strftime('%b %d, %Y') }}</dd>
+                        {% endif %}
+                    </dl>
+                </div>
+            </div>
+
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="mb-0">Custom Domain</h6>
+                </div>
+                <div class="card-body">
+                    {% if website.custom_domain %}
+                    <p><strong>{{ website.custom_domain }}</strong></p>
+                    <p>
+                        {% if website.domain_verified %}
+                        <span class="badge bg-success">Verified</span>
+                        {% else %}
+                        <span class="badge bg-warning">Pending Verification</span>
+                        {% endif %}
+                    </p>
+                    {% else %}
+                    <p class="text-muted">No custom domain configured</p>
+                    <div class="alert alert-info small">
+                        <i class="bi bi-info-circle"></i>
+                        Custom domain support coming soon
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="mb-0">SEO Tools</h6>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled mb-0 small">
+                        <li class="mb-2">
+                            <i class="bi bi-check-circle text-success"></i>
+                            Meta tags automatically generated
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-check-circle text-success"></i>
+                            Open Graph tags for social sharing
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-check-circle text-success"></i>
+                            Sitemap generation (coming soon)
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-check-circle text-success"></i>
+                            Robots.txt customization (coming soon)
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
