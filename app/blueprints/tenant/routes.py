@@ -144,35 +144,6 @@ def home():
                            recent_activity=recent_activity)
 
 
-@tenant_bp.route('/api/search')
-@login_required
-def api_search():
-    """Unified search API across all data types"""
-    query = request.args.get('q', '').strip()
-
-    # Require at least 2 characters
-    if len(query) < 2:
-        return jsonify({'results': {}, 'total_count': 0})
-
-    # Check if user has a current tenant
-    if not g.current_tenant:
-        return jsonify({'results': {}, 'total_count': 0, 'error': 'No tenant selected'})
-
-    from app.services.search_service import UnifiedSearchService
-
-    try:
-        results = UnifiedSearchService.search_all(
-            user_id=current_user.id,
-            tenant_id=g.current_tenant.id,
-            query=query,
-            limit=5
-        )
-        return jsonify(results)
-    except Exception as e:
-        print(f"Error in unified search: {e}")
-        return jsonify({'results': {}, 'total_count': 0, 'error': 'Search failed'}), 500
-
-
 @tenant_bp.route('/switch/<int:tenant_id>')
 @login_required
 def switch_tenant(tenant_id):

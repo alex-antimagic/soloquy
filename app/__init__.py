@@ -172,4 +172,33 @@ def create_app(config_name='default'):
             return redirect(url_for('tenant.home'))
         return redirect(url_for('auth.login'))
 
+    # API Routes (not under blueprint prefix)
+    @app.route('/api/search')
+    @login_required
+    def api_search():
+        """Unified search API across all data types"""
+        from flask import request, jsonify, g
+        query = request.args.get('q', '').strip()
+
+        if len(query) < 2:
+            return jsonify({'results': {}, 'total_count': 0})
+
+        if not g.current_tenant:
+            return jsonify({'results': {}, 'total_count': 0, 'error': 'No tenant selected'})
+
+        from app.services.search_service import UnifiedSearchService
+        from flask_login import current_user
+
+        try:
+            results = UnifiedSearchService.search_all(
+                user_id=current_user.id,
+                tenant_id=g.current_tenant.id,
+                query=query,
+                limit=5
+            )
+            return jsonify(results)
+        except Exception as e:
+            print(f"Error in unified search: {e}")
+            return jsonify({'results': {}, 'total_count': 0, 'error': 'Search failed'}), 500
+
     return app
