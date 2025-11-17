@@ -177,8 +177,9 @@ def upgrade():
                existing_type=sa.BOOLEAN(),
                nullable=False,
                existing_server_default=sa.text('true'))
-        batch_op.drop_constraint(batch_op.f('workspace_applets_tenant_id_applet_key_key'), type_='unique')
-        batch_op.create_unique_constraint('uq_tenant_applet', ['tenant_id', 'applet_key'])
+        # Skip constraint rename - existing constraint works fine
+        # batch_op.drop_constraint(batch_op.f('workspace_applets_tenant_id_applet_key_key'), type_='unique')
+        # batch_op.create_unique_constraint('uq_tenant_applet', ['tenant_id', 'applet_key'])
 
     # ### end Alembic commands ###
 
