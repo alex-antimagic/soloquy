@@ -1,28 +1,58 @@
-<!-- Icon Sidebar (Asana-style) -->
+<!-- Icon Sidebar (Simplified single-column) -->
 <div class="icon-sidebar d-flex flex-column">
-    <!-- Top Icons -->
+    <!-- Workspace Header -->
+    {% if current_tenant %}
+    <div class="workspace-header">
+        <div class="workspace-name" title="{{ current_tenant.name }}">
+            {{ current_tenant.name }}
+        </div>
+
+        <!-- Workspace Switcher Dropdown -->
+        <div class="dropdown">
+            <button type="button"
+                    class="icon-sidebar-item workspace-switch-btn"
+                    data-bs-toggle="dropdown"
+                    aria-expanded="false">
+                <i class="bi bi-buildings"></i>
+                <span class="icon-label">Switch</span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-dark">
+                {% for tenant in current_user.get_tenants() %}
+                    <li>
+                        <a class="dropdown-item {% if tenant.id == current_tenant.id %}active{% endif %}"
+                           href="{{ url_for('tenant.switch_tenant', tenant_id=tenant.id) }}">
+                            {{ tenant.name }}
+                        </a>
+                    </li>
+                {% endfor %}
+                <li><hr class="dropdown-divider"></li>
+                {% if current_user.can_create_workspace() %}
+                <li><a class="dropdown-item" href="{{ url_for('tenant.wizard') }}">
+                    <i class="bi bi-plus-circle"></i> Create Workspace
+                </a></li>
+                {% else %}
+                <li><a class="dropdown-item text-muted" href="{{ url_for('tenant.upgrade') }}">
+                    <i class="bi bi-lock"></i> Create Workspace
+                    <small class="d-block">Upgrade to Pro</small>
+                </a></li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Navigation Icons -->
     <div class="icon-sidebar-items flex-grow-1">
         <!-- Home -->
         <a href="{{ url_for('tenant.home') }}"
-           class="icon-sidebar-item {% if request.endpoint == 'tenant.home' %}active{% endif %}"
-           data-view="home">
+           class="icon-sidebar-item {% if request.endpoint == 'tenant.home' %}active{% endif %}">
             <i class="bi bi-house-door"></i>
             <span class="icon-label">Home</span>
         </a>
 
-        <!-- Dashboards -->
-        <button type="button"
-                class="icon-sidebar-item"
-                data-view="dashboards"
-                onclick="switchContentView('dashboards')">
-            <i class="bi bi-grid-3x3-gap"></i>
-            <span class="icon-label">Dashboards</span>
-        </button>
-
         <!-- AI Agents -->
         <a href="{{ url_for('tenant.agents') }}"
-           class="icon-sidebar-item {% if request.endpoint == 'tenant.agents' %}active{% endif %}"
-           data-view="agents">
+           class="icon-sidebar-item {% if request.endpoint == 'tenant.agents' %}active{% endif %}">
             <i class="bi bi-robot"></i>
             <span class="icon-label">Agents</span>
         </a>
@@ -41,13 +71,11 @@
 
         <!-- CRM -->
         {% if 'crm' in enabled_applets %}
-        <button type="button"
-                class="icon-sidebar-item {% if 'crm' in request.endpoint %}active{% endif %}"
-                data-view="crm"
-                onclick="switchContentView('crm')">
+        <a href="{{ url_for('crm.index') }}"
+           class="icon-sidebar-item {% if 'crm' in request.endpoint %}active{% endif %}">
             <i class="bi bi-people"></i>
             <span class="icon-label">CRM</span>
-        </button>
+        </a>
         {% endif %}
 
         <!-- Support -->
