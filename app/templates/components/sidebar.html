@@ -119,6 +119,13 @@
                 <span>Integrations</span>
             </a>
             {% endif %}
+
+            {% if 'website' in enabled_applets %}
+            <a href="{{ url_for('website.dashboard') }}" class="sidebar-item {% if 'website' in request.endpoint %}active{% endif %}">
+                <i class="bi bi-globe"></i>
+                <span>Website Builder</span>
+            </a>
+            {% endif %}
         </div>
 
         <!-- Dashboards -->
