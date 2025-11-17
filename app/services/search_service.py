@@ -206,25 +206,29 @@ class UnifiedSearchService:
         """
         Search messages with permission checks
         Only return messages from:
-        - Departments user is a member of
-        - Channels user has access to
+        - Department channels in user's tenant (tenant-wide access)
         - Direct messages involving the user
         """
         try:
             from app.models.user import User
+            from app.models.department import Department
+
             user = User.query.get(user_id)
             if not user:
                 return []
 
-            # Get user's department IDs
-            user_dept_ids = [d.id for d in user.get_departments(tenant_id)]
+            # Get all department IDs in this tenant
+            tenant_dept_ids = [d.id for d in Department.query.filter_by(
+                tenant_id=tenant_id,
+                is_active=True
+            ).all()]
 
-            # Search messages in accessible departments
+            # Search messages in tenant departments and user's DMs
             messages = Message.query.filter(
                 Message.content.ilike(f'%{query}%'),
                 db.or_(
-                    # Department channels user is member of
-                    Message.department_id.in_(user_dept_ids),
+                    # Department channels in tenant
+                    Message.department_id.in_(tenant_dept_ids),
                     # Direct messages to/from user
                     db.and_(
                         Message.recipient_id == user_id,

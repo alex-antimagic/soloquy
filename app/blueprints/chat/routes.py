@@ -255,6 +255,14 @@ def send_message():
         # User-to-agent DM
         conversation_id = f"agent_{agent_id}_user_{current_user.id}"
         socketio.emit('new_message', message_data, room=conversation_id)
+    elif department_id:
+        # Department/Channel message - broadcast to all users in the channel
+        from app.models.department import Department
+        department = Department.query.get(department_id)
+        if department:
+            # Room name based on department ID
+            department_room = f"department_{department_id}"
+            socketio.emit('new_message', message_data, room=department_room)
 
     # If message is to an agent, generate AI response
     agent_response = None
