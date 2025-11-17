@@ -105,6 +105,88 @@ class AIService:
                     },
                     "required": ["to", "subject", "body"]
                 }
+            },
+            {
+                "name": "outlook_list_calendar_events",
+                "description": "List upcoming calendar events from Outlook calendar",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "max_results": {
+                            "type": "number",
+                            "description": "Maximum number of events to return (default: 10)",
+                            "default": 10
+                        },
+                        "days_ahead": {
+                            "type": "number",
+                            "description": "Number of days ahead to look for events (default: 7)",
+                            "default": 7
+                        }
+                    }
+                }
+            },
+            {
+                "name": "outlook_create_calendar_event",
+                "description": "Create a new calendar event in Outlook calendar",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "subject": {
+                            "type": "string",
+                            "description": "Event title"
+                        },
+                        "start": {
+                            "type": "string",
+                            "description": "Start time in ISO format (e.g., '2024-01-15T14:00:00')"
+                        },
+                        "end": {
+                            "type": "string",
+                            "description": "End time in ISO format"
+                        },
+                        "attendees": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "Optional list of attendee email addresses"
+                        },
+                        "location": {
+                            "type": "string",
+                            "description": "Optional location string"
+                        },
+                        "body": {
+                            "type": "string",
+                            "description": "Optional event description"
+                        },
+                        "is_online_meeting": {
+                            "type": "boolean",
+                            "description": "Whether to create a Teams online meeting (default: false)",
+                            "default": false
+                        }
+                    },
+                    "required": ["subject", "start", "end"]
+                }
+            },
+            {
+                "name": "outlook_get_free_busy",
+                "description": "Check free/busy availability for one or more people",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "emails": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "List of email addresses to check availability for"
+                        },
+                        "start": {
+                            "type": "string",
+                            "description": "Start time in ISO format"
+                        },
+                        "end": {
+                            "type": "string",
+                            "description": "End time in ISO format"
+                        }
+                    },
+                    "required": ["emails", "start", "end"]
+                }
             }
         ]
 
@@ -439,6 +521,49 @@ class AIService:
 
                 result = outlook.send_email(to, subject, body, cc=cc)
                 return result
+
+            elif tool_name == 'outlook_list_calendar_events':
+                max_results = tool_input.get('max_results', 10)
+                days_ahead = tool_input.get('days_ahead', 7)
+                events = outlook.list_calendar_events(max_results=max_results, days_ahead=days_ahead)
+                return {"events": events, "count": len(events)}
+
+            elif tool_name == 'outlook_create_calendar_event':
+                subject = tool_input.get('subject')
+                start = tool_input.get('start')
+                end = tool_input.get('end')
+                attendees = tool_input.get('attendees')
+                location = tool_input.get('location')
+                body = tool_input.get('body')
+                is_online_meeting = tool_input.get('is_online_meeting', False)
+
+                if not all([subject, start, end]):
+                    return {"error": "subject, start, and end parameters are required"}
+
+                result = outlook.create_calendar_event(
+                    subject=subject,
+                    start=start,
+                    end=end,
+                    attendees=attendees,
+                    location=location,
+                    body=body,
+                    is_online_meeting=is_online_meeting
+                )
+                return result
+
+            elif tool_name == 'outlook_get_free_busy':
+                emails = tool_input.get('emails', [])
+                start = tool_input.get('start')
+                end = tool_input.get('end')
+
+                if not emails or not isinstance(emails, list):
+                    return {"error": "emails parameter must be a list of email addresses"}
+
+                if not all([start, end]):
+                    return {"error": "start and end parameters are required"}
+
+                result = outlook.get_free_busy(emails=emails, start=start, end=end)
+                return {"availability": result}
 
             else:
                 return {"error": f"Unknown Outlook tool: {tool_name}"}

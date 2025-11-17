@@ -199,3 +199,194 @@ class OutlookGraphService:
         except requests.exceptions.RequestException as e:
             current_app.logger.error(f"Error sending Outlook email: {e}")
             raise Exception(f"Failed to send email: {str(e)}")
+
+    def list_calendar_events(self, max_results: int = 10, days_ahead: int = 7) -> List[Dict]:
+        """
+        List upcoming calendar events
+
+        Args:
+            max_results: Maximum number of events to return
+            days_ahead: Number of days ahead to look for events
+
+        Returns:
+            List of calendar event dictionaries
+        """
+        try:
+            from datetime import datetime, timedelta
+
+            # Calculate date range
+            start_time = datetime.utcnow().isoformat() + 'Z'
+            end_time = (datetime.utcnow() + timedelta(days=days_ahead)).isoformat() + 'Z'
+
+            url = f"{self.BASE_URL}/me/calendarview"
+            params = {
+                'startDateTime': start_time,
+                'endDateTime': end_time,
+                '$top': max_results,
+                '$select': 'id,subject,start,end,location,attendees,organizer,isOnlineMeeting,onlineMeetingUrl,bodyPreview',
+                '$orderby': 'start/dateTime'
+            }
+
+            response = requests.get(url, headers=self.headers, params=params)
+            response.raise_for_status()
+
+            data = response.json()
+            events = data.get('value', [])
+
+            # Format events for Claude
+            formatted_events = []
+            for event in events:
+                formatted_events.append({
+                    'id': event.get('id'),
+                    'subject': event.get('subject'),
+                    'start': event.get('start', {}).get('dateTime'),
+                    'end': event.get('end', {}).get('dateTime'),
+                    'timezone': event.get('start', {}).get('timeZone'),
+                    'location': event.get('location', {}).get('displayName'),
+                    'organizer': event.get('organizer', {}).get('emailAddress', {}).get('address'),
+                    'attendees': [
+                        {
+                            'email': a.get('emailAddress', {}).get('address'),
+                            'name': a.get('emailAddress', {}).get('name'),
+                            'response': a.get('status', {}).get('response')
+                        }
+                        for a in event.get('attendees', [])
+                    ],
+                    'is_online_meeting': event.get('isOnlineMeeting', False),
+                    'meeting_url': event.get('onlineMeetingUrl'),
+                    'preview': event.get('bodyPreview')
+                })
+
+            return formatted_events
+
+        except requests.exceptions.RequestException as e:
+            current_app.logger.error(f"Error listing calendar events: {e}")
+            raise Exception(f"Failed to list calendar events: {str(e)}")
+
+    def create_calendar_event(self, subject: str, start: str, end: str,
+                              attendees: Optional[List[str]] = None,
+                              location: Optional[str] = None,
+                              body: Optional[str] = None,
+                              is_online_meeting: bool = False) -> Dict:
+        """
+        Create a calendar event
+
+        Args:
+            subject: Event title
+            start: Start time in ISO format (e.g., "2024-01-15T14:00:00")
+            end: End time in ISO format
+            attendees: Optional list of attendee email addresses
+            location: Optional location string
+            body: Optional event description
+            is_online_meeting: Whether to create Teams meeting
+
+        Returns:
+            Created event dictionary
+        """
+        try:
+            url = f"{self.BASE_URL}/me/events"
+
+            event_data = {
+                'subject': subject,
+                'start': {
+                    'dateTime': start,
+                    'timeZone': 'UTC'
+                },
+                'end': {
+                    'dateTime': end,
+                    'timeZone': 'UTC'
+                },
+                'isOnlineMeeting': is_online_meeting
+            }
+
+            if attendees:
+                event_data['attendees'] = [
+                    {
+                        'emailAddress': {'address': email},
+                        'type': 'required'
+                    }
+                    for email in attendees
+                ]
+
+            if location:
+                event_data['location'] = {'displayName': location}
+
+            if body:
+                event_data['body'] = {
+                    'contentType': 'Text',
+                    'content': body
+                }
+
+            response = requests.post(url, headers=self.headers, json=event_data)
+            response.raise_for_status()
+
+            created_event = response.json()
+
+            return {
+                'success': True,
+                'event_id': created_event.get('id'),
+                'subject': created_event.get('subject'),
+                'start': created_event.get('start', {}).get('dateTime'),
+                'end': created_event.get('end', {}).get('dateTime'),
+                'meeting_url': created_event.get('onlineMeetingUrl') if is_online_meeting else None
+            }
+
+        except requests.exceptions.RequestException as e:
+            current_app.logger.error(f"Error creating calendar event: {e}")
+            raise Exception(f"Failed to create calendar event: {str(e)}")
+
+    def get_free_busy(self, emails: List[str], start: str, end: str) -> Dict:
+        """
+        Check free/busy status for attendees
+
+        Args:
+            emails: List of email addresses to check
+            start: Start time in ISO format
+            end: End time in ISO format
+
+        Returns:
+            Free/busy information dictionary
+        """
+        try:
+            url = f"{self.BASE_URL}/me/calendar/getSchedule"
+
+            request_data = {
+                'schedules': emails,
+                'startTime': {
+                    'dateTime': start,
+                    'timeZone': 'UTC'
+                },
+                'endTime': {
+                    'dateTime': end,
+                    'timeZone': 'UTC'
+                },
+                'availabilityViewInterval': 60  # 60-minute intervals
+            }
+
+            response = requests.post(url, headers=self.headers, json=request_data)
+            response.raise_for_status()
+
+            data = response.json()
+            schedules = data.get('value', [])
+
+            # Format for Claude
+            availability = {}
+            for schedule in schedules:
+                email = schedule.get('scheduleId')
+                availability[email] = {
+                    'availability': schedule.get('availabilityView'),
+                    'schedule_items': [
+                        {
+                            'start': item.get('start', {}).get('dateTime'),
+                            'end': item.get('end', {}).get('dateTime'),
+                            'status': item.get('status')
+                        }
+                        for item in schedule.get('scheduleItems', [])
+                    ]
+                }
+
+            return availability
+
+        except requests.exceptions.RequestException as e:
+            current_app.logger.error(f"Error getting free/busy: {e}")
+            raise Exception(f"Failed to get free/busy information: {str(e)}")
