@@ -101,6 +101,199 @@ body {
     background-color: var(--slack-border);
 }
 
+/* ========================================
+   ASANA-STYLE SIDEBAR COMPONENTS
+   ======================================== */
+
+/* Icon Sidebar (60px, always visible) */
+.icon-sidebar {
+    width: 60px;
+    min-width: 60px;
+    max-width: 60px;
+    background-color: #0d0c0f; /* Darker than main sidebar */
+    border-right: 1px solid var(--slack-border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    position: relative;
+}
+
+.icon-sidebar-items {
+    display: flex;
+    flex-direction: column;
+    padding: 0.5rem 0;
+}
+
+.icon-sidebar-bottom {
+    margin-top: auto;
+}
+
+/* Icon sidebar item (icon buttons) */
+.icon-sidebar-item {
+    width: 60px;
+    height: 60px;
+    min-height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--slack-text);
+    text-decoration: none;
+    transition: background-color 0.2s, color 0.2s;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    position: relative;
+}
+
+.icon-sidebar-item:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+    color: #fff;
+}
+
+.icon-sidebar-item.active {
+    background-color: var(--slack-active);
+    color: #fff;
+}
+
+.icon-sidebar-item.active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 28px;
+    background-color: #fff;
+    border-radius: 0 2px 2px 0;
+}
+
+.icon-sidebar-item i {
+    font-size: 1.375rem;
+}
+
+/* Icon sidebar divider */
+.icon-sidebar-divider {
+    height: 1px;
+    background-color: var(--slack-border);
+    margin: 0.5rem 0.75rem;
+}
+
+/* User Avatar Icon (for icon sidebar) */
+.user-avatar-icon {
+    width: 36px;
+    height: 36px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.user-avatar-icon .avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 8px;
+}
+
+.user-avatar-icon .avatar-placeholder-icon {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 8px;
+    color: white;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.user-avatar-icon .avatar-status {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid #0d0c0f;
+}
+
+/* Content Sidebar (260px, collapsible) */
+.content-sidebar {
+    width: 260px;
+    min-width: 260px;
+    max-width: 260px;
+    background-color: var(--slack-sidebar-dark);
+    border-right: 1px solid var(--slack-border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    position: relative;
+    transition: margin-left 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
+.content-sidebar.collapsed {
+    margin-left: -260px;
+}
+
+/* Content Sidebar Header */
+.content-sidebar-header {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--slack-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex-shrink: 0;
+}
+
+/* Collapse Button */
+.collapse-btn {
+    background: transparent;
+    border: none;
+    color: var(--slack-text-muted);
+    cursor: pointer;
+    padding: 0.375rem;
+    border-radius: 0.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s, color 0.2s;
+    flex-shrink: 0;
+}
+
+.collapse-btn:hover {
+    background-color: var(--slack-hover);
+    color: var(--slack-text);
+}
+
+.collapse-btn i {
+    font-size: 1rem;
+}
+
+/* Content Sidebar Content Area */
+.content-sidebar-content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* Content Views (dynamic content) */
+.content-view {
+    display: none;
+}
+
+.content-view[style*="display: block"] {
+    display: block !important;
+}
+
+/* Content Sidebar Footer */
+.content-sidebar-footer {
+    flex-shrink: 0;
+    border-top: 1px solid var(--slack-border);
+    padding: 0.5rem;
+}
+
 /* Dropdown Menu Overrides for Sidebar */
 .sidebar .dropdown {
     position: relative;

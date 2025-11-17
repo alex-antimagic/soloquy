@@ -1,0 +1,185 @@
+<!-- Content Sidebar (Expandable/Collapsible) -->
+<div class="content-sidebar" id="contentSidebar">
+    <!-- Header with Collapse Button -->
+    <div class="content-sidebar-header">
+        <!-- Tenant Switcher -->
+        {% if current_tenant %}
+        <div class="dropdown">
+            <div class="tenant-switcher" data-bs-toggle="dropdown" aria-expanded="false">
+                <div class="d-flex align-items-center justify-content-between">
+                    <strong>{{ current_tenant.name }}</strong>
+                    <i class="bi bi-chevron-down"></i>
+                </div>
+            </div>
+            <ul class="dropdown-menu dropdown-menu-dark">
+                {% for tenant in current_user.get_tenants() %}
+                    <li>
+                        <a class="dropdown-item {% if tenant.id == current_tenant.id %}active{% endif %}"
+                           href="{{ url_for('tenant.switch_tenant', tenant_id=tenant.id) }}">
+                            {{ tenant.name }}
+                        </a>
+                    </li>
+                {% endfor %}
+                <li><hr class="dropdown-divider"></li>
+                {% if current_user.can_create_workspace() %}
+                <li><a class="dropdown-item" href="{{ url_for('tenant.wizard') }}">
+                    <i class="bi bi-plus-circle"></i> Create Workspace
+                </a></li>
+                {% else %}
+                <li><a class="dropdown-item text-muted" href="{{ url_for('tenant.upgrade') }}">
+                    <i class="bi bi-lock"></i> Create Workspace
+                    <small class="d-block">Upgrade to Pro</small>
+                </a></li>
+                {% endif %}
+            </ul>
+        </div>
+        {% endif %}
+
+        <!-- Collapse Button -->
+        <button type="button"
+                class="collapse-btn"
+                onclick="toggleContentSidebar()"
+                data-bs-toggle="tooltip"
+                data-bs-placement="right"
+                title="Collapse sidebar">
+            <i class="bi bi-chevron-left"></i>
+        </button>
+    </div>
+
+    <!-- Scrollable Content Area -->
+    <div class="content-sidebar-content">
+        <!-- Dashboards View -->
+        <div class="content-view" id="dashboardsView" style="display: none;">
+            <div class="sidebar-section">
+                <div class="sidebar-section-title">
+                    Dashboards
+                    <a href="{{ url_for('department.index') }}" class="float-end text-decoration-none">
+                        <i class="bi bi-plus"></i>
+                    </a>
+                </div>
+                {% if current_tenant %}
+                    {% for department in current_tenant.get_departments() %}
+                        <a href="{{ url_for('department.view', department_id=department.id) }}"
+                           class="sidebar-item {% if request.endpoint == 'department.view' and request.view_args.get('department_id') == department.id %}active{% endif %}">
+                            <span class="dept-badge" style="background-color: {{ department.color }};"></span>
+                            <span>{{ department.name }}</span>
+                        </a>
+                    {% else %}
+                        <div class="px-3 py-2 text-muted small">
+                            No departments yet
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- CRM View -->
+        <div class="content-view" id="crmView" style="display: none;">
+            <div class="sidebar-section">
+                <div class="sidebar-section-title">CRM</div>
+                <a href="{{ url_for('crm.index') }}" class="sidebar-item {% if request.endpoint == 'crm.index' %}active{% endif %}">
+                    <i class="bi bi-speedometer2"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="{{ url_for('crm.companies') }}" class="sidebar-item {% if request.endpoint == 'crm.companies' or request.endpoint == 'crm.company_detail' %}active{% endif %}">
+                    <i class="bi bi-building"></i>
+                    <span>Companies</span>
+                </a>
+                <a href="{{ url_for('crm.contacts') }}" class="sidebar-item {% if request.endpoint == 'crm.contacts' or request.endpoint == 'crm.contact_detail' %}active{% endif %}">
+                    <i class="bi bi-person"></i>
+                    <span>Contacts</span>
+                </a>
+                <a href="{{ url_for('crm.deals') }}" class="sidebar-item {% if request.endpoint == 'crm.deals' or request.endpoint == 'crm.deal_detail' %}active{% endif %}">
+                    <i class="bi bi-currency-dollar"></i>
+                    <span>Deals</span>
+                </a>
+                <a href="{{ url_for('crm.leads') }}" class="sidebar-item {% if request.endpoint == 'crm.leads' %}active{% endif %}">
+                    <i class="bi bi-funnel"></i>
+                    <span>Leads</span>
+                </a>
+                <a href="{{ url_for('crm.activities') }}" class="sidebar-item {% if request.endpoint == 'crm.activities' %}active{% endif %}">
+                    <i class="bi bi-clock-history"></i>
+                    <span>Activities</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Default View (Main Navigation) -->
+        <div class="content-view" id="defaultView">
+            <!-- Quick Actions / Recently Viewed -->
+            <div class="sidebar-section">
+                <div class="sidebar-section-title">Quick Access</div>
+                <a href="{{ url_for('tenant.home') }}" class="sidebar-item {% if request.endpoint == 'tenant.home' %}active{% endif %}">
+                    <i class="bi bi-house-door"></i>
+                    <span>Home</span>
+                </a>
+                {% if current_tenant %}
+                <a href="{{ url_for('tenant.agents') }}" class="sidebar-item {% if request.endpoint == 'tenant.agents' %}active{% endif %}">
+                    <i class="bi bi-robot"></i>
+                    <span>AI Agents</span>
+                </a>
+                {% endif %}
+            </div>
+
+            <!-- Applets Section -->
+            {% if 'projects' in enabled_applets or 'crm' in enabled_applets or 'support' in enabled_applets or 'website' in enabled_applets or 'integrations' in enabled_applets %}
+            <div class="sidebar-section">
+                <div class="sidebar-section-title">
+                    Applets
+                    {% if current_tenant and current_user.get_role_in_tenant(current_tenant.id) in ['owner', 'admin'] %}
+                    <a href="{{ url_for('tenant.applets_settings') }}" class="float-end text-decoration-none">
+                        <i class="bi bi-gear"></i>
+                    </a>
+                    {% endif %}
+                </div>
+
+                {% if 'projects' in enabled_applets or 'tasks' in enabled_applets %}
+                <a href="{{ url_for('projects.index') }}" class="sidebar-item {% if 'projects' in request.endpoint %}active{% endif %}">
+                    <i class="bi bi-kanban"></i>
+                    <span>Tasks/Projects</span>
+                </a>
+                {% endif %}
+
+                {% if 'crm' in enabled_applets %}
+                <a href="{{ url_for('crm.index') }}" class="sidebar-item {% if 'crm' in request.endpoint %}active{% endif %}">
+                    <i class="bi bi-people"></i>
+                    <span>CRM</span>
+                </a>
+                {% endif %}
+
+                {% if 'support' in enabled_applets %}
+                <a href="{{ url_for('support.index') }}" class="sidebar-item {% if 'support' in request.endpoint %}active{% endif %}">
+                    <i class="bi bi-headset"></i>
+                    <span>Support</span>
+                </a>
+                {% endif %}
+
+                {% if 'integrations' in enabled_applets %}
+                <a href="{{ url_for('integrations.index') }}" class="sidebar-item {% if 'integrations' in request.endpoint %}active{% endif %}">
+                    <i class="bi bi-plug"></i>
+                    <span>Integrations</span>
+                </a>
+                {% endif %}
+
+                {% if 'website' in enabled_applets %}
+                <a href="{{ url_for('website.dashboard') }}" class="sidebar-item {% if 'website' in request.endpoint %}active{% endif %}">
+                    <i class="bi bi-globe"></i>
+                    <span>Website Builder</span>
+                </a>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="content-sidebar-footer">
+        <!-- Upgrade CTA (Free Plan Only) -->
+        {% if current_user.plan == 'free' %}
+        <a href="{{ url_for('tenant.upgrade') }}" class="sidebar-item text-center" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 8px; margin: 8px; padding: 12px;">
+            <i class="bi bi-rocket-takeoff me-2"></i>
+            <span style="font-weight: 600;">Upgrade to Pro</span>
+        </a>
+        {% endif %}
+    </div>
+</div>

@@ -1,0 +1,160 @@
+<!-- Icon Sidebar (Asana-style) -->
+<div class="icon-sidebar d-flex flex-column">
+    <!-- Top Icons -->
+    <div class="icon-sidebar-items flex-grow-1">
+        <!-- Home -->
+        <a href="{{ url_for('tenant.home') }}"
+           class="icon-sidebar-item {% if request.endpoint == 'tenant.home' %}active{% endif %}"
+           data-bs-toggle="tooltip"
+           data-bs-placement="right"
+           title="Home"
+           data-view="home">
+            <i class="bi bi-house-door"></i>
+        </a>
+
+        <!-- Dashboards -->
+        <button type="button"
+                class="icon-sidebar-item"
+                data-bs-toggle="tooltip"
+                data-bs-placement="right"
+                title="Dashboards"
+                data-view="dashboards"
+                onclick="switchContentView('dashboards')">
+            <i class="bi bi-grid-3x3-gap"></i>
+        </button>
+
+        <!-- AI Agents -->
+        <a href="{{ url_for('tenant.agents') }}"
+           class="icon-sidebar-item {% if request.endpoint == 'tenant.agents' %}active{% endif %}"
+           data-bs-toggle="tooltip"
+           data-bs-placement="right"
+           title="AI Agents"
+           data-view="agents">
+            <i class="bi bi-robot"></i>
+        </a>
+
+        <div class="icon-sidebar-divider"></div>
+
+        <!-- Tasks/Projects -->
+        {% if 'projects' in enabled_applets or 'tasks' in enabled_applets %}
+        <a href="{{ url_for('projects.index') }}"
+           class="icon-sidebar-item {% if 'projects' in request.endpoint %}active{% endif %}"
+           data-bs-toggle="tooltip"
+           data-bs-placement="right"
+           title="Tasks & Projects"
+           data-view="projects">
+            <i class="bi bi-kanban"></i>
+        </a>
+        {% endif %}
+
+        <!-- CRM -->
+        {% if 'crm' in enabled_applets %}
+        <button type="button"
+                class="icon-sidebar-item {% if 'crm' in request.endpoint %}active{% endif %}"
+                data-bs-toggle="tooltip"
+                data-bs-placement="right"
+                title="CRM"
+                data-view="crm"
+                onclick="switchContentView('crm')">
+            <i class="bi bi-people"></i>
+        </button>
+        {% endif %}
+
+        <!-- Support -->
+        {% if 'support' in enabled_applets %}
+        <a href="{{ url_for('support.index') }}"
+           class="icon-sidebar-item {% if 'support' in request.endpoint %}active{% endif %}"
+           data-bs-toggle="tooltip"
+           data-bs-placement="right"
+           title="Support"
+           data-view="support">
+            <i class="bi bi-headset"></i>
+        </a>
+        {% endif %}
+
+        <!-- Website Builder -->
+        {% if 'website' in enabled_applets %}
+        <a href="{{ url_for('website.dashboard') }}"
+           class="icon-sidebar-item {% if 'website' in request.endpoint %}active{% endif %}"
+           data-bs-toggle="tooltip"
+           data-bs-placement="right"
+           title="Website"
+           data-view="website">
+            <i class="bi bi-globe"></i>
+        </a>
+        {% endif %}
+
+        <!-- Integrations -->
+        {% if 'integrations' in enabled_applets %}
+        <a href="{{ url_for('integrations.index') }}"
+           class="icon-sidebar-item {% if 'integrations' in request.endpoint %}active{% endif %}"
+           data-bs-toggle="tooltip"
+           data-bs-placement="right"
+           title="Integrations"
+           data-view="integrations">
+            <i class="bi bi-plug"></i>
+        </a>
+        {% endif %}
+    </div>
+
+    <!-- Bottom Icons -->
+    <div class="icon-sidebar-bottom">
+        <div class="icon-sidebar-divider"></div>
+
+        <!-- Settings -->
+        <a href="{{ url_for('tenant.settings') }}"
+           class="icon-sidebar-item {% if request.endpoint == 'tenant.settings' %}active{% endif %}"
+           data-bs-toggle="tooltip"
+           data-bs-placement="right"
+           title="Settings">
+            <i class="bi bi-gear"></i>
+        </a>
+
+        <!-- User Profile -->
+        <div class="dropdown dropup">
+            <button type="button"
+                    class="icon-sidebar-item"
+                    data-bs-toggle="dropdown"
+                    aria-expanded="false"
+                    title="{{ current_user.full_name }}">
+                <div class="user-avatar-icon">
+                    {% if current_user.avatar_url %}
+                        <img src="{{ current_user.avatar_url }}" alt="{{ current_user.full_name }}" class="avatar-img">
+                    {% else %}
+                        <div class="avatar-placeholder-icon">
+                            {{ current_user.full_name[0].upper() }}
+                        </div>
+                    {% endif %}
+                    <span class="avatar-status online"></span>
+                </div>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-dark">
+                <li class="dropdown-header">
+                    {{ current_user.full_name }}
+                    {% if current_user.plan == 'pro' %}
+                    <span class="badge bg-primary ms-2" style="font-size: 0.7rem;">PRO</span>
+                    {% endif %}
+                </li>
+                {% if current_tenant %}
+                <li><a class="dropdown-item" href="{{ url_for('tenant.settings') }}">
+                    <i class="bi bi-building-gear"></i> Workspace Settings
+                </a></li>
+                <li><hr class="dropdown-divider"></li>
+                {% endif %}
+                <li><a class="dropdown-item" href="{{ url_for('tenant.account_settings') }}"><i class="bi bi-person-gear"></i> Account Settings</a></li>
+                {% if current_user.plan == 'free' %}
+                <li><a class="dropdown-item" href="{{ url_for('tenant.upgrade') }}"><i class="bi bi-rocket-takeoff"></i> Upgrade to Pro</a></li>
+                {% endif %}
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <form action="{{ url_for('auth.logout') }}" method="POST" style="margin: 0;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="dropdown-item" style="border: none; background: none; cursor: pointer; width: 100%; text-align: left; padding: 0.25rem 1rem;">
+                            <i class="bi bi-box-arrow-right"></i> Sign Out
+                        </button>
+                    </form>
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>

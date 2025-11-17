@@ -19,7 +19,8 @@
     {% block body %}
     <div class="d-flex vh-100 overflow-hidden">
         {% if current_user.is_authenticated %}
-            {% block sidebar %}{% include 'components/sidebar.html' %}{% endblock %}
+            {% include 'components/icon_sidebar.html' %}
+            {% include 'components/content_sidebar.html' %}
             {% block conversations_sidebar %}{% include 'components/conversations_sidebar.html' %}{% endblock %}
         {% endif %}
 
@@ -78,6 +79,11 @@
 
     <!-- CSRF Protection -->
     <script src="{{ url_for('static', filename='js/csrf.js') }}"></script>
+
+    <!-- Sidebar Handler -->
+    {% if current_user.is_authenticated %}
+    <script src="{{ url_for('static', filename='js/sidebar.js') }}"></script>
+    {% endif %}
 
     <!-- Bug Report Handler -->
     {% if current_user.is_authenticated %}
