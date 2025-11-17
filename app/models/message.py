@@ -91,28 +91,27 @@ class Message(db.Model):
         if not mentions:
             return result
 
-        # Try to match mentions with agents and users in the tenant
-        if self.channel and self.channel.tenant_id:
-            tenant_id = self.channel.tenant_id
+        # Try to match mentions with agents and users
+        if self.channel:
+            # Get channel's associated agents (directly or through department)
+            channel_agents = self.channel.get_associated_agents() if hasattr(self.channel, 'get_associated_agents') else []
 
             for mention_name in mentions:
-                # Try to find matching agent
-                agent = Agent.query.join(Agent.department).filter(
-                    Agent.name.ilike(f'%{mention_name}%'),
-                    Agent.department.has(tenant_id=tenant_id)
-                ).first()
+                # First, try to find matching agent among channel's agents
+                for agent in channel_agents:
+                    if mention_name.lower() in agent.name.lower():
+                        if agent not in result['agents']:
+                            result['agents'].append(agent)
+                            break
 
-                if agent and agent not in result['agents']:
-                    result['agents'].append(agent)
-                    continue
+                # If not found in channel agents, try to find matching user
+                if mention_name.lower() not in [a.name.lower() for a in result['agents']]:
+                    user = User.query.filter(
+                        User.full_name.ilike(f'%{mention_name}%')
+                    ).first()
 
-                # Try to find matching user
-                user = User.query.filter(
-                    User.full_name.ilike(f'%{mention_name}%')
-                ).first()
-
-                if user and user not in result['users']:
-                    result['users'].append(user)
+                    if user and user not in result['users']:
+                        result['users'].append(user)
 
         return result
 
