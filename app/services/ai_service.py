@@ -108,6 +108,122 @@ class AIService:
             }
         ]
 
+    def _get_website_tools(self) -> List[Dict]:
+        """
+        Get website builder tool definitions for AI agents
+
+        Returns:
+            List of website builder tool definitions
+        """
+        return [
+            {
+                "name": "website_generate",
+                "description": "Generate a complete website from business context. Creates homepage, about page, and theme based on the tenant's business information.",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "regenerate": {
+                            "type": "boolean",
+                            "description": "Force regeneration even if website exists (default: false)",
+                            "default": False
+                        }
+                    }
+                }
+            },
+            {
+                "name": "website_create_page",
+                "description": "Create a new page on the website",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "page_type": {
+                            "type": "string",
+                            "description": "Type of page: 'home', 'blog', 'landing', or 'custom'",
+                            "enum": ["home", "blog", "landing", "custom"]
+                        },
+                        "slug": {
+                            "type": "string",
+                            "description": "URL slug for the page (e.g., 'about-us', 'pricing')"
+                        },
+                        "title": {
+                            "type": "string",
+                            "description": "Page title"
+                        },
+                        "content_description": {
+                            "type": "string",
+                            "description": "Description of what content should be on the page. The AI will generate appropriate sections."
+                        },
+                        "publish": {
+                            "type": "boolean",
+                            "description": "Publish the page immediately (default: false)",
+                            "default": False
+                        }
+                    },
+                    "required": ["page_type", "slug", "title", "content_description"]
+                }
+            },
+            {
+                "name": "website_update_theme",
+                "description": "Update the website theme colors and fonts",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "primary_color": {
+                            "type": "string",
+                            "description": "Primary brand color (hex code, e.g., '#667eea')"
+                        },
+                        "secondary_color": {
+                            "type": "string",
+                            "description": "Secondary color (hex code)"
+                        },
+                        "background_color": {
+                            "type": "string",
+                            "description": "Background color (hex code)"
+                        },
+                        "text_color": {
+                            "type": "string",
+                            "description": "Text color (hex code)"
+                        },
+                        "heading_font": {
+                            "type": "string",
+                            "description": "Google Font name for headings (e.g., 'Inter', 'Roboto')"
+                        },
+                        "body_font": {
+                            "type": "string",
+                            "description": "Google Font name for body text"
+                        }
+                    }
+                }
+            },
+            {
+                "name": "website_publish",
+                "description": "Publish or unpublish the website",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "publish": {
+                            "type": "boolean",
+                            "description": "True to publish, false to unpublish"
+                        },
+                        "is_indexable": {
+                            "type": "boolean",
+                            "description": "Allow search engines to index the website (default: true)",
+                            "default": True
+                        }
+                    },
+                    "required": ["publish"]
+                }
+            },
+            {
+                "name": "website_get_status",
+                "description": "Get the current status and details of the website",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {}
+                }
+            }
+        ]
+
     def chat(
         self,
         messages: List[Dict[str, str]],
@@ -147,15 +263,24 @@ class AIService:
                 'messages': messages
             }
 
-            # Get Outlook tools if agent has Outlook enabled
-            tools = None
-            if agent and user and agent.enable_outlook:
-                print(f"[OUTLOOK] Getting Outlook tools for agent {agent.id}")
-                tools = self._get_outlook_tools()
-                print(f"[OUTLOOK] Got {len(tools)} Outlook tools")
+            # Get tools if agent has integrations enabled
+            tools = []
+            if agent and user:
+                if agent.enable_outlook:
+                    print(f"[OUTLOOK] Getting Outlook tools for agent {agent.id}")
+                    outlook_tools = self._get_outlook_tools()
+                    print(f"[OUTLOOK] Got {len(outlook_tools)} Outlook tools")
+                    tools.extend(outlook_tools)
+
+                if agent.enable_website_builder:
+                    print(f"[WEBSITE] Getting Website tools for agent {agent.id}")
+                    website_tools = self._get_website_tools()
+                    print(f"[WEBSITE] Got {len(website_tools)} Website tools")
+                    tools.extend(website_tools)
+
                 if tools:
                     api_params['tools'] = tools
-                    current_app.logger.info(f"Agent {agent.name} has {len(tools)} Outlook tools available")
+                    current_app.logger.info(f"Agent {agent.name} has {len(tools)} tools available")
 
             # Call Claude API (potentially multiple times for tool use)
             response = self.client.messages.create(**api_params)
@@ -179,15 +304,27 @@ class AIService:
                 # Execute tools and collect results
                 tool_results = []
                 for tool_use in tool_uses:
-                    print(f"[OUTLOOK] Executing tool: {tool_use.name} with input: {tool_use.input}")
+                    print(f"[TOOL] Executing tool: {tool_use.name} with input: {tool_use.input}")
                     try:
-                        result = self._execute_outlook_tool(
-                            tool_name=tool_use.name,
-                            tool_input=tool_use.input,
-                            agent=agent,
-                            user=user
-                        )
-                        print(f"[OUTLOOK] Tool {tool_use.name} returned: {result}")
+                        # Route to appropriate tool executor
+                        if tool_use.name.startswith('outlook_'):
+                            result = self._execute_outlook_tool(
+                                tool_name=tool_use.name,
+                                tool_input=tool_use.input,
+                                agent=agent,
+                                user=user
+                            )
+                        elif tool_use.name.startswith('website_'):
+                            result = self._execute_website_tool(
+                                tool_name=tool_use.name,
+                                tool_input=tool_use.input,
+                                agent=agent,
+                                user=user
+                            )
+                        else:
+                            result = {"error": f"Unknown tool: {tool_use.name}"}
+
+                        print(f"[TOOL] Tool {tool_use.name} returned: {result}")
                         tool_results.append({
                             "type": "tool_result",
                             "tool_use_id": tool_use.id,
@@ -195,7 +332,7 @@ class AIService:
                         })
                         current_app.logger.info(f"Tool {tool_use.name} executed successfully")
                     except Exception as e:
-                        print(f"[MCP DEBUG] Tool {tool_use.name} failed with error: {e}")
+                        print(f"[TOOL] Tool {tool_use.name} failed with error: {e}")
                         current_app.logger.error(f"Tool {tool_use.name} failed: {e}")
                         tool_results.append({
                             "type": "tool_result",
@@ -308,6 +445,256 @@ class AIService:
 
         except Exception as e:
             current_app.logger.error(f"Error executing Outlook tool {tool_name}: {e}")
+            return {"error": f"Failed to execute {tool_name}: {str(e)}"}
+
+    def _execute_website_tool(self, tool_name: str, tool_input: Dict, agent, user) -> Any:
+        """
+        Execute website builder tool
+
+        Args:
+            tool_name: Name of the tool (website_generate, etc.)
+            tool_input: Tool input parameters
+            agent: Agent making the request
+            user: User context
+
+        Returns:
+            Tool execution result
+        """
+        from app.services.website_generator_service import website_generator
+        from app.models.website import Website, WebsitePage, WebsiteTheme
+        from app.models.tenant import Tenant
+        from app import db
+        from datetime import datetime
+
+        print(f"[WEBSITE] Executing tool: {tool_name} with input: {tool_input}")
+
+        # Get tenant from agent's department
+        tenant = agent.department.tenant
+
+        try:
+            # Route to appropriate method
+            if tool_name == 'website_generate':
+                regenerate = tool_input.get('regenerate', False)
+
+                # Check if website exists
+                existing = Website.query.filter_by(tenant_id=tenant.id).first()
+                if existing and not regenerate:
+                    return {
+                        "success": False,
+                        "message": "Website already exists. Use regenerate=true to force regeneration.",
+                        "website_url": f"/w/{tenant.slug}"
+                    }
+
+                # Generate website
+                website = website_generator.generate_website_for_tenant(tenant, agent_id=agent.id)
+                db.session.commit()
+
+                return {
+                    "success": True,
+                    "message": "Website generated successfully",
+                    "website_url": f"/w/{tenant.slug}",
+                    "pages_created": website.pages.count(),
+                    "is_published": website.is_published
+                }
+
+            elif tool_name == 'website_create_page':
+                page_type = tool_input.get('page_type')
+                slug = tool_input.get('slug')
+                title = tool_input.get('title')
+                content_description = tool_input.get('content_description')
+                publish = tool_input.get('publish', False)
+
+                # Validate inputs
+                if not all([page_type, slug, title, content_description]):
+                    return {"error": "Missing required parameters"}
+
+                # Get or create website
+                website = Website.query.filter_by(tenant_id=tenant.id).first()
+                if not website:
+                    return {"error": "No website found. Use website_generate first."}
+
+                # Check if slug already exists
+                existing = WebsitePage.query.filter_by(website_id=website.id, slug=slug).first()
+                if existing:
+                    return {"error": f"Page with slug '{slug}' already exists"}
+
+                # Generate page content using AI
+                prompt = f"""Create page content for: {title}
+
+Page Type: {page_type}
+Description: {content_description}
+
+Generate a JSON structure with appropriate sections for this page type.
+For landing pages, include hero, features, and CTA sections.
+For blog posts, include title, author, date, content sections.
+For custom pages, create relevant content sections based on the description.
+
+Return ONLY valid JSON in this format:
+{{
+    "sections": [
+        {{"type": "hero", "heading": "...", "subheading": "...", "cta_text": "...", "cta_url": "..."}},
+        {{"type": "text", "heading": "...", "content": "<p>HTML content</p>"}}
+    ]
+}}"""
+
+                response = self.client.messages.create(
+                    model="claude-sonnet-4-5-20250929",
+                    max_tokens=2000,
+                    temperature=0.8,
+                    messages=[{"role": "user", "content": prompt}]
+                )
+
+                # Extract JSON from response
+                content = response.content[0].text
+                if '{' in content and '}' in content:
+                    json_start = content.find('{')
+                    json_end = content.rfind('}') + 1
+                    json_str = content[json_start:json_end]
+                    content_json = json.loads(json_str)
+                else:
+                    content_json = {"sections": [{"type": "text", "heading": title, "content": f"<p>{content_description}</p>"}]}
+
+                # Create page
+                page = WebsitePage(
+                    website_id=website.id,
+                    page_type=page_type,
+                    slug=slug,
+                    title=title,
+                    meta_description=content_description[:160],
+                    content_json=content_json,
+                    is_published=publish,
+                    agent_id=agent.id,
+                    created_by_id=user.id
+                )
+
+                if publish:
+                    page.published_at = datetime.utcnow()
+
+                db.session.add(page)
+                db.session.commit()
+
+                return {
+                    "success": True,
+                    "message": f"Page '{title}' created successfully",
+                    "page_url": f"/w/{tenant.slug}/{slug}" if slug else f"/w/{tenant.slug}",
+                    "is_published": publish
+                }
+
+            elif tool_name == 'website_update_theme':
+                # Get website
+                website = Website.query.filter_by(tenant_id=tenant.id).first()
+                if not website:
+                    return {"error": "No website found. Use website_generate first."}
+
+                # Get or create theme
+                if not website.theme:
+                    theme = WebsiteTheme(website=website)
+                    db.session.add(theme)
+                else:
+                    theme = website.theme
+
+                # Update theme properties
+                if 'primary_color' in tool_input:
+                    theme.primary_color = tool_input['primary_color']
+                if 'secondary_color' in tool_input:
+                    theme.secondary_color = tool_input['secondary_color']
+                if 'background_color' in tool_input:
+                    theme.background_color = tool_input['background_color']
+                if 'text_color' in tool_input:
+                    theme.text_color = tool_input['text_color']
+                if 'heading_font' in tool_input:
+                    theme.heading_font = tool_input['heading_font']
+                if 'body_font' in tool_input:
+                    theme.body_font = tool_input['body_font']
+
+                db.session.commit()
+
+                return {
+                    "success": True,
+                    "message": "Theme updated successfully",
+                    "theme": {
+                        "primary_color": theme.primary_color,
+                        "secondary_color": theme.secondary_color,
+                        "background_color": theme.background_color,
+                        "text_color": theme.text_color,
+                        "heading_font": theme.heading_font,
+                        "body_font": theme.body_font
+                    }
+                }
+
+            elif tool_name == 'website_publish':
+                publish = tool_input.get('publish')
+                is_indexable = tool_input.get('is_indexable', True)
+
+                if publish is None:
+                    return {"error": "publish parameter is required"}
+
+                # Get website
+                website = Website.query.filter_by(tenant_id=tenant.id).first()
+                if not website:
+                    return {"error": "No website found. Use website_generate first."}
+
+                # Update publishing status
+                website.is_published = publish
+                website.is_indexable = is_indexable
+
+                if publish and not website.published_at:
+                    website.published_at = datetime.utcnow()
+
+                db.session.commit()
+
+                return {
+                    "success": True,
+                    "message": f"Website {'published' if publish else 'unpublished'} successfully",
+                    "is_published": website.is_published,
+                    "is_indexable": website.is_indexable,
+                    "website_url": f"/w/{tenant.slug}"
+                }
+
+            elif tool_name == 'website_get_status':
+                # Get website
+                website = Website.query.filter_by(tenant_id=tenant.id).first()
+
+                if not website:
+                    return {
+                        "exists": False,
+                        "message": "No website found. Use website_generate to create one."
+                    }
+
+                # Get pages
+                pages = website.pages.all()
+                published_pages = [p for p in pages if p.is_published]
+
+                return {
+                    "exists": True,
+                    "is_published": website.is_published,
+                    "is_indexable": website.is_indexable,
+                    "website_url": f"/w/{tenant.slug}",
+                    "total_pages": len(pages),
+                    "published_pages": len(published_pages),
+                    "pages": [
+                        {
+                            "title": p.title,
+                            "slug": p.slug,
+                            "type": p.page_type,
+                            "is_published": p.is_published,
+                            "views": p.view_count
+                        }
+                        for p in pages
+                    ],
+                    "theme": {
+                        "primary_color": website.theme.primary_color if website.theme else None,
+                        "secondary_color": website.theme.secondary_color if website.theme else None
+                    } if website.theme else None
+                }
+
+            else:
+                return {"error": f"Unknown website tool: {tool_name}"}
+
+        except Exception as e:
+            current_app.logger.error(f"Error executing website tool {tool_name}: {e}")
+            import traceback
+            traceback.print_exc()
             return {"error": f"Failed to execute {tool_name}: {str(e)}"}
 
     def analyze_bug_screenshot(
