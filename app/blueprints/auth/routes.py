@@ -15,6 +15,13 @@ def login():
         return redirect(url_for('tenant.home'))
 
     form = LoginForm()
+
+    # Check for CSRF errors and show user-friendly message
+    if request.method == 'POST' and not form.validate_on_submit():
+        if 'csrf_token' in form.errors:
+            flash('Your session expired. Please refresh the page and try again.', 'warning')
+            return redirect(url_for('auth.login'))
+
     if form.validate_on_submit():
         user = User.query.filter_by(email=form.email.data.lower()).first()
 

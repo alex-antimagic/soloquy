@@ -31,7 +31,8 @@ class Config:
 
     # Session
     PERMANENT_SESSION_LIFETIME = timedelta(days=7)
-    SESSION_COOKIE_SECURE = os.environ.get('FLASK_ENV') == 'production'
+    # Use HTTPS cookies on Heroku (detected by DYNO env var) or when FLASK_ENV is production
+    SESSION_COOKIE_SECURE = bool(os.environ.get('DYNO')) or os.environ.get('FLASK_ENV') == 'production'
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
 
