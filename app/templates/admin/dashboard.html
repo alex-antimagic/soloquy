@@ -1,0 +1,242 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}System Admin - RQ Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-1">
+                        <i class="bi bi-gear-fill text-danger"></i>
+                        System Administration
+                    </h1>
+                    <p class="text-muted">Background job monitoring and system health</p>
+                </div>
+                <div>
+                    <span class="badge bg-danger">Superadmin</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if error %}
+    <div class="alert alert-danger">
+        <i class="bi bi-exclamation-triangle"></i>
+        Error loading dashboard: {{ error }}
+    </div>
+    {% endif %}
+
+    <!-- Queue Status Cards -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h5 class="mb-3">
+                <i class="bi bi-stack"></i>
+                Job Queues
+            </h5>
+        </div>
+        {% for queue in queues %}
+        <div class="col-md-6 col-lg-3 mb-3">
+            <div class="card bg-dark border-secondary">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="mb-0">{{ queue.name }}</h6>
+                        <span class="badge bg-{{ 'danger' if queue.failed > 0 else 'warning' if queue.started > 0 else 'secondary' }}">
+                            {{ queue.count }}
+                        </span>
+                    </div>
+                    <div class="small text-muted">
+                        <div class="d-flex justify-content-between">
+                            <span><i class="bi bi-hourglass-split"></i> Queued:</span>
+                            <strong>{{ queue.count }}</strong>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span><i class="bi bi-play-circle"></i> Running:</span>
+                            <strong class="text-info">{{ queue.started }}</strong>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span><i class="bi bi-check-circle"></i> Finished:</span>
+                            <strong class="text-success">{{ queue.finished }}</strong>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span><i class="bi bi-x-circle"></i> Failed:</span>
+                            <strong class="text-danger">{{ queue.failed }}</strong>
+                        </div>
+                        {% if queue.scheduled > 0 %}
+                        <div class="d-flex justify-content-between">
+                            <span><i class="bi bi-clock"></i> Scheduled:</span>
+                            <strong class="text-warning">{{ queue.scheduled }}</strong>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="mt-2">
+                        <a href="{{ url_for('admin.jobs', queue=queue.name, registry='queued') }}" class="btn btn-sm btn-outline-primary w-100">
+                            View Jobs
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+        {% if not queues %}
+        <div class="col-12">
+            <div class="alert alert-warning">
+                No queues found. Make sure Redis is running and configured correctly.
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Recent Failures -->
+    {% if recent_failures %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <h5 class="mb-3">
+                <i class="bi bi-exclamation-triangle text-danger"></i>
+                Recent Failures (Last 10)
+            </h5>
+            <div class="card bg-dark border-danger">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-dark table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th style="width: 15%;">Queue</th>
+                                    <th style="width: 25%;">Job Function</th>
+                                    <th style="width: 15%;">Failed At</th>
+                                    <th style="width: 45%;">Error</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for failure in recent_failures %}
+                                <tr>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ failure.queue }}</span>
+                                    </td>
+                                    <td>
+                                        <code class="text-info">{{ failure.func_name }}</code>
+                                    </td>
+                                    <td class="small text-muted">
+                                        {% if failure.failed_at %}
+                                            {{ failure.failed_at.strftime('%m/%d %H:%M') }}
+                                        {% else %}
+                                            Unknown
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <small class="text-danger font-monospace">
+                                            {{ failure.exc_info[:150] }}...
+                                        </small>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Quick Links -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h5 class="mb-3">
+                <i class="bi bi-link-45deg"></i>
+                Quick Links
+            </h5>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card bg-dark border-secondary">
+                <div class="card-body">
+                    <h6 class="card-title">
+                        <i class="bi bi-list-task"></i>
+                        Browse All Jobs
+                    </h6>
+                    <p class="card-text small text-muted">
+                        View detailed job information across all queues and registries
+                    </p>
+                    <a href="{{ url_for('admin.jobs') }}" class="btn btn-sm btn-outline-primary">
+                        View Jobs
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card bg-dark border-secondary">
+                <div class="card-body">
+                    <h6 class="card-title">
+                        <i class="bi bi-cpu"></i>
+                        Worker Status
+                    </h6>
+                    <p class="card-text small text-muted">
+                        Monitor active workers and their performance metrics
+                    </p>
+                    <a href="{{ url_for('admin.workers') }}" class="btn btn-sm btn-outline-primary">
+                        View Workers
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card bg-dark border-secondary">
+                <div class="card-body">
+                    <h6 class="card-title">
+                        <i class="bi bi-x-circle"></i>
+                        Failed Jobs
+                    </h6>
+                    <p class="card-text small text-muted">
+                        Investigate and retry failed background jobs
+                    </p>
+                    <a href="{{ url_for('admin.jobs', registry='failed') }}" class="btn btn-sm btn-outline-danger">
+                        View Failures
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- System Info -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card bg-dark border-secondary">
+                <div class="card-body">
+                    <h6 class="card-title">
+                        <i class="bi bi-info-circle"></i>
+                        System Information
+                    </h6>
+                    <div class="small">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <strong>Redis URL:</strong><br>
+                                <code class="text-muted">{{ config.REDIS_URL[:50] if config.REDIS_URL else 'Not configured' }}...</code>
+                            </div>
+                            <div class="col-md-4">
+                                <strong>Environment:</strong><br>
+                                <span class="badge bg-{{ 'danger' if config.ENV == 'production' else 'warning' }}">
+                                    {{ config.ENV or 'development' }}
+                                </span>
+                            </div>
+                            <div class="col-md-4">
+                                <strong>Background Workers:</strong><br>
+                                <span class="text-info">4 queues (default, enrichment, high, low)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Auto-refresh dashboard every 30 seconds
+setTimeout(() => {
+    location.reload();
+}, 30000);
+</script>
+{% endblock %}

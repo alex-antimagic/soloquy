@@ -1,0 +1,160 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Workers - System Admin{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-1">
+                        <i class="bi bi-cpu"></i>
+                        Worker Status
+                    </h1>
+                    <p class="text-muted">Monitor active background workers</p>
+                </div>
+                <div>
+                    <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left"></i>
+                        Back to Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if error %}
+    <div class="alert alert-danger">
+        <i class="bi bi-exclamation-triangle"></i>
+        Error loading workers: {{ error }}
+    </div>
+    {% endif %}
+
+    <!-- Workers Table -->
+    <div class="row">
+        <div class="col-12">
+            {% if workers %}
+            <div class="card bg-dark border-secondary">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-dark table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th style="width: 20%;">Worker Name</th>
+                                    <th style="width: 10%;">State</th>
+                                    <th style="width: 15%;">Current Job</th>
+                                    <th style="width: 10%;">Success</th>
+                                    <th style="width: 10%;">Failed</th>
+                                    <th style="width: 15%;">Working Time</th>
+                                    <th style="width: 10%;">Started</th>
+                                    <th style="width: 10%;">Heartbeat</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for worker in workers %}
+                                <tr>
+                                    <td>
+                                        <code class="text-info">{{ worker.name }}</code>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{{
+                                            'success' if worker.state == 'busy'
+                                            else 'warning' if worker.state == 'idle'
+                                            else 'secondary' }}">
+                                            {{ worker.state }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if worker.current_job %}
+                                            <code class="small text-muted">{{ worker.current_job[:12] }}...</code>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-success">{{ worker.successful_jobs }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-danger">{{ worker.failed_jobs }}</span>
+                                    </td>
+                                    <td class="small text-muted">
+                                        {% if worker.total_working_time %}
+                                            {{ "%.2f"|format(worker.total_working_time) }}s
+                                        {% else %}
+                                            0s
+                                        {% endif %}
+                                    </td>
+                                    <td class="small text-muted">
+                                        {% if worker.birth_date %}
+                                            {{ worker.birth_date.strftime('%m/%d %H:%M') }}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td class="small text-muted">
+                                        {% if worker.last_heartbeat %}
+                                            {{ worker.last_heartbeat.strftime('%H:%M:%S') }}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="alert alert-warning">
+                <i class="bi bi-exclamation-triangle"></i>
+                No workers found. Make sure the worker dyno is running on Heroku.
+                <br><br>
+                <strong>To start workers:</strong>
+                <pre class="mt-2">heroku ps:scale worker=1</pre>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Worker Info -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card bg-dark border-secondary">
+                <div class="card-body">
+                    <h6 class="card-title">
+                        <i class="bi bi-info-circle"></i>
+                        About Workers
+                    </h6>
+                    <div class="small text-muted">
+                        <p class="mb-2">
+                            Workers process background jobs from RQ queues. Each worker listens to multiple queues:
+                            <code>default</code>, <code>enrichment</code>, <code>high</code>, and <code>low</code>.
+                        </p>
+                        <p class="mb-2">
+                            <strong>States:</strong>
+                        </p>
+                        <ul class="mb-2">
+                            <li><span class="badge bg-success">busy</span> - Currently processing a job</li>
+                            <li><span class="badge bg-warning">idle</span> - Waiting for jobs</li>
+                        </ul>
+                        <p class="mb-0">
+                            Workers send heartbeats every 30 seconds. If a worker hasn't sent a heartbeat in over 1 minute, it may be dead.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Auto-refresh every 5 seconds
+setTimeout(() => {
+    location.reload();
+}, 5000);
+</script>
+{% endblock %}

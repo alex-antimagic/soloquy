@@ -1,0 +1,163 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Job Browser - System Admin{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-1">
+                        <i class="bi bi-list-task"></i>
+                        Job Browser
+                    </h1>
+                    <p class="text-muted">Viewing {{ registry }} jobs in {{ queue }} queue</p>
+                </div>
+                <div>
+                    <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left"></i>
+                        Back to Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if error %}
+    <div class="alert alert-danger">
+        <i class="bi bi-exclamation-triangle"></i>
+        Error loading jobs: {{ error }}
+    </div>
+    {% endif %}
+
+    <!-- Filter Controls -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <label class="form-label">Queue</label>
+            <select class="form-select" id="queueSelect" onchange="updateFilter()">
+                <option value="default" {% if queue == 'default' %}selected{% endif %}>default</option>
+                <option value="enrichment" {% if queue == 'enrichment' %}selected{% endif %}>enrichment</option>
+                <option value="high" {% if queue == 'high' %}selected{% endif %}>high</option>
+                <option value="low" {% if queue == 'low' %}selected{% endif %}>low</option>
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Registry</label>
+            <select class="form-select" id="registrySelect" onchange="updateFilter()">
+                <option value="queued" {% if registry == 'queued' %}selected{% endif %}>Queued</option>
+                <option value="started" {% if registry == 'started' %}selected{% endif %}>Started</option>
+                <option value="finished" {% if registry == 'finished' %}selected{% endif %}>Finished</option>
+                <option value="failed" {% if registry == 'failed' %}selected{% endif %}>Failed</option>
+                <option value="scheduled" {% if registry == 'scheduled' %}selected{% endif %}>Scheduled</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Jobs Table -->
+    <div class="row">
+        <div class="col-12">
+            {% if jobs %}
+            <div class="card bg-dark border-secondary">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-dark table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th style="width: 10%;">Job ID</th>
+                                    <th style="width: 20%;">Function</th>
+                                    <th style="width: 15%;">Arguments</th>
+                                    <th style="width: 10%;">Status</th>
+                                    <th style="width: 15%;">Created</th>
+                                    <th style="width: 15%;">Started</th>
+                                    <th style="width: 15%;">Ended</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for job in jobs %}
+                                <tr {% if job.exc_info %}class="table-danger"{% endif %}>
+                                    <td>
+                                        <code class="small text-muted">{{ job.id[:8] }}...</code>
+                                    </td>
+                                    <td>
+                                        <code class="text-info">{{ job.func_name.split('.')[-1] }}</code>
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">{{ job.args }}</small>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{{
+                                            'success' if job.status == 'finished'
+                                            else 'danger' if job.status == 'failed'
+                                            else 'info' if job.status == 'started'
+                                            else 'warning' if job.status == 'scheduled'
+                                            else 'secondary' }}">
+                                            {{ job.status }}
+                                        </span>
+                                    </td>
+                                    <td class="small text-muted">
+                                        {% if job.created_at %}
+                                            {{ job.created_at.strftime('%m/%d %H:%M:%S') }}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td class="small text-muted">
+                                        {% if job.started_at %}
+                                            {{ job.started_at.strftime('%m/%d %H:%M:%S') }}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td class="small text-muted">
+                                        {% if job.ended_at %}
+                                            {{ job.ended_at.strftime('%m/%d %H:%M:%S') }}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% if job.exc_info %}
+                                <tr class="table-danger">
+                                    <td colspan="7">
+                                        <details>
+                                            <summary class="text-danger">
+                                                <i class="bi bi-exclamation-triangle"></i>
+                                                Error Details
+                                            </summary>
+                                            <pre class="mt-2 mb-0 small text-danger">{{ job.exc_info }}</pre>
+                                        </details>
+                                    </td>
+                                </tr>
+                                {% endif %}
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i>
+                No jobs found in this queue/registry.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function updateFilter() {
+    const queue = document.getElementById('queueSelect').value;
+    const registry = document.getElementById('registrySelect').value;
+    window.location.href = `{{ url_for('admin.jobs') }}?queue=${queue}&registry=${registry}`;
+}
+
+// Auto-refresh every 10 seconds
+setTimeout(() => {
+    location.reload();
+}, 10000);
+</script>
+{% endblock %}

@@ -113,6 +113,16 @@
     <div class="icon-sidebar-bottom">
         <div class="icon-sidebar-divider"></div>
 
+        <!-- System Admin (Superadmin only) -->
+        {% if current_user.is_superadmin %}
+        <a href="{{ url_for('admin.dashboard') }}"
+           class="icon-sidebar-item {% if 'admin' in request.endpoint %}active{% endif %}"
+           title="System Administration">
+            <i class="bi bi-shield-lock text-danger"></i>
+            <span class="icon-label">Admin</span>
+        </a>
+        {% endif %}
+
         <!-- Settings -->
         <a href="{{ url_for('tenant.settings') }}"
            class="icon-sidebar-item {% if request.endpoint == 'tenant.settings' %}active{% endif %}">

@@ -26,6 +26,7 @@ class User(UserMixin, db.Model):
     # Status
     is_active = db.Column(db.Boolean, default=True, nullable=False)
     is_online = db.Column(db.Boolean, default=False, nullable=False)
+    is_superadmin = db.Column(db.Boolean, default=False, nullable=False)  # Global admin access
     last_seen = db.Column(db.DateTime, default=datetime.utcnow)
 
     # Plan & Billing

@@ -48,3 +48,22 @@ def require_tenant_role(*allowed_roles):
         return decorated_function
 
     return decorator
+
+
+def require_superadmin(f):
+    """
+    Decorator to ensure user is a superadmin
+    Provides global admin access across all tenants
+    Must be used after @login_required
+    """
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated:
+            abort(401, description="Authentication required")
+
+        if not current_user.is_superadmin:
+            abort(403, description="Superadmin access required")
+
+        return f(*args, **kwargs)
+
+    return decorated_function

@@ -112,6 +112,7 @@ def create_app(config_name='default'):
     from app.blueprints.integrations import integrations_bp
     from app.blueprints.pages import pages
     from app.blueprints.website import website_bp, public_bp
+    from app.blueprints.admin import admin_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(tenant_bp, url_prefix='/tenant')
@@ -124,6 +125,7 @@ def create_app(config_name='default'):
     app.register_blueprint(integrations_bp, url_prefix='/integrations')
     app.register_blueprint(website_bp)  # Admin routes at /website
     app.register_blueprint(public_bp)  # Public routes at /w/<slug>
+    app.register_blueprint(admin_bp)  # System admin at /admin
     app.register_blueprint(pages)
 
     # Exempt chat blueprint from rate limiting
