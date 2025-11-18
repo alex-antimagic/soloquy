@@ -20,7 +20,11 @@ from rq import Queue
 def queue_company_enrichment(company_id, tenant_id):
     """Queue a company enrichment job in the background"""
     try:
-        redis_conn = Redis.from_url(current_app.config['REDIS_URL'])
+        # Connect to Redis with SSL certificate handling
+        redis_url = current_app.config['REDIS_URL']
+        if redis_url.startswith('rediss://'):
+            redis_url += '?ssl_cert_reqs=none'
+        redis_conn = Redis.from_url(redis_url)
         queue = Queue('enrichment', connection=redis_conn)
         job = queue.enqueue(
             enrich_company_background,
