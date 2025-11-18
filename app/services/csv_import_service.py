@@ -45,9 +45,13 @@ class CSVImportService:
             if hasattr(csv_file, 'read'):
                 content = csv_file.read()
                 if isinstance(content, bytes):
-                    content = content.decode('utf-8')
+                    content = content.decode('utf-8-sig')  # Handles BOM
             else:
                 content = csv_file
+
+            # Remove BOM if present
+            if content.startswith('\ufeff'):
+                content = content[1:]
 
             # Parse CSV
             csv_reader = csv.DictReader(io.StringIO(content))
@@ -162,9 +166,13 @@ class CSVImportService:
             if hasattr(csv_file, 'read'):
                 content = csv_file.read()
                 if isinstance(content, bytes):
-                    content = content.decode('utf-8')
+                    content = content.decode('utf-8-sig')  # Handles BOM
             else:
                 content = csv_file
+
+            # Remove BOM if present
+            if content.startswith('\ufeff'):
+                content = content[1:]
 
             # Parse CSV
             csv_reader = csv.DictReader(io.StringIO(content))
