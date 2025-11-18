@@ -292,8 +292,8 @@ Provide ONLY valid JSON, no additional text. Be thorough in your analysis and ba
                 system_prompt=agent.system_prompt
             )
 
-            # Extract JSON from response
-            content = response['content']
+            # Extract JSON from response (response is already a string, not a dict)
+            content = response
 
             # Try to find JSON in code blocks
             json_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', content, re.DOTALL)
