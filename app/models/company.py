@@ -27,6 +27,7 @@ class Company(db.Model):
     phone = db.Column(db.String(50))
     linkedin_url = db.Column(db.String(500))
     twitter_handle = db.Column(db.String(100))
+    logo_url = db.Column(db.String(500))  # Company logo URL
 
     # Business Intelligence
     description = db.Column(db.Text)

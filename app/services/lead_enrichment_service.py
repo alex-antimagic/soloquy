@@ -66,6 +66,27 @@ class LeadEnrichmentService:
 
         return None
 
+    def get_company_logo(self, domain):
+        """
+        Fetch company logo URL using Clearbit Logo API
+        Returns logo URL or None if not available
+        """
+        if not domain:
+            return None
+
+        # Clearbit Logo API - free, no API key required
+        logo_url = f"https://logo.clearbit.com/{domain}"
+
+        try:
+            # Verify the logo exists by making a HEAD request
+            response = requests.head(logo_url, timeout=5, allow_redirects=True)
+            if response.status_code == 200:
+                return logo_url
+        except Exception as e:
+            print(f"Error fetching logo for {domain}: {str(e)}")
+
+        return None
+
     def fetch_website_html(self, url, timeout=10):
         """Fetch HTML content from a website"""
         if not url.startswith(('http://', 'https://')):
@@ -285,6 +306,12 @@ Provide ONLY valid JSON, no additional text.
                 company.enrichment_error = 'No domain found (no website or contact emails)'
                 db.session.commit()
                 return
+
+            # Step 1.5: Fetch company logo
+            logo_url = self.get_company_logo(domain)
+            if logo_url:
+                company.logo_url = logo_url
+                print(f"Found logo for {company.name}: {logo_url}")
 
             # Step 2: Check cache
             cache, needs_scraping = self.get_or_create_cache(domain)
