@@ -288,16 +288,19 @@ Provide ONLY valid JSON, no additional text.
             company.enrichment_status = 'processing'
             db.session.commit()
 
-            # Get Lead Analyzer agent
-            agent = Agent.query.filter_by(
-                tenant_id=tenant_id,
-                name='Lead Analyzer'
+            # Get Lead Analyzer agent (join through Department since Agent doesn't have tenant_id directly)
+            from app.models.department import Department
+            agent = Agent.query.join(Department).filter(
+                Department.tenant_id == tenant_id,
+                Agent.name == 'Lead Analyzer'
             ).first()
 
             if not agent:
-                print("Lead Analyzer agent not found - creating default agent")
-                # Use a default Haiku agent as fallback
-                agent = Agent.query.filter_by(tenant_id=tenant_id).first()
+                print("Lead Analyzer agent not found - using first available agent")
+                # Use any agent from this tenant as fallback
+                agent = Agent.query.join(Department).filter(
+                    Department.tenant_id == tenant_id
+                ).first()
 
             # Step 1: Extract domain
             domain = self.get_company_domain(company)
