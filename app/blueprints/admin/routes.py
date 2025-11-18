@@ -24,8 +24,11 @@ from datetime import datetime, timedelta
 def dashboard():
     """Admin dashboard home page with system overview"""
     try:
-        # Connect to Redis
-        redis_conn = Redis.from_url(current_app.config['REDIS_URL'])
+        # Connect to Redis with SSL certificate handling
+        redis_url = current_app.config['REDIS_URL']
+        if redis_url.startswith('rediss://'):
+            redis_url += '?ssl_cert_reqs=none'
+        redis_conn = Redis.from_url(redis_url)
 
         # Get all queues
         queue_names = ['default', 'enrichment', 'high', 'low']
@@ -96,7 +99,11 @@ def dashboard():
 def jobs():
     """Detailed job browser"""
     try:
-        redis_conn = Redis.from_url(current_app.config['REDIS_URL'])
+        # Connect to Redis with SSL certificate handling
+        redis_url = current_app.config['REDIS_URL']
+        if redis_url.startswith('rediss://'):
+            redis_url += '?ssl_cert_reqs=none'
+        redis_conn = Redis.from_url(redis_url)
         queue_name = request.args.get('queue', 'default')
         registry_type = request.args.get('registry', 'queued')
 
@@ -164,7 +171,11 @@ def workers():
     """Worker status and management"""
     try:
         from rq import Worker
-        redis_conn = Redis.from_url(current_app.config['REDIS_URL'])
+        # Connect to Redis with SSL certificate handling
+        redis_url = current_app.config['REDIS_URL']
+        if redis_url.startswith('rediss://'):
+            redis_url += '?ssl_cert_reqs=none'
+        redis_conn = Redis.from_url(redis_url)
 
         workers_list = []
         for worker in Worker.all(connection=redis_conn):
