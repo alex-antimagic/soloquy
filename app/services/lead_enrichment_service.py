@@ -143,21 +143,62 @@ class LeadEnrichmentService:
 
     def google_search_company(self, company_name, domain=None):
         """
-        Simulate Google search results for a company
-        In production, this would use Google Custom Search API or similar
-        For now, returns a simplified search query string
+        Perform Google search for a company to gather additional context
+        Uses web scraping approach to get search results
         """
-        search_query = f"{company_name}"
-        if domain:
-            search_query += f" site:{domain}"
+        try:
+            import urllib.parse
+            search_query = f"{company_name}"
+            if domain:
+                search_query += f" {domain}"
+            search_query += " company about"
 
-        # In production, you would use Google Custom Search API here
-        # For MVP, we'll return the search query for the AI to understand context
-        return {
-            'search_performed': True,
-            'query': search_query,
-            'note': 'Google search integration pending - AI will work with available website data'
-        }
+            encoded_query = urllib.parse.quote_plus(search_query)
+            search_url = f"https://www.google.com/search?q={encoded_query}"
+
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
+            }
+
+            response = requests.get(search_url, headers=headers, timeout=10)
+
+            if response.status_code == 200:
+                soup = BeautifulSoup(response.text, 'lxml')
+
+                # Extract search result snippets
+                snippets = []
+                for result in soup.find_all('div', class_='VwiC3b', limit=5):
+                    snippet_text = result.get_text(strip=True)
+                    if snippet_text and len(snippet_text) > 20:
+                        snippets.append(snippet_text)
+
+                # Also try to extract from meta descriptions in results
+                for result in soup.find_all('span', class_='aCOpRe', limit=5):
+                    snippet_text = result.get_text(strip=True)
+                    if snippet_text and len(snippet_text) > 20:
+                        snippets.append(snippet_text)
+
+                return {
+                    'search_performed': True,
+                    'query': search_query,
+                    'snippets': snippets[:5],  # Top 5 snippets
+                    'snippet_text': ' | '.join(snippets[:5]) if snippets else None
+                }
+            else:
+                print(f"Google search returned status {response.status_code}")
+                return {
+                    'search_performed': False,
+                    'query': search_query,
+                    'error': f'HTTP {response.status_code}'
+                }
+
+        except Exception as e:
+            print(f"Error performing Google search: {str(e)}")
+            return {
+                'search_performed': False,
+                'query': search_query if 'search_query' in locals() else company_name,
+                'error': str(e)
+            }
 
     def get_or_create_cache(self, domain):
         """Get existing cache or create new entry"""
@@ -196,41 +237,51 @@ Company Name: {company_name}
 Website Data:
 {json.dumps(website_data, indent=2)}
 
-Search Context:
+Google Search Results:
 {json.dumps(search_data, indent=2)}
 
-Analyze this company and provide a comprehensive assessment in the following JSON format:
+Analyze this company and provide a comprehensive assessment. For company size, look for clues like:
+- Number of employees mentioned on website or in search results
+- LinkedIn employee count estimates
+- Office locations (multiple locations = larger company)
+- Team page size
+- Funding announcements or revenue figures
+- Use these categories: "1-10", "11-50", "51-200", "201-500", "501-1000", "1001-5000", "5001+"
+
+Provide your analysis in the following JSON format:
 {{
     "company_basics": {{
-        "industry": "detected industry",
-        "company_size_estimate": "1-10|11-50|51-200|201-500|501+",
-        "description": "brief company description",
-        "founding_year": "estimated year or null"
+        "industry": "specific industry/vertical",
+        "company_size_estimate": "1-10|11-50|51-200|201-500|501-1000|1001-5000|5001+",
+        "description": "2-3 sentence company description",
+        "founding_year": "YYYY or null",
+        "headquarters": "City, State/Country or null"
     }},
     "products_services": {{
-        "primary_offerings": ["product1", "product2"],
-        "target_market": "description of target customers",
-        "value_proposition": "key value props"
+        "primary_offerings": ["product1", "product2", "product3"],
+        "target_market": "description of target customers and market segment",
+        "value_proposition": "key value propositions and differentiators"
     }},
     "competitors": {{
-        "main_competitors": ["competitor1", "competitor2"],
-        "market_position": "leader|challenger|niche player|startup"
+        "main_competitors": ["competitor1", "competitor2", "competitor3"],
+        "market_position": "leader|challenger|niche player|startup|unknown",
+        "competitive_advantages": ["advantage1", "advantage2"]
     }},
     "key_people": {{
         "executives": [
-            {{"name": "name", "title": "title", "linkedin": "url or null"}}
+            {{"name": "Full Name", "title": "Job Title", "linkedin": "url or null"}}
         ]
     }},
     "lead_analysis": {{
         "lead_score": 75,
-        "lead_score_rationale": "why this score",
-        "buying_signals": ["signal1", "signal2"],
-        "competitive_position": "market position analysis",
-        "enrichment_summary": "executive summary of the lead opportunity"
+        "lead_score_rationale": "detailed explanation of score based on company size, market position, funding, growth indicators",
+        "buying_signals": ["specific signals like hiring, funding, expansion, tech stack"],
+        "competitive_position": "detailed market position and competitive landscape analysis",
+        "enrichment_summary": "executive summary highlighting key insights and opportunity assessment"
     }}
 }}
 
-Provide ONLY valid JSON, no additional text.
+Provide ONLY valid JSON, no additional text. Be thorough in your analysis and base conclusions on available data.
 """
 
         try:
