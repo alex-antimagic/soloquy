@@ -5,7 +5,7 @@ from flask import render_template, current_app, request
 from flask_login import login_required
 from . import admin_bp
 from app.utils.security_decorators import require_superadmin
-from redis import Redis
+from redis import Redis, ConnectionPool
 from rq import Queue
 from rq.job import Job
 from rq.registry import (
@@ -18,17 +18,31 @@ from rq.registry import (
 from datetime import datetime, timedelta
 
 
+def get_redis_connection():
+    """Create a fresh Redis connection with proper SSL handling"""
+    redis_url = current_app.config['REDIS_URL']
+    if redis_url.startswith('rediss://'):
+        redis_url += '?ssl_cert_reqs=none'
+
+    # Create connection with health check and retry
+    return Redis.from_url(
+        redis_url,
+        socket_keepalive=True,
+        socket_connect_timeout=5,
+        socket_timeout=5,
+        retry_on_timeout=True,
+        health_check_interval=10
+    )
+
+
 @admin_bp.route('/')
 @login_required
 @require_superadmin
 def dashboard():
     """Admin dashboard home page with system overview"""
     try:
-        # Connect to Redis with SSL certificate handling
-        redis_url = current_app.config['REDIS_URL']
-        if redis_url.startswith('rediss://'):
-            redis_url += '?ssl_cert_reqs=none'
-        redis_conn = Redis.from_url(redis_url)
+        # Get fresh Redis connection
+        redis_conn = get_redis_connection()
 
         # Get all queues
         queue_names = ['default', 'enrichment', 'high', 'low']
@@ -99,11 +113,8 @@ def dashboard():
 def jobs():
     """Detailed job browser"""
     try:
-        # Connect to Redis with SSL certificate handling
-        redis_url = current_app.config['REDIS_URL']
-        if redis_url.startswith('rediss://'):
-            redis_url += '?ssl_cert_reqs=none'
-        redis_conn = Redis.from_url(redis_url)
+        # Get fresh Redis connection
+        redis_conn = get_redis_connection()
         queue_name = request.args.get('queue', 'default')
         registry_type = request.args.get('registry', 'queued')
 
@@ -171,11 +182,8 @@ def workers():
     """Worker status and management"""
     try:
         from rq import Worker
-        # Connect to Redis with SSL certificate handling
-        redis_url = current_app.config['REDIS_URL']
-        if redis_url.startswith('rediss://'):
-            redis_url += '?ssl_cert_reqs=none'
-        redis_conn = Redis.from_url(redis_url)
+        # Get fresh Redis connection
+        redis_conn = get_redis_connection()
 
         workers_list = []
         for worker in Worker.all(connection=redis_conn):
