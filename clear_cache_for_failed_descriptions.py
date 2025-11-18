@@ -12,15 +12,16 @@ with app.app_context():
     print(f'Found {len(companies)} companies with "Analysis failed" descriptions')
     print()
 
-    # Clear ALL cache entries to force fresh AI analysis for everyone
-    print('Clearing ALL enrichment cache entries to force fresh AI analysis...')
-    cache_count = CompanyEnrichmentCache.query.count()
-    print(f'  Found {cache_count} cache entries')
+    # Instead of deleting cache (foreign key constraint), just NULL out the references
+    # This forces fresh AI analysis without breaking foreign key constraints
+    print('Clearing cache references for companies with failed descriptions...')
 
-    CompanyEnrichmentCache.query.delete()
+    for company in companies:
+        company.enrichment_cache_id = None
+
     db.session.commit()
 
     print()
-    print(f'Successfully cleared ALL {cache_count} cache entries')
-    print(f'{len(companies)} companies with failed descriptions will get fresh analysis with v171 prompts')
+    print(f'Successfully cleared cache references for {len(companies)} companies')
+    print('These companies will get fresh AI analysis with v171 prompts on next enrichment')
     print('Re-queue these companies to get proper factual descriptions')
