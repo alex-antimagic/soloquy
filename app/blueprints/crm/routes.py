@@ -294,7 +294,7 @@ def contact_detail(contact_id):
 
     # Get related data
     activities = contact.activities.order_by(Activity.created_at.desc()).limit(20).all()
-    deals = contact.deals.all()
+    deals = contact.deals  # Already a list, not a query
 
     return render_template('crm/contacts/detail.html',
                           title=f'{contact.first_name} {contact.last_name}',
