@@ -39,6 +39,9 @@ class Config:
     # AI
     ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY')
 
+    # Error Tracking
+    SENTRY_DSN = os.environ.get('SENTRY_DSN')
+
     # Cloudinary (File Storage)
     CLOUDINARY_CLOUD_NAME = os.environ.get('CLOUDINARY_CLOUD_NAME')
     CLOUDINARY_API_KEY = os.environ.get('CLOUDINARY_API_KEY')

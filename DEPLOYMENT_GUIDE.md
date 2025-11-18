@@ -84,7 +84,22 @@ heroku create your-app-name
 heroku addons:create heroku-postgresql:mini
 ```
 
-### 5. Set Environment Variables
+### 5. Add Redis for Background Jobs
+```bash
+heroku addons:create heroku-redis:mini
+```
+
+### 6. Add Sentry for Error Tracking (Highly Recommended)
+```bash
+# Option 1: Use Heroku add-on (easiest)
+heroku addons:create sentry:f1  # Free tier
+
+# Option 2: Sign up directly at sentry.io
+# Then set the DSN manually:
+# heroku config:set SENTRY_DSN=your_sentry_dsn_here
+```
+
+### 7. Set Environment Variables
 ```bash
 # Generate and set SECRET_KEY
 heroku config:set SECRET_KEY=$(python -c 'import secrets; print(secrets.token_hex(32))')
@@ -94,6 +109,13 @@ heroku config:set FLASK_ENV=production
 
 # Set Anthropic API key
 heroku config:set ANTHROPIC_API_KEY=your_anthropic_api_key_here
+
+# Set SocketIO CORS origins (replace with your app URL)
+heroku config:set SOCKETIO_CORS_ORIGINS=https://your-app-name.herokuapp.com
+
+# Note: SENTRY_DSN is automatically set if you used the Heroku add-on
+# If you signed up directly at sentry.io, set it manually:
+# heroku config:set SENTRY_DSN=your_sentry_dsn_here
 
 # Verify configuration
 heroku config
@@ -184,7 +206,11 @@ heroku pg:info
 | `SECRET_KEY` | ✅ Yes | Flask secret key for sessions (generate with secrets.token_hex(32)) |
 | `FLASK_ENV` | ✅ Yes | Set to 'production' |
 | `ANTHROPIC_API_KEY` | ✅ Yes | Your Claude API key from Anthropic |
+| `SENTRY_DSN` | ⚠️ Recommended | Sentry DSN for error tracking (free tier available) |
+| `SOCKETIO_CORS_ORIGINS` | ⚠️ Recommended | Comma-separated list of allowed origins for WebSocket connections |
 | `DATABASE_URL` | Auto | Automatically set by Heroku Postgres addon |
+| `REDIS_URL` | Auto | Automatically set by Heroku Redis addon |
+| `CLOUDINARY_*` | Auto | Automatically set by Cloudinary addon (if installed) |
 | `PORT` | Auto | Automatically set by Heroku |
 
 ---
@@ -217,9 +243,17 @@ heroku features:enable preboot
 ```
 
 ### 4. Set Up Monitoring
-- Enable Heroku metrics
-- Consider adding Sentry for error tracking
+
+**Sentry Error Tracking (Integrated):**
+- ✅ Sentry is already integrated and will start tracking errors automatically
+- Access your Sentry dashboard: https://sentry.io/
+- Configure alert rules for critical errors
+- Set up Slack/email notifications for error spikes
+
+**Additional Monitoring:**
+- Enable Heroku metrics: `heroku labs:enable log-runtime-metrics`
 - Set up uptime monitoring (e.g., UptimeRobot, Pingdom)
+- Monitor the `/health` endpoint for service health checks
 
 ### 5. Backup Database
 ```bash

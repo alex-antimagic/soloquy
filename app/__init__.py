@@ -10,6 +10,10 @@ from flask_limiter.util import get_remote_address
 from flask_talisman import Talisman
 from flask_socketio import SocketIO
 from config import config
+import sentry_sdk
+from sentry_sdk.integrations.flask import FlaskIntegration
+from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
+from sentry_sdk.integrations.rq import RqIntegration
 
 # Initialize extensions
 db = SQLAlchemy()
@@ -31,10 +35,45 @@ limiter = Limiter(
 socketio = SocketIO()
 
 
+def init_sentry(app):
+    """Initialize Sentry error tracking and performance monitoring"""
+    sentry_dsn = app.config.get('SENTRY_DSN')
+
+    if sentry_dsn:
+        sentry_sdk.init(
+            dsn=sentry_dsn,
+            integrations=[
+                FlaskIntegration(),
+                SqlalchemyIntegration(),
+                RqIntegration(),
+            ],
+            # Performance monitoring - sample 10% of transactions
+            traces_sample_rate=0.1,
+
+            # Release tracking for better debugging
+            release=os.environ.get('HEROKU_SLUG_COMMIT', 'unknown'),
+
+            # Environment tracking
+            environment=app.config.get('FLASK_ENV', 'development'),
+
+            # Don't send personally identifiable information
+            send_default_pii=False,
+
+            # Sample rate for error events (1.0 = capture all errors)
+            sample_rate=1.0,
+        )
+        print(f"✓ Sentry initialized for {app.config.get('FLASK_ENV', 'development')} environment")
+    else:
+        print("⚠ Sentry DSN not configured - error tracking disabled")
+
+
 def create_app(config_name='default'):
     """Application factory pattern"""
     app = Flask(__name__)
     app.config.from_object(config[config_name])
+
+    # Initialize Sentry error tracking (do this early to catch initialization errors)
+    init_sentry(app)
 
     # Initialize extensions
     db.init_app(app)
@@ -45,11 +84,14 @@ def create_app(config_name='default'):
     limiter.init_app(app)
 
     # Initialize Socket.IO with Redis message queue
+    # Get allowed origins from environment (defaults to localhost for development)
+    allowed_origins = os.environ.get('SOCKETIO_CORS_ORIGINS', 'http://localhost:5000').split(',')
+
     socketio.init_app(
         app,
         message_queue=app.config['SOCKETIO_MESSAGE_QUEUE'],
         async_mode=app.config['SOCKETIO_ASYNC_MODE'],
-        cors_allowed_origins="*",  # Configure appropriately for production
+        cors_allowed_origins=allowed_origins,
         logger=True,
         engineio_logger=True
     )
@@ -117,7 +159,6 @@ def create_app(config_name='default'):
     from app.blueprints.crm import crm_bp
     from app.blueprints.support import support_bp
     from app.blueprints.integrations import integrations_bp
-    from app.blueprints.marketplace import marketplace_bp
     from app.blueprints.pages import pages
     from app.blueprints.website import website_bp, public_bp
     from app.blueprints.admin import admin_bp
@@ -131,7 +172,6 @@ def create_app(config_name='default'):
     app.register_blueprint(crm_bp, url_prefix='/crm')
     app.register_blueprint(support_bp, url_prefix='/support')
     app.register_blueprint(integrations_bp, url_prefix='/integrations')
-    app.register_blueprint(marketplace_bp)  # Agent marketplace at /marketplace
     app.register_blueprint(website_bp)  # Admin routes at /website
     app.register_blueprint(public_bp)  # Public routes at /w/<slug>
     app.register_blueprint(admin_bp)  # System admin at /admin
@@ -186,6 +226,43 @@ def create_app(config_name='default'):
         if current_user.is_authenticated:
             return redirect(url_for('tenant.home'))
         return redirect(url_for('auth.login'))
+
+    # Health check endpoint for monitoring and load balancers
+    @app.route('/health')
+    def health_check():
+        """Health check endpoint - returns 200 if app is healthy"""
+        from flask import jsonify
+        from redis import Redis
+
+        health_status = {
+            'status': 'healthy',
+            'version': os.environ.get('HEROKU_RELEASE_VERSION', 'unknown'),
+            'environment': app.config.get('FLASK_ENV', 'development')
+        }
+
+        try:
+            # Check database connection
+            db.session.execute('SELECT 1')
+            health_status['database'] = 'connected'
+        except Exception as e:
+            health_status['status'] = 'unhealthy'
+            health_status['database'] = f'error: {str(e)}'
+            return jsonify(health_status), 500
+
+        try:
+            # Check Redis connection
+            redis_url = app.config.get('REDIS_URL', 'redis://localhost:6379/0')
+            if redis_url.startswith('rediss://'):
+                redis_url += '?ssl_cert_reqs=none'
+            redis_conn = Redis.from_url(redis_url)
+            redis_conn.ping()
+            health_status['redis'] = 'connected'
+        except Exception as e:
+            health_status['status'] = 'unhealthy'
+            health_status['redis'] = f'error: {str(e)}'
+            return jsonify(health_status), 500
+
+        return jsonify(health_status), 200
 
     # API Routes (not under blueprint prefix)
     @app.route('/api/search')

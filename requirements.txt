@@ -55,5 +55,8 @@ eventlet==0.37.0
 rq==1.15.1  # Redis Queue for background job processing
 rq-dashboard==0.6.1  # Web dashboard for RQ job monitoring
 
+# Error Tracking & Monitoring
+sentry-sdk[flask]==1.40.0  # Error tracking and performance monitoring
+
 # Development
 python-dateutil==2.8.2
