@@ -34,6 +34,9 @@ class User(UserMixin, db.Model):
     stripe_customer_id = db.Column(db.String(255))  # For Stripe integration
     stripe_subscription_id = db.Column(db.String(255))  # For Stripe subscriptions
 
+    # Preferences
+    theme_preference = db.Column(db.String(10), default='dark', nullable=False)  # 'dark' or 'light'
+
     # Timestamps
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)

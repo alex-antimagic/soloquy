@@ -95,6 +95,41 @@
                 </div>
             </div>
 
+            <!-- Appearance Settings -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-palette me-2"></i>Appearance</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('tenant.account_settings') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="action" value="update_theme">
+
+                        <div class="mb-3">
+                            <label class="form-label">Theme Preference</label>
+                            <div class="form-text mb-2">Choose your preferred color theme for the interface.</div>
+                            <div class="btn-group w-100" role="group" aria-label="Theme selection">
+                                <input type="radio" class="btn-check" name="theme_preference" id="theme-dark" value="dark"
+                                       {% if current_user.theme_preference == 'dark' %}checked{% endif %}>
+                                <label class="btn btn-outline-secondary" for="theme-dark">
+                                    <i class="bi bi-moon-stars me-2"></i>Dark Mode
+                                </label>
+
+                                <input type="radio" class="btn-check" name="theme_preference" id="theme-light" value="light"
+                                       {% if current_user.theme_preference == 'light' %}checked{% endif %}>
+                                <label class="btn btn-outline-secondary" for="theme-light">
+                                    <i class="bi bi-sun me-2"></i>Light Mode
+                                </label>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg me-2"></i>Save Theme
+                        </button>
+                    </form>
+                </div>
+            </div>
+
             <!-- Change Password -->
             <div class="card mb-4">
                 <div class="card-header">

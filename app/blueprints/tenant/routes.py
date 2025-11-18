@@ -983,6 +983,16 @@ def account_settings():
             db.session.commit()
             flash('Profile picture removed successfully!', 'success')
 
+        elif action == 'update_theme':
+            # Update theme preference
+            theme = request.form.get('theme_preference', 'dark')
+            if theme in ['dark', 'light']:
+                current_user.theme_preference = theme
+                db.session.commit()
+                flash(f'Theme changed to {theme} mode!', 'success')
+            else:
+                flash('Invalid theme preference.', 'danger')
+
         return redirect(url_for('tenant.account_settings'))
 
     return render_template('tenant/account.html', title='Account Settings')
