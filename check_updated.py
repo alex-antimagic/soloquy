@@ -5,14 +5,19 @@ from app.models.company import Company
 app = create_app()
 
 with app.app_context():
-    # Check the companies that just finished
-    company_ids = [25, 27, 36]  # Network Intelligence, Launch Labs, Textback.ai
+    # Check all completed companies
+    companies = Company.query.filter_by(enrichment_status='completed').all()
 
-    for cid in company_ids:
-        c = Company.query.filter_by(id=cid).first()
-        if c:
-            print(f'{c.name} (ID {c.id}):')
-            print(f'  Score: {c.lead_score}')
-            summary = c.enrichment_summary[:150] if c.enrichment_summary else 'None'
-            print(f'  Summary: {summary}...')
-            print()
+    print(f'Total completed companies: {len(companies)}')
+    print()
+
+    # Check first 10 completed companies
+    for c in companies[:10]:
+        print(f'{c.name} (ID {c.id}):')
+        print(f'  Status: {c.enrichment_status}')
+        print(f'  Score: {c.lead_score}')
+        desc = c.description[:120] if c.description else 'None'
+        print(f'  Description: {desc}...')
+        summary = c.enrichment_summary[:120] if c.enrichment_summary else 'None'
+        print(f'  Summary: {summary}...')
+        print()
