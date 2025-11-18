@@ -329,7 +329,7 @@ Provide your analysis in the following JSON format:
         "lead_score_rationale": "detailed explanation of score based on company size, market position, funding, growth indicators",
         "buying_signals": ["specific signals like hiring, funding, expansion, tech stack"],
         "competitive_position": "detailed market position and competitive landscape analysis",
-        "enrichment_summary": "executive summary highlighting key insights and opportunity assessment"
+        "enrichment_summary": "1-2 sentence factual description of what the company does. NO opinions, NO assessments, NO strategic language - just state what products/services they provide and who they serve. Example: 'ABC Company provides cloud-based CRM software for small businesses in the retail sector.'"
     }}
 }}
 
