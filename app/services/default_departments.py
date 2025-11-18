@@ -292,6 +292,7 @@ def create_default_departments(tenant_id, template='business', selected_departme
 
         agent = Agent(
             department_id=department.id,
+            created_by_id=owner_id,
             name=agent_name,
             description=f"AI assistant specialized in {dept_config['name']} operations",
             system_prompt=dept_config['agent_prompt'],
