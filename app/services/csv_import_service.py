@@ -5,9 +5,40 @@ Handles bulk importing from CSV files with validation and error reporting.
 import csv
 import io
 from datetime import datetime
+import phonenumbers
 from app.models.company import Company
 from app.models.contact import Contact
 from app import db
+
+
+def normalize_phone_number(phone_str, default_region='US'):
+    """
+    Normalize phone number to E.164 format.
+
+    Args:
+        phone_str: Phone number string in any format
+        default_region: Default country code if not specified (default: US)
+
+    Returns:
+        str: Phone number in E.164 format (e.g., +14155552671) or None if invalid
+    """
+    if not phone_str or not phone_str.strip():
+        return None
+
+    try:
+        # Parse the phone number
+        parsed = phonenumbers.parse(phone_str, default_region)
+
+        # Validate it's a possible number
+        if phonenumbers.is_valid_number(parsed):
+            # Format to E.164
+            return phonenumbers.format_number(parsed, phonenumbers.PhoneNumberFormat.E164)
+        else:
+            # If not valid, return None
+            return None
+    except (phonenumbers.NumberParseException, Exception):
+        # If parsing fails, return None
+        return None
 
 
 class CSVImportService:
@@ -80,6 +111,10 @@ class CSVImportService:
                     if existing:
                         raise ValueError(f"Company '{name}' already exists")
 
+                    # Normalize phone number to E.164 format
+                    phone_raw = row.get('phone', '').strip()
+                    phone_normalized = normalize_phone_number(phone_raw) if phone_raw else None
+
                     # Create company
                     company = Company(
                         tenant_id=tenant_id,
@@ -93,7 +128,7 @@ class CSVImportService:
                         address_state=row.get('address_state', '').strip() or None,
                         address_postal_code=row.get('address_postal_code', '').strip() or None,
                         address_country=row.get('address_country', '').strip() or None,
-                        phone=row.get('phone', '').strip() or None,
+                        phone=phone_normalized,
                         linkedin_url=row.get('linkedin_url', '').strip() or None,
                         twitter_handle=row.get('twitter_handle', '').strip() or None,
                         description=row.get('description', '').strip() or None,
@@ -228,14 +263,21 @@ class CSVImportService:
                     except ValueError:
                         pass  # Use default 0
 
+                    # Normalize phone numbers to E.164 format
+                    phone_raw = row.get('phone', '').strip()
+                    phone_normalized = normalize_phone_number(phone_raw) if phone_raw else None
+
+                    mobile_raw = row.get('mobile', '').strip()
+                    mobile_normalized = normalize_phone_number(mobile_raw) if mobile_raw else None
+
                     # Create contact
                     contact = Contact(
                         tenant_id=tenant_id,
                         first_name=first_name,
                         last_name=last_name,
                         email=email,
-                        phone=row.get('phone', '').strip() or None,
-                        mobile=row.get('mobile', '').strip() or None,
+                        phone=phone_normalized,
+                        mobile=mobile_normalized,
                         job_title=row.get('job_title', '').strip() or None,
                         department=row.get('department', '').strip() or None,
                         seniority_level=row.get('seniority_level', '').strip() or None,
