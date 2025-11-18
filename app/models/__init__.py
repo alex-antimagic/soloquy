@@ -12,6 +12,7 @@ from app.models.audit_log import AuditLog
 
 # CRM Models
 from app.models.company import Company
+from app.models.company_enrichment_cache import CompanyEnrichmentCache
 from app.models.contact import Contact
 from app.models.lead import Lead
 from app.models.deal_pipeline import DealPipeline

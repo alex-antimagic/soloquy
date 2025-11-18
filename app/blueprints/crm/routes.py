@@ -1,4 +1,4 @@
-from flask import render_template, request, jsonify, g, make_response
+from flask import render_template, request, jsonify, g, make_response, current_app
 from flask_login import login_required, current_user
 from app.blueprints.crm import crm_bp
 from app.models.company import Company
@@ -10,8 +10,29 @@ from app.models.activity import Activity
 from app.models.lead import Lead
 from app.services.default_crm_data import create_default_deal_pipeline
 from app.services.csv_import_service import CSVImportService
+from app.services.lead_enrichment_service import enrich_company_background
 from app import db
 from datetime import datetime
+from redis import Redis
+from rq import Queue
+
+
+def queue_company_enrichment(company_id, tenant_id):
+    """Queue a company enrichment job in the background"""
+    try:
+        redis_conn = Redis.from_url(current_app.config['REDIS_URL'])
+        queue = Queue('enrichment', connection=redis_conn)
+        job = queue.enqueue(
+            enrich_company_background,
+            company_id,
+            tenant_id,
+            job_timeout='5m'  # 5 minute timeout
+        )
+        print(f"Queued enrichment job {job.id} for company {company_id}")
+        return job
+    except Exception as e:
+        print(f"Error queuing enrichment job: {str(e)}")
+        return None
 
 
 @crm_bp.route('/')
@@ -129,6 +150,9 @@ def create_company():
     db.session.add(company)
     db.session.commit()
 
+    # Queue background enrichment job
+    queue_company_enrichment(company.id, g.current_tenant.id)
+
     return jsonify(company.to_dict()), 201
 
 
@@ -223,6 +247,12 @@ def import_companies():
             tenant_id=g.current_tenant.id,
             owner_id=current_user.id
         )
+
+        # Queue enrichment jobs for all successfully imported companies
+        if results.get('created_ids'):
+            for company_id in results['created_ids']:
+                queue_company_enrichment(company_id, g.current_tenant.id)
+
         return jsonify(results)
     except Exception as e:
         return jsonify({'error': str(e)}), 500

@@ -33,6 +33,16 @@ class Company(db.Model):
     business_context = db.Column(db.Text)  # JSON with scraped/enriched data
     tags = db.Column(db.String(500))  # Comma-separated tags
 
+    # Lead Enrichment (AI-generated)
+    enrichment_status = db.Column(db.String(20), index=True)  # 'pending', 'processing', 'completed', 'failed'
+    enriched_at = db.Column(db.DateTime)
+    enrichment_error = db.Column(db.Text)
+    lead_score = db.Column(db.Integer, index=True)  # 0-100 AI-calculated fit score
+    buying_signals = db.Column(db.Text)  # JSON: detected signals (hiring, funding, expansion)
+    competitive_position = db.Column(db.Text)  # Market position analysis
+    enrichment_summary = db.Column(db.Text)  # AI-generated summary
+    enrichment_cache_id = db.Column(db.Integer, db.ForeignKey('company_enrichment_cache.id'))
+
     # Status & Classification
     status = db.Column(db.String(20), default='active')  # active, inactive, prospect, customer
     lifecycle_stage = db.Column(db.String(50), default='lead')  # lead, qualified, customer, churned
@@ -48,6 +58,7 @@ class Company(db.Model):
     # Relationships
     tenant = db.relationship('Tenant', backref='companies')
     owner = db.relationship('User', foreign_keys=[owner_id], backref='owned_companies')
+    enrichment_cache = db.relationship('CompanyEnrichmentCache', back_populates='companies', foreign_keys=[enrichment_cache_id])
     contacts = db.relationship('Contact', back_populates='company', lazy='dynamic')
     deals = db.relationship('Deal', back_populates='company', lazy='dynamic')
     activities = db.relationship('Activity', back_populates='company', lazy='dynamic')
