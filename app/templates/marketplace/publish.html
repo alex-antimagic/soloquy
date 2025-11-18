@@ -1,0 +1,186 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('department.index') }}">Departments</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('department.view', department_id=department.id) }}">{{ department.name }}</a></li>
+                    <li class="breadcrumb-item active">Publish to Marketplace</li>
+                </ol>
+            </nav>
+
+            <h2>
+                <i class="bi bi-upload"></i>
+                Publish {{ agent.name }} to Marketplace
+            </h2>
+            <p class="text-muted">Share your agent with the community</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <form method="POST" action="{{ url_for('marketplace.publish_agent', agent_id=agent.id) }}">
+                {{ csrf_token() }}
+
+                <!-- Agent Preview -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="bi bi-eye"></i> Agent Preview</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex align-items-start mb-3">
+                            {% if agent.avatar_url %}
+                            <img src="{{ agent.avatar_url }}" alt="{{ agent.name }}"
+                                 class="rounded me-3" style="width: 60px; height: 60px;">
+                            {% endif %}
+                            <div>
+                                <h4 class="mb-1">{{ agent.name }}</h4>
+                                <p class="text-muted mb-0">{{ agent.description or 'No description provided' }}</p>
+                            </div>
+                        </div>
+                        <dl class="row mb-0">
+                            <dt class="col-sm-3">Model</dt>
+                            <dd class="col-sm-9"><code>{{ agent.model }}</code></dd>
+
+                            <dt class="col-sm-3">Temperature</dt>
+                            <dd class="col-sm-9">{{ agent.temperature }}</dd>
+
+                            <dt class="col-sm-3">System Prompt</dt>
+                            <dd class="col-sm-9">
+                                <small class="text-muted">{{ agent.system_prompt[:100] }}...</small>
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
+
+                <!-- Publication Settings -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="bi bi-sliders"></i> Publication Settings</h5>
+                    </div>
+                    <div class="card-body">
+                        <!-- Category -->
+                        <div class="mb-3">
+                            <label for="category" class="form-label">Category</label>
+                            <select name="category" id="category" class="form-select" required>
+                                <option value="">Choose a category...</option>
+                                <option value="sales">Sales</option>
+                                <option value="support">Customer Support</option>
+                                <option value="finance">Finance</option>
+                                <option value="marketing">Marketing</option>
+                                <option value="engineering">Engineering</option>
+                                <option value="hr">Human Resources</option>
+                                <option value="operations">Operations</option>
+                                <option value="general">General</option>
+                            </select>
+                            <small class="form-text text-muted">
+                                Help users find your agent by selecting the most relevant category
+                            </small>
+                        </div>
+
+                        <!-- Tags -->
+                        <div class="mb-3">
+                            <label for="tags" class="form-label">Tags</label>
+                            <input type="text" name="tags" id="tags" class="form-control"
+                                   placeholder="e.g., invoicing, customer-service, data-analysis">
+                            <small class="form-text text-muted">
+                                Comma-separated tags to help users discover your agent
+                            </small>
+                        </div>
+
+                        <!-- Visibility -->
+                        <div class="mb-3">
+                            <label class="form-label">Visibility</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="visibility"
+                                       id="visibilityPublic" value="public" checked>
+                                <label class="form-check-label" for="visibilityPublic">
+                                    <strong>Public</strong> - Available to all Soloquy users
+                                    <br><small class="text-muted">Anyone can discover and install your agent</small>
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="visibility"
+                                       id="visibilityWorkspace" value="workspace">
+                                <label class="form-check-label" for="visibilityWorkspace">
+                                    <strong>Workspace Only</strong> - Only your workspace members
+                                    <br><small class="text-muted">Share within your organization</small>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Important Notes -->
+                <div class="alert alert-warning">
+                    <h6><i class="bi bi-exclamation-triangle"></i> Before Publishing</h6>
+                    <ul class="mb-0 small">
+                        <li>Make sure your system prompt doesn't contain sensitive information</li>
+                        <li>Integration settings (QuickBooks, Gmail, etc.) will NOT be shared</li>
+                        <li>Users will create their own copy of this agent</li>
+                        <li>You can unpublish your agent at any time</li>
+                    </ul>
+                </div>
+
+                <!-- Actions -->
+                <div class="d-flex justify-content-between">
+                    <a href="{{ url_for('department.edit_agent', agent_id=agent.id) }}" class="btn btn-secondary">
+                        <i class="bi bi-arrow-left"></i> Cancel
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-upload"></i> Publish to Marketplace
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Help Sidebar -->
+        <div class="col-lg-4">
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-lightbulb"></i> Publishing Tips</h6>
+                </div>
+                <div class="card-body">
+                    <h6>Choose the Right Category</h6>
+                    <p class="small">Pick the category that best matches your agent's primary purpose.</p>
+
+                    <h6>Add Relevant Tags</h6>
+                    <p class="small">Tags help users find your agent. Include specific use cases and features.</p>
+
+                    <h6>Write a Clear Description</h6>
+                    <p class="small">Your agent description should explain what it does and who it's for.</p>
+
+                    <h6>Test Before Publishing</h6>
+                    <p class="small">Make sure your agent works as expected before sharing with others.</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">What Gets Shared</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-2">
+                        <i class="bi bi-check-circle text-success"></i> Name & Description
+                    </div>
+                    <div class="mb-2">
+                        <i class="bi bi-check-circle text-success"></i> System Prompt
+                    </div>
+                    <div class="mb-2">
+                        <i class="bi bi-check-circle text-success"></i> Model Settings
+                    </div>
+                    <div class="mb-2">
+                        <i class="bi bi-x-circle text-danger"></i> Integration Credentials
+                    </div>
+                    <div class="mb-2">
+                        <i class="bi bi-x-circle text-danger"></i> Conversation History
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

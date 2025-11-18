@@ -110,6 +110,7 @@ def create_app(config_name='default'):
     from app.blueprints.crm import crm_bp
     from app.blueprints.support import support_bp
     from app.blueprints.integrations import integrations_bp
+    from app.blueprints.marketplace import marketplace_bp
     from app.blueprints.pages import pages
     from app.blueprints.website import website_bp, public_bp
     from app.blueprints.admin import admin_bp
@@ -123,6 +124,7 @@ def create_app(config_name='default'):
     app.register_blueprint(crm_bp, url_prefix='/crm')
     app.register_blueprint(support_bp, url_prefix='/support')
     app.register_blueprint(integrations_bp, url_prefix='/integrations')
+    app.register_blueprint(marketplace_bp)  # Agent marketplace at /marketplace
     app.register_blueprint(website_bp)  # Admin routes at /website
     app.register_blueprint(public_bp)  # Public routes at /w/<slug>
     app.register_blueprint(admin_bp)  # System admin at /admin

@@ -57,6 +57,13 @@
             <span class="icon-label">Agents</span>
         </a>
 
+        <!-- Marketplace -->
+        <a href="{{ url_for('marketplace.index') }}"
+           class="icon-sidebar-item {% if 'marketplace' in request.endpoint %}active{% endif %}">
+            <i class="bi bi-shop"></i>
+            <span class="icon-label">Marketplace</span>
+        </a>
+
         <div class="icon-sidebar-divider"></div>
 
         <!-- Tasks/Projects -->

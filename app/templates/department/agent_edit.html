@@ -30,6 +30,9 @@
                     </span>
                 </div>
                 <div>
+                    <a href="{{ url_for('marketplace.publish_agent', agent_id=agent.id) }}" class="btn btn-sm btn-outline-success me-2">
+                        <i class="bi bi-upload"></i> Publish
+                    </a>
                     <a href="{{ url_for('department.export_agent', agent_id=agent.id) }}" class="btn btn-sm btn-outline-secondary me-2">
                         <i class="bi bi-download"></i> Export
                     </a>
