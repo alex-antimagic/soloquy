@@ -341,7 +341,8 @@ Provide ONLY valid JSON, no additional text. Be thorough in your analysis and ba
             response = self.ai_service.chat(
                 agent=agent,
                 messages=[{"role": "user", "content": context}],
-                system_prompt=agent.system_prompt
+                system_prompt=agent.system_prompt,
+                max_tokens=8000  # Increased to prevent truncation of JSON responses
             )
 
             # Extract JSON from response (response is already a string, not a dict)
@@ -360,18 +361,19 @@ Provide ONLY valid JSON, no additional text. Be thorough in your analysis and ba
 
         except Exception as e:
             print(f"Error in AI analysis: {str(e)}")
-            # Return default structure on error
+            # Return default structure with a reasonable fallback message
+            fallback_summary = f"{company_name} requires further manual research to determine business value and fit."
             return {
-                "company_basics": {"description": "Analysis failed"},
+                "company_basics": {"description": f"Company information for {company_name} could not be automatically analyzed."},
                 "products_services": {},
                 "competitors": {},
                 "key_people": {},
                 "lead_analysis": {
                     "lead_score": 50,
-                    "lead_score_rationale": f"Analysis error: {str(e)}",
+                    "lead_score_rationale": "Automatic analysis unavailable - manual review recommended",
                     "buying_signals": [],
                     "competitive_position": "Unknown",
-                    "enrichment_summary": "Enrichment analysis encountered an error"
+                    "enrichment_summary": fallback_summary
                 }
             }
 
