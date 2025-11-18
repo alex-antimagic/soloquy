@@ -305,7 +305,7 @@ Provide your analysis in the following JSON format:
     "company_basics": {{
         "industry": "specific industry/vertical",
         "company_size_estimate": "1-10|11-50|51-200|201-500|501-1000|1001-5000|5001+",
-        "description": "2-3 sentence company description",
+        "description": "1-2 sentence FACTUAL description of what the company does. NO opinions, NO assessments, NO strategic language - just state what products/services they provide and who they serve. Example: 'ABC Company provides cloud-based CRM software for small businesses in the retail sector.'",
         "founding_year": "YYYY or null",
         "headquarters": "City, State/Country or null"
     }},
@@ -329,7 +329,7 @@ Provide your analysis in the following JSON format:
         "lead_score_rationale": "detailed explanation of score based on company size, market position, funding, growth indicators",
         "buying_signals": ["specific signals like hiring, funding, expansion, tech stack"],
         "competitive_position": "detailed market position and competitive landscape analysis",
-        "enrichment_summary": "1-2 sentence factual description of what the company does. NO opinions, NO assessments, NO strategic language - just state what products/services they provide and who they serve. Example: 'ABC Company provides cloud-based CRM software for small businesses in the retail sector.'"
+        "enrichment_summary": "brief strategic recommendation and opportunity assessment"
     }}
 }}
 
@@ -507,7 +507,8 @@ Provide ONLY valid JSON, no additional text. Be thorough in your analysis and ba
                 company.industry = basics['industry']
             if basics.get('company_size_estimate') and not company.company_size:
                 company.company_size = basics['company_size_estimate']
-            if basics.get('description') and not company.description:
+            # Always update description when we have new AI-generated data
+            if basics.get('description'):
                 company.description = basics['description']
 
             company.enrichment_status = 'completed'
