@@ -156,54 +156,11 @@ def import_enhanced_agents(json_file='enhanced_agents.json', tenant_id=None, dry
                     stats['errors'] += 1
                     continue
 
-            # Create default tasks
-            default_tasks = enhanced.get('default_tasks', [])
-
-            if default_tasks:
-                print(f"    📋 Creating {len(default_tasks)} default tasks...")
-
-                for task_data in default_tasks:
-                    if dry_run:
-                        print(f"       - [{task_data.get('priority', 'medium')}] {task_data.get('title')}")
-                    else:
-                        try:
-                            # Calculate due date based on priority
-                            priority = task_data.get('priority', 'medium')
-                            if priority == 'high':
-                                due_date = datetime.utcnow() + timedelta(days=7)
-                            elif priority == 'medium':
-                                due_date = datetime.utcnow() + timedelta(days=14)
-                            else:  # low
-                                due_date = datetime.utcnow() + timedelta(days=30)
-
-                            task = Task(
-                                title=task_data.get('title')[:200],  # Respect max length
-                                description=task_data.get('description'),
-                                status='pending',
-                                priority=priority,
-                                due_date=due_date,
-                                tenant_id=tenant.id,
-                                department_id=department.id,
-                                assigned_to_agent_id=agent.id,
-                                created_by_id=system_user.id
-                            )
-
-                            db.session.add(task)
-                            stats['tasks_created'] += 1
-
-                            print(f"       ✅ [{priority}] {task_data.get('title')}")
-
-                        except Exception as e:
-                            print(f"       ❌ Error creating task: {e}")
-                            stats['errors'] += 1
-
-                if not dry_run:
-                    try:
-                        db.session.commit()
-                    except Exception as e:
-                        print(f"    ❌ Error committing tasks: {e}")
-                        db.session.rollback()
-                        stats['errors'] += 1
+            # Task generation disabled per user request
+            # default_tasks = enhanced.get('default_tasks', [])
+            # if default_tasks:
+            #     print(f"    📋 Skipping task creation (disabled)")
+            pass
 
             print()  # Blank line between agents
 
