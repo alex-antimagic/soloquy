@@ -35,9 +35,14 @@
             <h2 class="mb-1">Companies</h2>
             <p class="text-muted mb-0">Manage your customer accounts and organizations</p>
         </div>
-        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createCompanyModal">
-            <i class="bi bi-building-add"></i> New Company
-        </button>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#importCompanyModal">
+                <i class="bi bi-upload"></i> Import CSV
+            </button>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createCompanyModal">
+                <i class="bi bi-building-add"></i> New Company
+            </button>
+        </div>
     </div>
 
     <!-- Search and Filters -->
@@ -111,8 +116,30 @@
                     </p>
                     {% endif %}
 
+                    {% if company.phone %}
+                    <p class="text-muted small mb-2">
+                        <i class="bi bi-telephone"></i> <a href="tel:{{ company.phone }}" onclick="event.stopPropagation();" class="text-decoration-none">{{ company.phone }}</a>
+                    </p>
+                    {% endif %}
+
+                    {% if company.address_city or company.address_state %}
+                    <p class="text-muted small mb-2">
+                        <i class="bi bi-geo-alt"></i>
+                        {% if company.address_city %}{{ company.address_city }}{% endif %}{% if company.address_city and company.address_state %}, {% endif %}{% if company.address_state %}{{ company.address_state }}{% endif %}{% if company.address_country %}, {{ company.address_country }}{% endif %}
+                    </p>
+                    {% endif %}
+
+                    <div class="d-flex gap-2 flex-wrap mb-2">
+                        {% if company.company_size %}
+                        <span class="badge bg-light text-dark"><i class="bi bi-people"></i> {{ company.company_size }}</span>
+                        {% endif %}
+                        {% if company.annual_revenue %}
+                        <span class="badge bg-light text-dark"><i class="bi bi-cash-stack"></i> {{ company.annual_revenue }}</span>
+                        {% endif %}
+                    </div>
+
                     {% if company.description %}
-                    <p class="card-text text-muted small mb-3">{{ company.description[:120] }}{% if company.description|length > 120 %}...{% endif %}</p>
+                    <p class="card-text text-muted small mb-3">{{ company.description[:100] }}{% if company.description|length > 100 %}...{% endif %}</p>
                     {% endif %}
 
                     <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
@@ -124,11 +151,18 @@
                                 <i class="bi bi-currency-dollar"></i> {{ company.deals.count() }}
                             </span>
                         </div>
-                        {% if company.website %}
-                        <a href="{{ company.website }}" target="_blank" class="text-decoration-none small" onclick="event.stopPropagation();">
-                            <i class="bi bi-globe"></i> Website
-                        </a>
-                        {% endif %}
+                        <div class="d-flex gap-2">
+                            {% if company.website %}
+                            <a href="{{ company.website }}" target="_blank" class="text-decoration-none small" onclick="event.stopPropagation();" title="Website">
+                                <i class="bi bi-globe"></i>
+                            </a>
+                            {% endif %}
+                            {% if company.linkedin_url %}
+                            <a href="{{ company.linkedin_url }}" target="_blank" class="text-decoration-none small" onclick="event.stopPropagation();" title="LinkedIn">
+                                <i class="bi bi-linkedin"></i>
+                            </a>
+                            {% endif %}
+                        </div>
                     </div>
 
                     {% if company.owner %}
@@ -238,6 +272,178 @@
     </div>
 </div>
 
+<!-- Import Companies Modal -->
+<div class="modal fade" id="importCompanyModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Import Companies from CSV</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i>
+                    <strong>CSV Format:</strong> Download the template below to see the correct format.
+                    Minimum required field: <strong>name</strong>
+                </div>
+
+                <div class="mb-3">
+                    <a href="{{ url_for('crm.download_company_template') }}" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-download"></i> Download CSV Template
+                    </a>
+                </div>
+
+                <div class="mb-3">
+                    <label for="companyCSVFile" class="form-label">Select CSV File</label>
+                    <input type="file" class="form-control" id="companyCSVFile" accept=".csv">
+                </div>
+
+                <div id="importResults" class="d-none">
+                    <div class="alert alert-success" id="importSuccess" style="display: none;">
+                        <i class="bi bi-check-circle"></i>
+                        <span id="successMessage"></span>
+                    </div>
+                    <div class="alert alert-danger" id="importErrors" style="display: none;">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        <strong>Import Errors:</strong>
+                        <ul id="errorList" class="mb-0 mt-2"></ul>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="importCompanies()">
+                    <i class="bi bi-upload"></i> Import
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Company Modal -->
+<div class="modal fade" id="editCompanyModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Company</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editCompanyForm">
+                    <input type="hidden" id="editCompanyId">
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label for="editCompanyName" class="form-label">Company Name *</label>
+                            <input type="text" class="form-control" id="editCompanyName" name="name" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="editCompanyWebsite" class="form-label">Website</label>
+                            <input type="url" class="form-control" id="editCompanyWebsite" name="website">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="editCompanyIndustry" class="form-label">Industry</label>
+                            <input type="text" class="form-control" id="editCompanyIndustry" name="industry">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="editCompanySize" class="form-label">Company Size</label>
+                            <select class="form-select" id="editCompanySize" name="company_size">
+                                <option value="">Select size...</option>
+                                <option value="1-10">1-10 employees</option>
+                                <option value="11-50">11-50 employees</option>
+                                <option value="51-200">51-200 employees</option>
+                                <option value="201-500">201-500 employees</option>
+                                <option value="501-1000">501-1000 employees</option>
+                                <option value="1001+">1001+ employees</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="editCompanyRevenue" class="form-label">Annual Revenue</label>
+                            <select class="form-select" id="editCompanyRevenue" name="annual_revenue">
+                                <option value="">Select revenue...</option>
+                                <option value="$0-1M">$0-1M</option>
+                                <option value="$1M-10M">$1M-10M</option>
+                                <option value="$10M-50M">$10M-50M</option>
+                                <option value="$50M-100M">$50M-100M</option>
+                                <option value="$100M+">$100M+</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="editCompanyPhone" class="form-label">Phone</label>
+                            <input type="tel" class="form-control" id="editCompanyPhone" name="phone">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="editCompanyLinkedIn" class="form-label">LinkedIn URL</label>
+                            <input type="url" class="form-control" id="editCompanyLinkedIn" name="linkedin_url">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editCompanyStreet" class="form-label">Street Address</label>
+                        <input type="text" class="form-control" id="editCompanyStreet" name="address_street">
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="editCompanyCity" class="form-label">City</label>
+                            <input type="text" class="form-control" id="editCompanyCity" name="address_city">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label for="editCompanyState" class="form-label">State</label>
+                            <input type="text" class="form-control" id="editCompanyState" name="address_state">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label for="editCompanyPostal" class="form-label">Postal Code</label>
+                            <input type="text" class="form-control" id="editCompanyPostal" name="address_postal_code">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="editCompanyCountry" class="form-label">Country</label>
+                            <input type="text" class="form-control" id="editCompanyCountry" name="address_country">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="editCompanyTags" class="form-label">Tags</label>
+                            <input type="text" class="form-control" id="editCompanyTags" name="tags" placeholder="comma,separated,tags">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="editCompanyStatus" class="form-label">Status</label>
+                            <select class="form-select" id="editCompanyStatus" name="status">
+                                <option value="active">Active</option>
+                                <option value="inactive">Inactive</option>
+                                <option value="prospect">Prospect</option>
+                                <option value="customer">Customer</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="editCompanyLifecycle" class="form-label">Lifecycle Stage</label>
+                            <select class="form-select" id="editCompanyLifecycle" name="lifecycle_stage">
+                                <option value="lead">Lead</option>
+                                <option value="qualified">Qualified</option>
+                                <option value="customer">Customer</option>
+                                <option value="churned">Churned</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editCompanyDescription" class="form-label">Description</label>
+                        <textarea class="form-control" id="editCompanyDescription" name="description" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="updateCompany()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
@@ -272,8 +478,67 @@ function editCompany(companyId, event) {
     event.preventDefault();
     event.stopPropagation();
 
-    // TODO: Implement edit modal
-    alert('Edit functionality coming soon!');
+    // Fetch company data
+    fetch(`/crm/companies/${companyId}`)
+        .then(response => response.text())
+        .then(html => {
+            // Parse HTML to extract company data (this is a simple approach)
+            // In production, you'd want an API endpoint that returns JSON
+            // For now, we'll create a simpler approach using the company detail page's data
+
+            // Instead, let's fetch via a direct approach
+            // Since we don't have a JSON API endpoint, we'll need to pass data via the template
+            // For now, use a Bootstrap modal with manual data entry
+            // Store companyId for update
+            document.getElementById('editCompanyId').value = companyId;
+
+            // Show modal (user will need to fill in current values)
+            const modal = new bootstrap.Modal(document.getElementById('editCompanyModal'));
+            modal.show();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            // Still show the modal even if fetch fails
+            document.getElementById('editCompanyId').value = companyId;
+            const modal = new bootstrap.Modal(document.getElementById('editCompanyModal'));
+            modal.show();
+        });
+}
+
+function updateCompany() {
+    const companyId = document.getElementById('editCompanyId').value;
+    const form = document.getElementById('editCompanyForm');
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData.entries());
+
+    // Convert empty strings to null
+    Object.keys(data).forEach(key => {
+        if (data[key] === '') data[key] = null;
+    });
+
+    fetch(`/crm/companies/${companyId}/update`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.id) {
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('editCompanyModal'));
+            modal.hide();
+            // Reload page to show updated data
+            window.location.reload();
+        } else if (data.error) {
+            alert(data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to update company');
+    });
 }
 
 function createDeal(companyId, event) {
@@ -306,6 +571,72 @@ function deleteCompany(companyId, event) {
             alert('Failed to delete company');
         });
     }
+}
+
+function importCompanies() {
+    const fileInput = document.getElementById('companyCSVFile');
+    const file = fileInput.files[0];
+
+    if (!file) {
+        alert('Please select a CSV file');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    // Show loading state
+    const importButton = event.target;
+    const originalText = importButton.innerHTML;
+    importButton.disabled = true;
+    importButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Importing...';
+
+    fetch('{{ url_for("crm.import_companies") }}', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        const resultsDiv = document.getElementById('importResults');
+        const successDiv = document.getElementById('importSuccess');
+        const errorsDiv = document.getElementById('importErrors');
+        const successMessage = document.getElementById('successMessage');
+        const errorList = document.getElementById('errorList');
+
+        resultsDiv.classList.remove('d-none');
+
+        if (data.success > 0) {
+            successDiv.style.display = 'block';
+            successMessage.textContent = `Successfully imported ${data.success} companies!`;
+        }
+
+        if (data.errors && data.errors.length > 0) {
+            errorsDiv.style.display = 'block';
+            errorList.innerHTML = '';
+            data.errors.forEach(error => {
+                const li = document.createElement('li');
+                li.textContent = `Row ${error.row}: ${error.error}`;
+                errorList.appendChild(li);
+            });
+        }
+
+        // Reset button
+        importButton.disabled = false;
+        importButton.innerHTML = originalText;
+
+        // Reload page after 2 seconds if any companies were imported
+        if (data.success > 0) {
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to import companies');
+        importButton.disabled = false;
+        importButton.innerHTML = originalText;
+    });
 }
 </script>
 {% endblock %}

@@ -1,4 +1,4 @@
-from flask import render_template, request, jsonify, g
+from flask import render_template, request, jsonify, g, make_response
 from flask_login import login_required, current_user
 from app.blueprints.crm import crm_bp
 from app.models.company import Company
@@ -9,6 +9,7 @@ from app.models.deal_stage import DealStage
 from app.models.activity import Activity
 from app.models.lead import Lead
 from app.services.default_crm_data import create_default_deal_pipeline
+from app.services.csv_import_service import CSVImportService
 from app import db
 from datetime import datetime
 
@@ -201,6 +202,45 @@ def delete_company(company_id):
     return jsonify({'success': True})
 
 
+@crm_bp.route('/companies/import', methods=['POST'])
+@login_required
+def import_companies():
+    """Bulk import companies from CSV file"""
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file uploaded'}), 400
+
+    file = request.files['file']
+
+    if file.filename == '':
+        return jsonify({'error': 'No file selected'}), 400
+
+    if not file.filename.endswith('.csv'):
+        return jsonify({'error': 'File must be a CSV'}), 400
+
+    try:
+        results = CSVImportService.import_companies(
+            file,
+            tenant_id=g.current_tenant.id,
+            owner_id=current_user.id
+        )
+        return jsonify(results)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@crm_bp.route('/companies/import/template')
+@login_required
+def download_company_template():
+    """Download CSV template for company import"""
+    csv_content = CSVImportService.generate_company_template()
+
+    response = make_response(csv_content)
+    response.headers['Content-Type'] = 'text/csv'
+    response.headers['Content-Disposition'] = 'attachment; filename=company_import_template.csv'
+
+    return response
+
+
 # ========== CONTACTS ROUTES ==========
 
 @crm_bp.route('/contacts')
@@ -281,7 +321,7 @@ def create_contact():
         last_name=last_name,
         email=data.get('email'),
         phone=data.get('phone'),
-        mobile_phone=data.get('mobile_phone'),
+        mobile=data.get('mobile'),
         job_title=data.get('job_title'),
         company_id=data.get('company_id'),
         linkedin_url=data.get('linkedin_url'),
@@ -320,8 +360,8 @@ def update_contact(contact_id):
         contact.email = data['email']
     if 'phone' in data:
         contact.phone = data['phone']
-    if 'mobile_phone' in data:
-        contact.mobile_phone = data['mobile_phone']
+    if 'mobile' in data:
+        contact.mobile = data['mobile']
     if 'job_title' in data:
         contact.job_title = data['job_title']
     if 'company_id' in data:
@@ -359,6 +399,45 @@ def delete_contact(contact_id):
     db.session.commit()
 
     return jsonify({'success': True})
+
+
+@crm_bp.route('/contacts/import', methods=['POST'])
+@login_required
+def import_contacts():
+    """Bulk import contacts from CSV file"""
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file uploaded'}), 400
+
+    file = request.files['file']
+
+    if file.filename == '':
+        return jsonify({'error': 'No file selected'}), 400
+
+    if not file.filename.endswith('.csv'):
+        return jsonify({'error': 'File must be a CSV'}), 400
+
+    try:
+        results = CSVImportService.import_contacts(
+            file,
+            tenant_id=g.current_tenant.id,
+            owner_id=current_user.id
+        )
+        return jsonify(results)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@crm_bp.route('/contacts/import/template')
+@login_required
+def download_contact_template():
+    """Download CSV template for contact import"""
+    csv_content = CSVImportService.generate_contact_template()
+
+    response = make_response(csv_content)
+    response.headers['Content-Type'] = 'text/csv'
+    response.headers['Content-Disposition'] = 'attachment; filename=contact_import_template.csv'
+
+    return response
 
 
 # ========== PIPELINE ROUTES ==========
