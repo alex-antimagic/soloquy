@@ -478,6 +478,38 @@ class Agent(db.Model):
         if missing_fields:
             raise ValueError(f"Missing required fields: {', '.join(missing_fields)}")
 
+        # Security: Sanitize system prompt to prevent injection attacks
+        system_prompt = agent_data['system_prompt']
+
+        # Check for dangerous patterns
+        dangerous_patterns = [
+            'ignore previous instructions',
+            'disregard above',
+            'system:',
+            'admin:',
+            '<script',
+            'javascript:',
+            'exec(',
+            'eval(',
+            '__import__'
+        ]
+
+        system_prompt_lower = system_prompt.lower()
+        for pattern in dangerous_patterns:
+            if pattern in system_prompt_lower:
+                raise ValueError(f"System prompt contains potentially dangerous content: '{pattern}'")
+
+        # Limit length to prevent resource exhaustion
+        if len(system_prompt) > 10000:
+            raise ValueError("System prompt exceeds maximum length of 10,000 characters")
+
+        # Validate name length and characters
+        name = agent_data['name']
+        if len(name) > 255:
+            raise ValueError("Agent name exceeds maximum length of 255 characters")
+        if len(name) < 1:
+            raise ValueError("Agent name cannot be empty")
+
         # Validate model choice
         valid_models = [
             'claude-haiku-4-5-20251001',

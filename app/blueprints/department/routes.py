@@ -7,6 +7,53 @@ from app.models.department import Department
 from app.models.agent import Agent
 
 
+def get_agent_secure(agent_id):
+    """
+    Securely fetch agent with tenant validation built-in.
+    Prevents cross-tenant data leakage.
+    """
+    agent = Agent.query.join(Department).filter(
+        Agent.id == agent_id,
+        Department.tenant_id == g.current_tenant.id
+    ).first_or_404()
+    return agent
+
+
+def get_department_secure(department_id):
+    """
+    Securely fetch department with tenant validation built-in.
+    Prevents cross-tenant data leakage.
+    """
+    department = Department.query.filter_by(
+        id=department_id,
+        tenant_id=g.current_tenant.id
+    ).first_or_404()
+    return department
+
+
+def require_role(*roles):
+    """
+    Decorator to require specific roles in current tenant.
+    Usage: @require_role('owner', 'admin')
+    """
+    def decorator(f):
+        from functools import wraps
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            if not g.current_tenant:
+                flash('Please select a workspace first.', 'warning')
+                return redirect(url_for('tenant.home'))
+
+            user_role = current_user.get_role_in_tenant(g.current_tenant.id)
+            if user_role not in roles:
+                flash(f'Access denied. Required role: {"/".join(roles)}', 'danger')
+                return redirect(url_for('department.index'))
+
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
+
+
 @department_bp.route('/')
 @login_required
 def index():
@@ -57,12 +104,9 @@ def view(department_id):
 
 @department_bp.route('/create', methods=['GET', 'POST'])
 @login_required
+@require_role('owner', 'admin')
 def create():
     """Create a new department"""
-    if not g.current_tenant:
-        flash('Please select a workspace first.', 'warning')
-        return redirect(url_for('tenant.home'))
-
     form = DepartmentForm()
     if form.validate_on_submit():
         department = Department(
@@ -156,21 +200,11 @@ def delete(department_id):
 
 @department_bp.route('/agent/<int:agent_id>/edit', methods=['GET', 'POST'])
 @login_required
+@require_role('owner', 'admin')
 def edit_agent(agent_id):
     """Edit an agent's configuration"""
-    agent = Agent.query.get_or_404(agent_id)
+    agent = get_agent_secure(agent_id)  # Secure fetch with tenant validation
     department = agent.department
-
-    # Check tenant access
-    if department.tenant_id != g.current_tenant.id:
-        flash('Access denied.', 'danger')
-        return redirect(url_for('department.index'))
-
-    # Check user role (owner/admin only)
-    user_role = current_user.get_role_in_tenant(g.current_tenant.id)
-    if user_role not in ['owner', 'admin']:
-        flash('Only workspace owners and admins can edit agents.', 'danger')
-        return redirect(url_for('department.view', department_id=department.id))
 
     form = AgentForm(obj=agent)
 
@@ -224,13 +258,8 @@ def edit_agent(agent_id):
 @login_required
 def agent_versions(agent_id):
     """View version history for an agent"""
-    agent = Agent.query.get_or_404(agent_id)
+    agent = get_agent_secure(agent_id)  # Secure fetch with tenant validation
     department = agent.department
-
-    # Check tenant access
-    if department.tenant_id != g.current_tenant.id:
-        flash('Access denied.', 'danger')
-        return redirect(url_for('department.index'))
 
     # Get all versions
     versions = agent.get_version_history()
@@ -244,21 +273,10 @@ def agent_versions(agent_id):
 
 @department_bp.route('/agent/<int:agent_id>/versions/<int:version_id>/rollback', methods=['POST'])
 @login_required
+@require_role('owner', 'admin')
 def rollback_agent_version(agent_id, version_id):
     """Rollback agent to a previous version"""
-    agent = Agent.query.get_or_404(agent_id)
-    department = agent.department
-
-    # Check tenant access
-    if department.tenant_id != g.current_tenant.id:
-        flash('Access denied.', 'danger')
-        return redirect(url_for('department.index'))
-
-    # Check user role (owner/admin only)
-    user_role = current_user.get_role_in_tenant(g.current_tenant.id)
-    if user_role not in ['owner', 'admin']:
-        flash('Only workspace owners and admins can rollback agent versions.', 'danger')
-        return redirect(url_for('department.agent_versions', agent_id=agent.id))
+    agent = get_agent_secure(agent_id)  # Secure fetch with tenant validation
 
     # Get rollback reason from form
     from flask import request
@@ -284,13 +302,8 @@ def rollback_agent_version(agent_id, version_id):
 @login_required
 def compare_agent_versions(agent_id):
     """Compare two versions of an agent side-by-side"""
-    agent = Agent.query.get_or_404(agent_id)
+    agent = get_agent_secure(agent_id)  # Secure fetch with tenant validation
     department = agent.department
-
-    # Check tenant access
-    if department.tenant_id != g.current_tenant.id:
-        flash('Access denied.', 'danger')
-        return redirect(url_for('department.index'))
 
     # Get version IDs from query params
     from flask import request
@@ -347,25 +360,19 @@ def compare_agent_versions(agent_id):
 
 @department_bp.route('/agent/<int:agent_id>/versions/<int:version_id>/tag', methods=['POST'])
 @login_required
+@require_role('owner', 'admin')
 def tag_agent_version(agent_id, version_id):
     """Add or update a tag for an agent version"""
     from app.models.agent_version import AgentVersion
 
-    agent = Agent.query.get_or_404(agent_id)
-    department = agent.department
+    agent = get_agent_secure(agent_id)  # Secure fetch with tenant validation
 
-    # Check tenant access
-    if department.tenant_id != g.current_tenant.id:
-        flash('Access denied.', 'danger')
-        return redirect(url_for('department.index'))
-
-    # Check user role (owner/admin only)
-    user_role = current_user.get_role_in_tenant(g.current_tenant.id)
-    if user_role not in ['owner', 'admin']:
-        flash('Only workspace owners and admins can tag versions.', 'danger')
-        return redirect(url_for('department.agent_versions', agent_id=agent.id))
-
-    version = AgentVersion.query.get_or_404(version_id)
+    # Fetch version with tenant validation through agent relationship
+    version = AgentVersion.query.join(Agent).join(Department).filter(
+        AgentVersion.id == version_id,
+        AgentVersion.agent_id == agent.id,
+        Department.tenant_id == g.current_tenant.id
+    ).first_or_404()
 
     if version.agent_id != agent.id:
         flash('Invalid version.', 'danger')
@@ -391,22 +398,21 @@ def tag_agent_version(agent_id, version_id):
 @login_required
 def export_agent(agent_id):
     """Export agent configuration as JSON file"""
-    agent = Agent.query.get_or_404(agent_id)
-    department = agent.department
-
-    # Check tenant access
-    if department.tenant_id != g.current_tenant.id:
-        flash('Access denied.', 'danger')
-        return redirect(url_for('department.index'))
+    agent = get_agent_secure(agent_id)  # Secure fetch with tenant validation
 
     # Export to JSON
     import json
+    import re
     from flask import make_response
+    from werkzeug.utils import secure_filename
 
     agent_json = agent.export_to_json()
 
-    # Create filename
-    filename = f"{agent.name.lower().replace(' ', '_')}_config.json"
+    # Create filename - sanitize to prevent path traversal
+    safe_name = re.sub(r'[^a-zA-Z0-9_-]', '_', agent.name.lower())
+    safe_name = safe_name[:50]  # Limit length
+    filename = f"{safe_name}_config.json"
+    filename = secure_filename(filename)  # Additional sanitization
 
     # Create response
     response = make_response(json.dumps(agent_json, indent=2))
@@ -418,20 +424,10 @@ def export_agent(agent_id):
 
 @department_bp.route('/<int:department_id>/agent/import', methods=['GET', 'POST'])
 @login_required
+@require_role('owner', 'admin')
 def import_agent(department_id):
     """Import agent from JSON file"""
-    department = Department.query.get_or_404(department_id)
-
-    # Check tenant access
-    if department.tenant_id != g.current_tenant.id:
-        flash('Access denied.', 'danger')
-        return redirect(url_for('department.index'))
-
-    # Check user role (owner/admin only)
-    user_role = current_user.get_role_in_tenant(g.current_tenant.id)
-    if user_role not in ['owner', 'admin']:
-        flash('Only workspace owners and admins can import agents.', 'danger')
-        return redirect(url_for('department.view', department_id=department.id))
+    department = get_department_secure(department_id)  # Secure fetch with tenant validation
 
     if request.method == 'POST':
         # Check if file was uploaded
@@ -469,11 +465,15 @@ def import_agent(department_id):
             flash('Invalid JSON file. Please check the file format.', 'danger')
             return redirect(url_for('department.import_agent', department_id=department.id))
         except ValueError as e:
+            # ValueError contains user-friendly validation messages
             flash(f'Import failed: {str(e)}', 'danger')
             return redirect(url_for('department.import_agent', department_id=department.id))
         except Exception as e:
-            print(f"Error importing agent: {e}")
-            flash('An error occurred while importing the agent.', 'danger')
+            # Log detailed error internally, show generic message to user
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Agent import failed for user {current_user.id}: {type(e).__name__}: {str(e)}")
+            flash('Unable to import agent configuration. Please check the file and try again.', 'danger')
             return redirect(url_for('department.import_agent', department_id=department.id))
 
     return render_template('department/agent_import.html',

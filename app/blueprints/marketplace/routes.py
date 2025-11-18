@@ -114,6 +114,12 @@ def install_agent(agent_id):
         flash('Please select a workspace first.', 'warning')
         return redirect(url_for('marketplace.index'))
 
+    # Security: Only owners and admins can install agents
+    user_role = current_user.get_role_in_tenant(g.current_tenant.id)
+    if user_role not in ['owner', 'admin']:
+        flash('Only workspace owners and admins can install agents.', 'danger')
+        return redirect(url_for('marketplace.index'))
+
     marketplace_agent = MarketplaceAgent.query.get_or_404(agent_id)
 
     # Check if already installed
@@ -132,12 +138,11 @@ def install_agent(agent_id):
         flash('Please select a department.', 'danger')
         return redirect(url_for('marketplace.view_agent', agent_id=agent_id))
 
-    department = Department.query.get_or_404(department_id)
-
-    # Check department belongs to current tenant
-    if department.tenant_id != g.current_tenant.id:
-        flash('Access denied.', 'danger')
-        return redirect(url_for('marketplace.index'))
+    # Security: Fetch department with tenant validation built-in
+    department = Department.query.filter_by(
+        id=department_id,
+        tenant_id=g.current_tenant.id
+    ).first_or_404()
 
     try:
         # Create agent from marketplace listing
@@ -188,8 +193,11 @@ def install_agent(agent_id):
 
     except Exception as e:
         db.session.rollback()
-        print(f"Error installing agent: {e}")
-        flash('An error occurred while installing the agent.', 'danger')
+        # Log detailed error internally, show generic message to user
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Agent installation failed for user {current_user.id}, agent {agent_id}: {type(e).__name__}: {str(e)}")
+        flash('Unable to install agent. Please try again later.', 'danger')
         return redirect(url_for('marketplace.view_agent', agent_id=agent_id))
 
 
@@ -197,19 +205,22 @@ def install_agent(agent_id):
 @login_required
 def publish_agent(agent_id):
     """Publish an agent to the marketplace"""
-    agent = Agent.query.get_or_404(agent_id)
-    department = agent.department
+    if not g.current_tenant:
+        flash('Please select a workspace first.', 'warning')
+        return redirect(url_for('tenant.home'))
 
-    # Check tenant access
-    if department.tenant_id != g.current_tenant.id:
-        flash('Access denied.', 'danger')
-        return redirect(url_for('department.index'))
-
-    # Check user role (owner/admin only)
+    # Security: Only owners and admins can publish agents
     user_role = current_user.get_role_in_tenant(g.current_tenant.id)
     if user_role not in ['owner', 'admin']:
         flash('Only workspace owners and admins can publish agents.', 'danger')
-        return redirect(url_for('department.view', department_id=department.id))
+        return redirect(url_for('department.index'))
+
+    # Security: Fetch agent with tenant validation built-in
+    agent = Agent.query.join(Department).filter(
+        Agent.id == agent_id,
+        Department.tenant_id == g.current_tenant.id
+    ).first_or_404()
+    department = agent.department
 
     if request.method == 'POST':
         # Get form data
@@ -236,8 +247,11 @@ def publish_agent(agent_id):
 
         except Exception as e:
             db.session.rollback()
-            print(f"Error publishing agent: {e}")
-            flash('An error occurred while publishing the agent.', 'danger')
+            # Log detailed error internally, show generic message to user
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Agent publishing failed for user {current_user.id}, agent {agent_id}: {type(e).__name__}: {str(e)}")
+            flash('Unable to publish agent. Please try again later.', 'danger')
             return redirect(url_for('marketplace.publish_agent', agent_id=agent.id))
 
     return render_template('marketplace/publish.html',
@@ -307,8 +321,11 @@ def add_review(agent_id):
 
     except Exception as e:
         db.session.rollback()
-        print(f"Error adding review: {e}")
-        flash('An error occurred while saving your review.', 'danger')
+        # Log detailed error internally, show generic message to user
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Review submission failed for user {current_user.id}, agent {agent_id}: {type(e).__name__}: {str(e)}")
+        flash('Unable to save review. Please try again later.', 'danger')
 
     return redirect(url_for('marketplace.view_agent', agent_id=agent_id))
 
