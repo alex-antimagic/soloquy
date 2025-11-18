@@ -205,8 +205,8 @@
                                 {% else %}
                                 <p class="text-muted small mb-2 fst-italic">No description</p>
                                 {% endif %}
-                                <div class="d-flex gap-2 small text-muted align-items-center">
-                                    <span class="{% if not task.project %}fst-italic{% endif %}">
+                                <div class="d-flex gap-2 small text-muted align-items-center" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                    <span class="{% if not task.project %}fst-italic{% endif %} flex-shrink-0">
                                         <i class="bi bi-kanban"></i>
                                         {% if task.project %}
                                         <a href="{{ url_for('projects.view', project_id=task.project_id) }}">{{ task.project.name }}</a>
@@ -214,8 +214,8 @@
                                         No project
                                         {% endif %}
                                     </span>
-                                    <span class="text-muted">•</span>
-                                    <span class="{% if not task.assigned_to and not task.assigned_to_agent %}fst-italic{% endif %}">
+                                    <span class="text-muted flex-shrink-0">•</span>
+                                    <span class="{% if not task.assigned_to and not task.assigned_to_agent %}fst-italic{% endif %} flex-shrink-0">
                                         {% if task.assigned_to %}
                                         <i class="bi bi-person"></i> {{ task.assigned_to.full_name }}
                                         {% elif task.assigned_to_agent %}
@@ -224,8 +224,8 @@
                                         <i class="bi bi-person"></i> Unassigned
                                         {% endif %}
                                     </span>
-                                    <span class="text-muted">•</span>
-                                    <span class="{% if not task.due_date %}fst-italic{% endif %} {% if task.is_overdue() %}text-danger{% endif %}">
+                                    <span class="text-muted flex-shrink-0">•</span>
+                                    <span class="{% if not task.due_date %}fst-italic{% endif %} {% if task.is_overdue() %}text-danger{% endif %} flex-shrink-0">
                                         <i class="bi bi-calendar"></i>
                                         {% if task.due_date %}
                                         {{ task.due_date.strftime('%b %d') }}
