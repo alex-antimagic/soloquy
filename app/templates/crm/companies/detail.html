@@ -542,7 +542,7 @@ function updateCompany() {
     // Get CSRF token
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
 
-    fetch('{{ url_for("crm.company_update", company_id=company.id) }}', {
+    fetch('{{ url_for("crm.update_company", company_id=company.id) }}', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
