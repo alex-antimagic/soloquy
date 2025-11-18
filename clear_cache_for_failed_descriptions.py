@@ -10,22 +10,17 @@ with app.app_context():
     companies = Company.query.filter(Company.description.like('%Analysis failed%')).all()
 
     print(f'Found {len(companies)} companies with "Analysis failed" descriptions')
-    print('Clearing their enrichment cache to force fresh AI analysis...')
     print()
 
-    cleared_count = 0
-    for company in companies:
-        if company.domain:
-            # Delete cache entries for this domain
-            cache_entries = CompanyEnrichmentCache.query.filter_by(domain=company.domain).all()
-            for cache in cache_entries:
-                db.session.delete(cache)
-                cleared_count += 1
+    # Clear ALL cache entries to force fresh AI analysis for everyone
+    print('Clearing ALL enrichment cache entries to force fresh AI analysis...')
+    cache_count = CompanyEnrichmentCache.query.count()
+    print(f'  Found {cache_count} cache entries')
 
-            if cache_entries:
-                print(f'  Cleared {len(cache_entries)} cache entries for {company.name} ({company.domain})')
-
+    CompanyEnrichmentCache.query.delete()
     db.session.commit()
+
     print()
-    print(f'Successfully cleared {cleared_count} cache entries for {len(companies)} companies')
-    print('Re-queue these companies to get fresh AI analysis with updated descriptions')
+    print(f'Successfully cleared ALL {cache_count} cache entries')
+    print(f'{len(companies)} companies with failed descriptions will get fresh analysis with v171 prompts')
+    print('Re-queue these companies to get proper factual descriptions')
