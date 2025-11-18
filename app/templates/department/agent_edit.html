@@ -16,6 +16,27 @@
         </div>
     </div>
 
+    <!-- Version Info Alert -->
+    {% set active_version = agent.get_active_version() %}
+    {% if active_version %}
+    <div class="row mb-3">
+        <div class="col-lg-8">
+            <div class="alert alert-info d-flex justify-content-between align-items-center">
+                <div>
+                    <i class="bi bi-info-circle"></i>
+                    <strong>Current Version:</strong> {{ active_version.version_number }}
+                    <span class="text-muted ms-2">
+                        • Last updated {{ active_version.created_at.strftime('%b %d, %Y') }} by {{ active_version.changed_by.full_name if active_version.changed_by else 'System' }}
+                    </span>
+                </div>
+                <a href="{{ url_for('department.agent_versions', agent_id=agent.id) }}" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-clock-history"></i> View History
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <div class="row">
         <div class="col-lg-8">
             <form method="POST" action="{{ url_for('department.edit_agent', agent_id=agent.id) }}">

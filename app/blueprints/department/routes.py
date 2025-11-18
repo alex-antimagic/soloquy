@@ -82,10 +82,21 @@ def create():
             name=f"{form.name.data} Assistant",
             description=f"AI assistant for the {form.name.data} department",
             system_prompt=f"You are a helpful AI assistant for the {form.name.data} department. Provide assistance with tasks, questions, and information related to {form.name.data}.",
-            is_primary=True
+            is_primary=True,
+            created_by_id=current_user.id
         )
         db.session.add(agent)
         db.session.commit()
+
+        # Create initial version (version 1)
+        try:
+            agent.create_version(
+                changed_by_user=current_user,
+                change_summary="Initial version",
+                change_type='initial'
+            )
+        except Exception as e:
+            print(f"Error creating initial agent version: {e}")
 
         flash(f'Department "{form.name.data}" created successfully!', 'success')
         return redirect(url_for('department.index'))
@@ -185,9 +196,20 @@ def edit_agent(agent_id):
         agent.enable_outlook = form.enable_outlook.data if hasattr(form, 'enable_outlook') else agent.enable_outlook
         agent.enable_google_drive = form.enable_google_drive.data if hasattr(form, 'enable_google_drive') else agent.enable_google_drive
 
+        # Commit agent changes first (without versioning)
         db.session.commit()
 
-        flash(f'Agent "{agent.name}" updated successfully!', 'success')
+        # Create new version (auto-generates change summary)
+        try:
+            new_version = agent.create_version(
+                changed_by_user=current_user,
+                change_type='update'
+            )
+            flash(f'Agent "{agent.name}" updated successfully! (Version {new_version.version_number} created)', 'success')
+        except Exception as e:
+            print(f"Error creating agent version: {e}")
+            flash(f'Agent "{agent.name}" updated successfully!', 'success')
+
         return redirect(url_for('department.view', department_id=department.id))
 
     return render_template('department/agent_edit.html',
@@ -196,3 +218,63 @@ def edit_agent(agent_id):
                           agent=agent,
                           department=department,
                           qb_integration=qb_integration)
+
+
+@department_bp.route('/agent/<int:agent_id>/versions')
+@login_required
+def agent_versions(agent_id):
+    """View version history for an agent"""
+    agent = Agent.query.get_or_404(agent_id)
+    department = agent.department
+
+    # Check tenant access
+    if department.tenant_id != g.current_tenant.id:
+        flash('Access denied.', 'danger')
+        return redirect(url_for('department.index'))
+
+    # Get all versions
+    versions = agent.get_version_history()
+
+    return render_template('department/agent_versions.html',
+                          title=f'{agent.name} - Version History',
+                          agent=agent,
+                          department=department,
+                          versions=versions)
+
+
+@department_bp.route('/agent/<int:agent_id>/versions/<int:version_id>/rollback', methods=['POST'])
+@login_required
+def rollback_agent_version(agent_id, version_id):
+    """Rollback agent to a previous version"""
+    agent = Agent.query.get_or_404(agent_id)
+    department = agent.department
+
+    # Check tenant access
+    if department.tenant_id != g.current_tenant.id:
+        flash('Access denied.', 'danger')
+        return redirect(url_for('department.index'))
+
+    # Check user role (owner/admin only)
+    user_role = current_user.get_role_in_tenant(g.current_tenant.id)
+    if user_role not in ['owner', 'admin']:
+        flash('Only workspace owners and admins can rollback agent versions.', 'danger')
+        return redirect(url_for('department.agent_versions', agent_id=agent.id))
+
+    # Get rollback reason from form
+    from flask import request
+    reason = request.form.get('reason', '')
+
+    try:
+        new_version = agent.rollback_to_version(
+            version_id=version_id,
+            current_user=current_user,
+            reason=reason if reason else None
+        )
+        flash(f'Successfully rolled back to version {new_version.version_number}!', 'success')
+    except ValueError as e:
+        flash(f'Error: {str(e)}', 'danger')
+    except Exception as e:
+        print(f"Error rolling back agent: {e}")
+        flash('An error occurred while rolling back the agent.', 'danger')
+
+    return redirect(url_for('department.agent_versions', agent_id=agent.id))

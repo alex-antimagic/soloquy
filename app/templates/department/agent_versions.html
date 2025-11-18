@@ -1,0 +1,271 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('department.index') }}">Departments</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('department.view', department_id=department.id) }}">{{ department.name }}</a></li>
+                    <li class="breadcrumb-item active">{{ agent.name }} - Version History</li>
+                </ol>
+            </nav>
+
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h2>
+                        <i class="bi bi-clock-history"></i>
+                        Version History
+                    </h2>
+                    <p class="text-muted">{{ agent.name }} configuration changes over time</p>
+                </div>
+                <div>
+                    <a href="{{ url_for('department.edit_agent', agent_id=agent.id) }}" class="btn btn-primary">
+                        <i class="bi bi-pencil"></i> Edit Agent
+                    </a>
+                    <a href="{{ url_for('department.view', department_id=department.id) }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left"></i> Back to Department
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if not versions %}
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i>
+        No version history available yet. Versions are created automatically when you update the agent configuration.
+    </div>
+    {% else %}
+    <div class="row">
+        <div class="col-lg-10">
+            <!-- Version Timeline -->
+            <div class="timeline">
+                {% for version in versions %}
+                <div class="timeline-item {% if version.is_active_version %}active-version{% endif %}">
+                    <div class="timeline-marker">
+                        {% if version.is_active_version %}
+                        <i class="bi bi-check-circle-fill text-success"></i>
+                        {% elif version.change_type == 'rollback' %}
+                        <i class="bi bi-arrow-counterclockwise text-warning"></i>
+                        {% elif version.change_type == 'initial' %}
+                        <i class="bi bi-star-fill text-primary"></i>
+                        {% else %}
+                        <i class="bi bi-circle"></i>
+                        {% endif %}
+                    </div>
+
+                    <div class="timeline-content">
+                        <div class="card {% if version.is_active_version %}border-success{% endif %}">
+                            <div class="card-header">
+                                <div class="row align-items-center">
+                                    <div class="col-md-6">
+                                        <h5 class="mb-0">
+                                            Version {{ version.version_number }}
+                                            {% if version.is_active_version %}
+                                            <span class="badge bg-success ms-2">Active</span>
+                                            {% endif %}
+                                            {% if version.version_tag %}
+                                            <span class="badge bg-secondary ms-2">{{ version.version_tag }}</span>
+                                            {% endif %}
+                                        </h5>
+                                        <small class="text-muted">
+                                            {{ version.created_at.strftime('%B %d, %Y at %I:%M %p') }}
+                                            by {{ version.changed_by.full_name if version.changed_by else 'System' }}
+                                        </small>
+                                    </div>
+                                    <div class="col-md-6 text-end">
+                                        {% if not version.is_active_version %}
+                                        <button type="button" class="btn btn-sm btn-outline-warning"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#rollbackModal{{ version.id }}">
+                                            <i class="bi bi-arrow-counterclockwise"></i> Restore This Version
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <strong>Changes:</strong>
+                                    <p class="mb-0">{{ version.get_display_summary() }}</p>
+                                </div>
+
+                                <!-- Show detailed changes if available -->
+                                {% set changes = version.get_changes() %}
+                                {% if changes %}
+                                <details class="mt-3">
+                                    <summary class="text-primary" style="cursor: pointer;">
+                                        <i class="bi bi-list-ul"></i> View Detailed Changes ({{ changes|length }})
+                                    </summary>
+                                    <div class="mt-3">
+                                        <div class="table-responsive">
+                                            <table class="table table-sm table-dark">
+                                                <thead>
+                                                    <tr>
+                                                        <th style="width: 25%;">Field</th>
+                                                        <th style="width: 37.5%;">Old Value</th>
+                                                        <th style="width: 37.5%;">New Value</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for change in changes %}
+                                                    <tr {% if change.security_sensitive %}class="table-warning"{% endif %}>
+                                                        <td>
+                                                            <strong>{{ change.display_name }}</strong>
+                                                            {% if change.security_sensitive %}
+                                                            <br><span class="badge bg-warning text-dark">Security</span>
+                                                            {% endif %}
+                                                        </td>
+                                                        <td>
+                                                            {% if change.type == 'boolean' %}
+                                                                {% if change.old_value %}
+                                                                <span class="badge bg-success">Enabled</span>
+                                                                {% else %}
+                                                                <span class="badge bg-secondary">Disabled</span>
+                                                                {% endif %}
+                                                            {% elif change.type == 'text' %}
+                                                                <code class="small">{{ (change.old_value[:100] + '...') if change.old_value and change.old_value|length > 100 else (change.old_value or '-') }}</code>
+                                                            {% else %}
+                                                                <code>{{ change.old_value or '-' }}</code>
+                                                            {% endif %}
+                                                        </td>
+                                                        <td>
+                                                            {% if change.type == 'boolean' %}
+                                                                {% if change.new_value %}
+                                                                <span class="badge bg-success">Enabled</span>
+                                                                {% else %}
+                                                                <span class="badge bg-secondary">Disabled</span>
+                                                                {% endif %}
+                                                            {% elif change.type == 'text' %}
+                                                                <code class="small">{{ (change.new_value[:100] + '...') if change.new_value and change.new_value|length > 100 else (change.new_value or '-') }}</code>
+                                                            {% else %}
+                                                                <code>{{ change.new_value or '-' }}</code>
+                                                            {% endif %}
+                                                        </td>
+                                                    </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </details>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Rollback Modal -->
+                    {% if not version.is_active_version %}
+                    <div class="modal fade" id="rollbackModal{{ version.id }}" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content bg-dark">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Confirm Rollback</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <form method="POST" action="{{ url_for('department.rollback_agent_version', agent_id=agent.id, version_id=version.id) }}">
+                                    {{ csrf_token() }}
+                                    <div class="modal-body">
+                                        <div class="alert alert-warning">
+                                            <i class="bi bi-exclamation-triangle"></i>
+                                            <strong>Important:</strong> Rolling back will create a <strong>new version</strong> with the configuration from version {{ version.version_number }}.
+                                            Your current configuration will be preserved in version history.
+                                        </div>
+
+                                        <p>You are about to restore:</p>
+                                        <ul>
+                                            <li><strong>Version:</strong> {{ version.version_number }}</li>
+                                            <li><strong>Created:</strong> {{ version.created_at.strftime('%B %d, %Y') }}</li>
+                                            <li><strong>Changes:</strong> {{ version.get_display_summary() }}</li>
+                                        </ul>
+
+                                        <div class="mb-3">
+                                            <label for="reason{{ version.id }}" class="form-label">
+                                                Reason for rollback (optional)
+                                            </label>
+                                            <input type="text"
+                                                   class="form-control"
+                                                   id="reason{{ version.id }}"
+                                                   name="reason"
+                                                   placeholder="e.g., Reverting problematic changes">
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                        <button type="submit" class="btn btn-warning">
+                                            <i class="bi bi-arrow-counterclockwise"></i> Restore Version {{ version.version_number }}
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+/* Timeline Styles */
+.timeline {
+    position: relative;
+    padding: 20px 0;
+}
+
+.timeline::before {
+    content: '';
+    position: absolute;
+    left: 30px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--bs-border-color);
+}
+
+.timeline-item {
+    position: relative;
+    padding-left: 70px;
+    margin-bottom: 30px;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: 0;
+    top: 10px;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: var(--bs-dark);
+    border: 3px solid var(--bs-border-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    z-index: 1;
+}
+
+.timeline-item.active-version .timeline-marker {
+    border-color: var(--bs-success);
+    background: var(--bs-success-bg-subtle);
+}
+
+.timeline-content {
+    flex-grow: 1;
+}
+
+details summary {
+    user-select: none;
+}
+
+details summary:hover {
+    text-decoration: underline;
+}
+</style>
+{% endblock %}

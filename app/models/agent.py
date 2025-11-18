@@ -41,6 +41,9 @@ class Agent(db.Model):
     department = db.relationship('Department', back_populates='agents')
     created_by = db.relationship('User', foreign_keys=[created_by_id])
     messages = db.relationship('Message', back_populates='agent', lazy='dynamic')
+    versions = db.relationship('AgentVersion', back_populates='agent',
+                               order_by='AgentVersion.version_number.desc()',
+                               cascade='all, delete-orphan')
 
     def __repr__(self):
         return f'<Agent {self.name}>'
@@ -251,3 +254,164 @@ class Agent(db.Model):
             context_parts.append("\n" + self.system_prompt)
 
         return "\n".join(context_parts)
+
+    # Version management methods
+    def create_version(self, changed_by_user, change_summary=None, change_type='update'):
+        """
+        Create a new version snapshot of this agent
+
+        Args:
+            changed_by_user: User making the change
+            change_summary: Optional manual description (auto-generated if None)
+            change_type: Type of change (initial, update, rollback, import)
+
+        Returns:
+            New AgentVersion instance (committed to database)
+        """
+        from app.models.agent_version import AgentVersion
+
+        # Get previous active version for diff
+        previous_version = self.get_active_version()
+
+        # Create new version
+        new_version = AgentVersion.create_from_agent(
+            agent=self,
+            changed_by_user=changed_by_user,
+            change_summary=change_summary,
+            change_type=change_type,
+            previous_version=previous_version
+        )
+
+        # Deactivate previous version
+        if previous_version:
+            previous_version.is_active_version = False
+
+        # Activate new version
+        new_version.is_active_version = True
+
+        db.session.add(new_version)
+        db.session.commit()
+
+        return new_version
+
+    def get_active_version(self):
+        """Get the currently active/published version"""
+        from app.models.agent_version import AgentVersion
+        return AgentVersion.query.filter_by(
+            agent_id=self.id,
+            is_active_version=True
+        ).first()
+
+    def get_latest_version(self):
+        """Get the most recent version (may not be active)"""
+        from app.models.agent_version import AgentVersion
+        return AgentVersion.query.filter_by(agent_id=self.id)\
+            .order_by(AgentVersion.version_number.desc()).first()
+
+    def get_version_history(self, limit=None):
+        """
+        Get all versions in reverse chronological order
+
+        Args:
+            limit: Optional limit on number of versions to return
+
+        Returns:
+            List of AgentVersion instances
+        """
+        from app.models.agent_version import AgentVersion
+        query = AgentVersion.query.filter_by(agent_id=self.id)\
+            .order_by(AgentVersion.version_number.desc())
+
+        if limit:
+            query = query.limit(limit)
+
+        return query.all()
+
+    def get_next_version_number(self):
+        """Get the next version number for this agent"""
+        from app.models.agent_version import AgentVersion
+        max_version = db.session.query(db.func.max(AgentVersion.version_number))\
+            .filter_by(agent_id=self.id).scalar()
+        return (max_version or 0) + 1
+
+    def rollback_to_version(self, version_id, current_user, reason=None):
+        """
+        Rollback to a previous version (creates a new version, doesn't delete history)
+
+        Args:
+            version_id: ID of version to restore
+            current_user: User performing the rollback
+            reason: Optional reason for rollback
+
+        Returns:
+            New AgentVersion instance
+        """
+        from app.models.agent_version import AgentVersion
+
+        # Get target version
+        target_version = AgentVersion.query.get(version_id)
+        if not target_version or target_version.agent_id != self.id:
+            raise ValueError("Invalid version ID")
+
+        # Copy all fields from target version to current agent
+        self.name = target_version.name
+        self.description = target_version.description
+        self.avatar_url = target_version.avatar_url
+        self.system_prompt = target_version.system_prompt
+        self.model = target_version.model
+        self.temperature = target_version.temperature
+        self.max_tokens = target_version.max_tokens
+        self.enable_quickbooks = target_version.enable_quickbooks
+        self.enable_gmail = target_version.enable_gmail
+        self.enable_outlook = target_version.enable_outlook
+        self.enable_google_drive = target_version.enable_google_drive
+        self.enable_website_builder = target_version.enable_website_builder
+
+        # Generate rollback summary
+        rollback_summary = f"Rolled back to version {target_version.version_number}"
+        if reason:
+            rollback_summary += f": {reason}"
+
+        # Create new version (rollback is just a new version)
+        new_version = self.create_version(
+            changed_by_user=current_user,
+            change_summary=rollback_summary,
+            change_type='rollback'
+        )
+
+        return new_version
+
+    def compare_versions(self, version1_id, version2_id):
+        """
+        Compare two versions and return the differences
+
+        Args:
+            version1_id: ID of first version
+            version2_id: ID of second version
+
+        Returns:
+            Dictionary with diff information
+        """
+        from app.models.agent_version import AgentVersion
+
+        v1 = AgentVersion.query.get(version1_id)
+        v2 = AgentVersion.query.get(version2_id)
+
+        if not v1 or not v2 or v1.agent_id != self.id or v2.agent_id != self.id:
+            raise ValueError("Invalid version IDs")
+
+        # Use v2's diff if it exists and was compared against v1
+        if v2.get_changes():
+            return {
+                'version1': v1.to_dict(),
+                'version2': v2.to_dict(include_diff=True),
+                'changes': v2.get_changes()
+            }
+
+        # Otherwise generate diff on the fly
+        diff = AgentVersion._generate_diff(v1, v2)
+        return {
+            'version1': v1.to_dict(),
+            'version2': v2.to_dict(),
+            'changes': diff
+        }
