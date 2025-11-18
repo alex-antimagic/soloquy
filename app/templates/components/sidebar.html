@@ -152,6 +152,17 @@
         {% endif %}
     </div>
 
+    <!-- Admin Menu (Superadmin Only) -->
+    {% if current_user.is_superadmin %}
+    <div class="sidebar-section border-top">
+        <a href="{{ url_for('admin.dashboard') }}" class="sidebar-item" style="color: #FFD700;">
+            <i class="bi bi-shield-fill-check" style="color: #FFD700;"></i>
+            <span>Admin Panel</span>
+            <span class="badge" style="background-color: #FFD700; color: black; font-size: 0.6rem; margin-left: auto;">ADMIN</span>
+        </a>
+    </div>
+    {% endif %}
+
     <!-- Upgrade CTA (Free Plan Only) -->
     {% if current_user.plan == 'free' %}
     <div class="sidebar-section border-top">
