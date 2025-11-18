@@ -1052,6 +1052,15 @@ main:has(.chat-container) {
     font-weight: 600;
     margin: 0;
     line-height: 1.2;
+    color: var(--soloquy-text);
+}
+
+.conversations-header .btn-link {
+    color: var(--soloquy-text);
+}
+
+.conversations-header .btn-link:hover {
+    color: var(--soloquy-active);
 }
 
 .conversations-content {
