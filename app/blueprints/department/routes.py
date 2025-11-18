@@ -385,3 +385,97 @@ def tag_agent_version(agent_id, version_id):
     db.session.commit()
 
     return redirect(url_for('department.agent_versions', agent_id=agent.id))
+
+
+@department_bp.route('/agent/<int:agent_id>/export')
+@login_required
+def export_agent(agent_id):
+    """Export agent configuration as JSON file"""
+    agent = Agent.query.get_or_404(agent_id)
+    department = agent.department
+
+    # Check tenant access
+    if department.tenant_id != g.current_tenant.id:
+        flash('Access denied.', 'danger')
+        return redirect(url_for('department.index'))
+
+    # Export to JSON
+    import json
+    from flask import make_response
+
+    agent_json = agent.export_to_json()
+
+    # Create filename
+    filename = f"{agent.name.lower().replace(' ', '_')}_config.json"
+
+    # Create response
+    response = make_response(json.dumps(agent_json, indent=2))
+    response.headers['Content-Type'] = 'application/json'
+    response.headers['Content-Disposition'] = f'attachment; filename={filename}'
+
+    return response
+
+
+@department_bp.route('/<int:department_id>/agent/import', methods=['GET', 'POST'])
+@login_required
+def import_agent(department_id):
+    """Import agent from JSON file"""
+    department = Department.query.get_or_404(department_id)
+
+    # Check tenant access
+    if department.tenant_id != g.current_tenant.id:
+        flash('Access denied.', 'danger')
+        return redirect(url_for('department.index'))
+
+    # Check user role (owner/admin only)
+    user_role = current_user.get_role_in_tenant(g.current_tenant.id)
+    if user_role not in ['owner', 'admin']:
+        flash('Only workspace owners and admins can import agents.', 'danger')
+        return redirect(url_for('department.view', department_id=department.id))
+
+    if request.method == 'POST':
+        # Check if file was uploaded
+        if 'agent_file' not in request.files:
+            flash('No file uploaded.', 'danger')
+            return redirect(url_for('department.import_agent', department_id=department.id))
+
+        file = request.files['agent_file']
+
+        if file.filename == '':
+            flash('No file selected.', 'danger')
+            return redirect(url_for('department.import_agent', department_id=department.id))
+
+        # Validate file extension
+        if not file.filename.endswith('.json'):
+            flash('Invalid file type. Please upload a .json file.', 'danger')
+            return redirect(url_for('department.import_agent', department_id=department.id))
+
+        try:
+            # Parse JSON
+            import json
+            agent_data = json.load(file)
+
+            # Import agent
+            new_agent, version_number, was_created = Agent.import_from_json(
+                json_data=agent_data,
+                department_id=department.id,
+                created_by_user=current_user
+            )
+
+            flash(f'Agent "{new_agent.name}" imported successfully!', 'success')
+            return redirect(url_for('department.edit_agent', agent_id=new_agent.id))
+
+        except json.JSONDecodeError:
+            flash('Invalid JSON file. Please check the file format.', 'danger')
+            return redirect(url_for('department.import_agent', department_id=department.id))
+        except ValueError as e:
+            flash(f'Import failed: {str(e)}', 'danger')
+            return redirect(url_for('department.import_agent', department_id=department.id))
+        except Exception as e:
+            print(f"Error importing agent: {e}")
+            flash('An error occurred while importing the agent.', 'danger')
+            return redirect(url_for('department.import_agent', department_id=department.id))
+
+    return render_template('department/agent_import.html',
+                          title='Import Agent',
+                          department=department)

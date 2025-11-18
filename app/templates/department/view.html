@@ -216,6 +216,11 @@
                             <i class="bi bi-chat-dots"></i> Chat with {{ agent.name }}
                         </a>
                     {% endif %}
+                    {% if current_user.get_role_in_tenant(current_tenant.id) in ['owner', 'admin'] %}
+                        <a href="{{ url_for('department.import_agent', department_id=department.id) }}" class="list-group-item list-group-item-action">
+                            <i class="bi bi-upload"></i> Import Agent
+                        </a>
+                    {% endif %}
                     <a href="{{ url_for('department.edit', department_id=department.id) }}" class="list-group-item list-group-item-action">
                         <i class="bi bi-gear"></i> Department Settings
                     </a>

@@ -29,9 +29,14 @@
                         • Last updated {{ active_version.created_at.strftime('%b %d, %Y') }} by {{ active_version.changed_by.full_name if active_version.changed_by else 'System' }}
                     </span>
                 </div>
-                <a href="{{ url_for('department.agent_versions', agent_id=agent.id) }}" class="btn btn-sm btn-outline-primary">
-                    <i class="bi bi-clock-history"></i> View History
-                </a>
+                <div>
+                    <a href="{{ url_for('department.export_agent', agent_id=agent.id) }}" class="btn btn-sm btn-outline-secondary me-2">
+                        <i class="bi bi-download"></i> Export
+                    </a>
+                    <a href="{{ url_for('department.agent_versions', agent_id=agent.id) }}" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-clock-history"></i> View History
+                    </a>
+                </div>
             </div>
         </div>
     </div>

@@ -415,3 +415,120 @@ class Agent(db.Model):
             'version2': v2.to_dict(),
             'changes': diff
         }
+
+    def export_to_json(self):
+        """
+        Export agent configuration as JSON for sharing/backup
+
+        Returns:
+            Dictionary containing complete agent configuration
+        """
+        return {
+            'export_version': '1.0',
+            'export_date': datetime.utcnow().isoformat(),
+            'agent': {
+                'name': self.name,
+                'description': self.description,
+                'avatar_url': self.avatar_url,
+                'system_prompt': self.system_prompt,
+                'model': self.model,
+                'temperature': self.temperature,
+                'max_tokens': self.max_tokens,
+                'is_active': self.is_active,
+                'enable_quickbooks': self.enable_quickbooks,
+                'enable_gmail': self.enable_gmail,
+                'enable_outlook': self.enable_outlook,
+                'enable_google_drive': self.enable_google_drive,
+                'enable_website_builder': self.enable_website_builder
+            },
+            'metadata': {
+                'original_agent_id': self.id,
+                'original_department': self.department.name,
+                'created_at': self.created_at.isoformat() if self.created_at else None,
+                'created_by': self.created_by.full_name if self.created_by else None
+            }
+        }
+
+    @staticmethod
+    def import_from_json(json_data, department_id, created_by_user, import_mode='new'):
+        """
+        Import agent configuration from JSON
+
+        Args:
+            json_data: Dictionary with agent configuration
+            department_id: Department to create agent in
+            created_by_user: User performing the import
+            import_mode: 'new' to create new agent, 'version' to add as version to existing
+
+        Returns:
+            Tuple of (Agent instance, version_number, was_created)
+
+        Raises:
+            ValueError: If JSON is invalid or missing required fields
+        """
+        # Validate JSON structure
+        if 'agent' not in json_data:
+            raise ValueError("Invalid agent export: missing 'agent' section")
+
+        agent_data = json_data['agent']
+
+        # Validate required fields
+        required_fields = ['name', 'system_prompt']
+        missing_fields = [f for f in required_fields if f not in agent_data or not agent_data[f]]
+        if missing_fields:
+            raise ValueError(f"Missing required fields: {', '.join(missing_fields)}")
+
+        # Validate model choice
+        valid_models = [
+            'claude-haiku-4-5-20251001',
+            'claude-sonnet-4-5-20251022',
+            'claude-opus-4-20250514'
+        ]
+        model = agent_data.get('model', 'claude-haiku-4-5-20251001')
+        if model not in valid_models:
+            raise ValueError(f"Invalid model: {model}. Must be one of: {', '.join(valid_models)}")
+
+        # Validate temperature
+        temperature = agent_data.get('temperature', 1.0)
+        if not isinstance(temperature, (int, float)) or not 0 <= temperature <= 1:
+            raise ValueError("Temperature must be between 0 and 1")
+
+        # Validate max_tokens
+        max_tokens = agent_data.get('max_tokens', 4096)
+        if not isinstance(max_tokens, int) or not 256 <= max_tokens <= 8192:
+            raise ValueError("Max tokens must be between 256 and 8192")
+
+        # Create new agent
+        new_agent = Agent(
+            department_id=department_id,
+            created_by_id=created_by_user.id,
+            name=agent_data['name'],
+            description=agent_data.get('description'),
+            avatar_url=agent_data.get('avatar_url'),
+            system_prompt=agent_data['system_prompt'],
+            model=model,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            is_active=agent_data.get('is_active', True),
+            enable_quickbooks=agent_data.get('enable_quickbooks', False),
+            enable_gmail=agent_data.get('enable_gmail', False),
+            enable_outlook=agent_data.get('enable_outlook', False),
+            enable_google_drive=agent_data.get('enable_google_drive', False),
+            enable_website_builder=agent_data.get('enable_website_builder', False),
+            is_primary=False  # Imported agents are never primary
+        )
+
+        db.session.add(new_agent)
+        db.session.flush()  # Get ID
+
+        # Create initial version
+        change_summary = f"Imported from {json_data.get('metadata', {}).get('original_department', 'external source')}"
+        new_agent.create_version(
+            changed_by_user=created_by_user,
+            change_summary=change_summary,
+            change_type='import'
+        )
+
+        db.session.commit()
+
+        return new_agent, 1, True
