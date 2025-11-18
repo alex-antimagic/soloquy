@@ -95,7 +95,7 @@ def upgrade():
         SELECT
             a.id,                              -- agent_id
             1,                                 -- version_number (first version)
-            1,                                 -- is_active_version (true)
+            TRUE,                              -- is_active_version
             NULL,                              -- version_tag
             a.created_by_id,                   -- changed_by_id
             'Initial version (migrated)',      -- change_summary
