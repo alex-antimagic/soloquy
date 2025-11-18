@@ -19,6 +19,16 @@ class Config:
     SQLALCHEMY_DATABASE_URI = database_url
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
+    # Database Connection Pool Configuration
+    # Optimized for production scalability (hundreds of concurrent users)
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'pool_size': 20,           # Number of persistent connections to keep open
+        'max_overflow': 40,        # Additional connections allowed above pool_size
+        'pool_pre_ping': True,     # Test connection health before using
+        'pool_recycle': 300,       # Recycle connections after 5 minutes
+        'pool_timeout': 30,        # Timeout for getting connection from pool
+    }
+
     # Session
     PERMANENT_SESSION_LIFETIME = timedelta(days=7)
     SESSION_COOKIE_SECURE = os.environ.get('FLASK_ENV') == 'production'
