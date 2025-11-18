@@ -141,6 +141,58 @@ class LeadEnrichmentService:
             print(f"Error parsing HTML: {str(e)}")
             return {}
 
+    def find_domain_from_google(self, company_name):
+        """
+        Search Google for company name and extract domain from search results
+        Returns domain string or None if not found
+        """
+        try:
+            import urllib.parse
+            search_query = f"{company_name} official website"
+
+            encoded_query = urllib.parse.quote_plus(search_query)
+            search_url = f"https://www.google.com/search?q={encoded_query}"
+
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
+            }
+
+            response = requests.get(search_url, headers=headers, timeout=10)
+
+            if response.status_code == 200:
+                soup = BeautifulSoup(response.text, 'lxml')
+
+                # Look for URLs in search results
+                # Try to find actual result links (not Google's internal links)
+                for link in soup.find_all('a', href=True):
+                    href = link['href']
+
+                    # Google wraps URLs - extract the actual URL
+                    if '/url?q=' in href:
+                        # Extract URL from Google's wrapper
+                        actual_url = href.split('/url?q=')[1].split('&')[0]
+                        actual_url = urllib.parse.unquote(actual_url)
+
+                        # Skip Google's own domains and common non-company sites
+                        skip_domains = [
+                            'google.com', 'youtube.com', 'facebook.com', 'linkedin.com',
+                            'twitter.com', 'instagram.com', 'wikipedia.org', 'crunchbase.com',
+                            'bloomberg.com', 'forbes.com', 'glassdoor.com', 'indeed.com'
+                        ]
+
+                        if actual_url.startswith('http'):
+                            domain = self.extract_domain_from_url(actual_url)
+                            if domain and not any(skip in domain for skip in skip_domains):
+                                print(f"Found domain from Google search: {domain}")
+                                return domain
+
+            print(f"Could not find domain from Google search for: {company_name}")
+            return None
+
+        except Exception as e:
+            print(f"Error finding domain from Google: {str(e)}")
+            return None
+
     def google_search_company(self, company_name, domain=None):
         """
         Perform Google search for a company to gather additional context
@@ -355,11 +407,23 @@ Provide ONLY valid JSON, no additional text. Be thorough in your analysis and ba
 
             # Step 1: Extract domain
             domain = self.get_company_domain(company)
+
+            # Step 1.1: If no domain found, try Google search as fallback
             if not domain:
-                company.enrichment_status = 'failed'
-                company.enrichment_error = 'No domain found (no website or contact emails)'
-                db.session.commit()
-                return
+                print(f"No domain in company data, searching Google for: {company.name}")
+                domain = self.find_domain_from_google(company.name)
+
+                if domain:
+                    print(f"Found domain via Google: {domain}")
+                    # Update company website with discovered domain
+                    if not company.website:
+                        company.website = f"https://{domain}"
+                        db.session.commit()
+                else:
+                    company.enrichment_status = 'failed'
+                    company.enrichment_error = 'No domain found (no website, contact emails, or Google results)'
+                    db.session.commit()
+                    return
 
             # Step 1.5: Fetch company logo
             logo_url = self.get_company_logo(domain)
