@@ -202,7 +202,7 @@
                     {% if company.annual_revenue %}
                     <div class="info-item">
                         <div class="info-label">Annual Revenue</div>
-                        <div class="info-value">${{ "{:,.0f}".format(company.annual_revenue) }}</div>
+                        <div class="info-value">{{ company.annual_revenue }}</div>
                     </div>
                     {% endif %}
 
