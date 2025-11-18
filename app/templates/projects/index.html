@@ -194,26 +194,34 @@
                     {% for task in recent_tasks %}
                     <a href="{{ url_for('tasks.view', task_id=task.id) }}" class="list-group-item list-group-item-action">
                         <div class="d-flex justify-content-between align-items-start">
-                            <div class="flex-grow-1">
-                                <div class="d-flex align-items-center gap-2 mb-1">
-                                    <h6 class="mb-0">{{ task.title }}</h6>
-                                    <span class="badge {{ task.get_priority_badge_class() }}">{{ task.priority }}</span>
-                                    <span class="badge {{ task.get_status_badge_class() }}">{{ task.status }}</span>
+                            <div class="flex-grow-1" style="min-width: 0;">
+                                <div class="d-flex align-items-start gap-2 mb-2 flex-wrap">
+                                    <h6 class="mb-0 flex-shrink-0">{{ task.title }}</h6>
+                                    <span class="badge {{ task.get_priority_badge_class() }} flex-shrink-0">{{ task.priority }}</span>
+                                    <span class="badge {{ task.get_status_badge_class() }} flex-shrink-0">{{ task.status }}</span>
                                 </div>
                                 {% if task.description %}
                                 <p class="text-muted small mb-2">{{ task.description[:80] }}{% if task.description|length > 80 %}...{% endif %}</p>
+                                {% else %}
+                                <p class="text-muted small mb-2 fst-italic">No description</p>
                                 {% endif %}
-                                <div class="d-flex gap-3 small text-muted">
+                                <div class="d-flex gap-3 small text-muted flex-wrap">
                                     {% if task.project %}
                                     <span><i class="bi bi-kanban"></i> <a href="{{ url_for('projects.view', project_id=task.project_id) }}">{{ task.project.name }}</a></span>
+                                    {% else %}
+                                    <span class="text-muted fst-italic"><i class="bi bi-kanban"></i> No project</span>
                                     {% endif %}
                                     {% if task.assigned_to %}
                                     <span><i class="bi bi-person"></i> {{ task.assigned_to.full_name }}</span>
                                     {% elif task.assigned_to_agent %}
-                                    <span>{{ task.assigned_to_agent.name }}</span>
+                                    <span><i class="bi bi-robot"></i> {{ task.assigned_to_agent.name }}</span>
+                                    {% else %}
+                                    <span class="text-muted fst-italic"><i class="bi bi-person"></i> Unassigned</span>
                                     {% endif %}
                                     {% if task.due_date %}
                                     <span class="{% if task.is_overdue() %}text-danger{% endif %}"><i class="bi bi-calendar"></i> {{ task.due_date.strftime('%b %d') }}</span>
+                                    {% else %}
+                                    <span class="text-muted fst-italic"><i class="bi bi-calendar"></i> No due date</span>
                                     {% endif %}
                                 </div>
                             </div>
