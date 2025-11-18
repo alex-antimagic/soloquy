@@ -205,24 +205,34 @@
                                 {% else %}
                                 <p class="text-muted small mb-2 fst-italic">No description</p>
                                 {% endif %}
-                                <div class="d-flex gap-3 small text-muted flex-wrap">
-                                    {% if task.project %}
-                                    <span><i class="bi bi-kanban"></i> <a href="{{ url_for('projects.view', project_id=task.project_id) }}">{{ task.project.name }}</a></span>
-                                    {% else %}
-                                    <span class="text-muted fst-italic"><i class="bi bi-kanban"></i> No project</span>
-                                    {% endif %}
-                                    {% if task.assigned_to %}
-                                    <span><i class="bi bi-person"></i> {{ task.assigned_to.full_name }}</span>
-                                    {% elif task.assigned_to_agent %}
-                                    <span><i class="bi bi-robot"></i> {{ task.assigned_to_agent.name }}</span>
-                                    {% else %}
-                                    <span class="text-muted fst-italic"><i class="bi bi-person"></i> Unassigned</span>
-                                    {% endif %}
-                                    {% if task.due_date %}
-                                    <span class="{% if task.is_overdue() %}text-danger{% endif %}"><i class="bi bi-calendar"></i> {{ task.due_date.strftime('%b %d') }}</span>
-                                    {% else %}
-                                    <span class="text-muted fst-italic"><i class="bi bi-calendar"></i> No due date</span>
-                                    {% endif %}
+                                <div class="d-flex gap-2 small text-muted align-items-center">
+                                    <span class="{% if not task.project %}fst-italic{% endif %}">
+                                        <i class="bi bi-kanban"></i>
+                                        {% if task.project %}
+                                        <a href="{{ url_for('projects.view', project_id=task.project_id) }}">{{ task.project.name }}</a>
+                                        {% else %}
+                                        No project
+                                        {% endif %}
+                                    </span>
+                                    <span class="text-muted">•</span>
+                                    <span class="{% if not task.assigned_to and not task.assigned_to_agent %}fst-italic{% endif %}">
+                                        {% if task.assigned_to %}
+                                        <i class="bi bi-person"></i> {{ task.assigned_to.full_name }}
+                                        {% elif task.assigned_to_agent %}
+                                        <i class="bi bi-robot"></i> {{ task.assigned_to_agent.name }}
+                                        {% else %}
+                                        <i class="bi bi-person"></i> Unassigned
+                                        {% endif %}
+                                    </span>
+                                    <span class="text-muted">•</span>
+                                    <span class="{% if not task.due_date %}fst-italic{% endif %} {% if task.is_overdue() %}text-danger{% endif %}">
+                                        <i class="bi bi-calendar"></i>
+                                        {% if task.due_date %}
+                                        {{ task.due_date.strftime('%b %d') }}
+                                        {% else %}
+                                        No due date
+                                        {% endif %}
+                                    </span>
                                 </div>
                             </div>
                         </div>
