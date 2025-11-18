@@ -52,7 +52,13 @@ class CSVImportService:
             # Parse CSV
             csv_reader = csv.DictReader(io.StringIO(content))
 
-            for row_num, row in enumerate(csv_reader, start=2):  # Start at 2 (header is row 1)
+            # Normalize headers to lowercase for case-insensitive matching
+            normalized_rows = []
+            for original_row in csv_reader:
+                normalized_row = {k.lower().strip(): v for k, v in original_row.items()}
+                normalized_rows.append(normalized_row)
+
+            for row_num, row in enumerate(normalized_rows, start=2):  # Start at 2 (header is row 1)
                 results['total'] += 1
 
                 try:
@@ -163,7 +169,13 @@ class CSVImportService:
             # Parse CSV
             csv_reader = csv.DictReader(io.StringIO(content))
 
-            for row_num, row in enumerate(csv_reader, start=2):  # Start at 2 (header is row 1)
+            # Normalize headers to lowercase for case-insensitive matching
+            normalized_rows = []
+            for original_row in csv_reader:
+                normalized_row = {k.lower().strip(): v for k, v in original_row.items()}
+                normalized_rows.append(normalized_row)
+
+            for row_num, row in enumerate(normalized_rows, start=2):  # Start at 2 (header is row 1)
                 results['total'] += 1
 
                 try:
