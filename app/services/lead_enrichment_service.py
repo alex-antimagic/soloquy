@@ -237,8 +237,8 @@ Provide ONLY valid JSON, no additional text.
             # Use the Lead Analyzer agent to analyze
             response = self.ai_service.chat(
                 agent=agent,
-                messages=[],
-                user_message=context
+                messages=[{"role": "user", "content": context}],
+                system_prompt=agent.system_prompt
             )
 
             # Extract JSON from response
