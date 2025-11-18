@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 from app import create_app, db
 from app.models.company import Company
-from app.models.enrichment_cache import EnrichmentCache
+from app.models.company_enrichment_cache import CompanyEnrichmentCache
 
 app = create_app()
 
@@ -17,7 +17,7 @@ with app.app_context():
     for company in companies:
         if company.domain:
             # Delete cache entries for this domain
-            cache_entries = EnrichmentCache.query.filter_by(domain=company.domain).all()
+            cache_entries = CompanyEnrichmentCache.query.filter_by(domain=company.domain).all()
             for cache in cache_entries:
                 db.session.delete(cache)
                 cleared_count += 1
