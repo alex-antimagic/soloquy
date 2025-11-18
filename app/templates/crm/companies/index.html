@@ -94,6 +94,20 @@
                                     {{ company.status }}
                                 </span>
                                 {% endif %}
+                                {% if company.lead_score is not none %}
+                                <span class="badge bg-{{ 'success' if company.lead_score >= 70 else 'warning' if company.lead_score >= 50 else 'secondary' }}" title="Lead Score">
+                                    <i class="bi bi-star-fill"></i> {{ company.lead_score }}
+                                </span>
+                                {% endif %}
+                                {% if company.enrichment_status == 'processing' %}
+                                <span class="badge bg-info" title="AI analysis in progress">
+                                    <i class="bi bi-arrow-repeat"></i> Analyzing
+                                </span>
+                                {% elif company.enrichment_status == 'pending' %}
+                                <span class="badge bg-secondary" title="Queued for AI analysis">
+                                    <i class="bi bi-clock"></i> Queued
+                                </span>
+                                {% endif %}
                             </div>
                         </div>
                         <div class="dropdown" onclick="event.stopPropagation();">

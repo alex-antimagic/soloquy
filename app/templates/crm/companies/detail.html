@@ -109,6 +109,64 @@
         </div>
     </div>
 
+    <!-- Lead Intelligence Section (if enriched) -->
+    {% if company.enrichment_status %}
+    <div class="alert alert-{{ 'success' if company.enrichment_status == 'completed' else 'warning' if company.enrichment_status == 'processing' else 'info' if company.enrichment_status == 'pending' else 'danger' }} mb-4">
+        <div class="row align-items-center">
+            <div class="col-md-{{ '2' if company.enrichment_status == 'completed' else '12' }}">
+                <h6 class="mb-1">
+                    <i class="bi bi-{% if company.enrichment_status == 'completed' %}check-circle{% elif company.enrichment_status == 'processing' %}arrow-repeat{% elif company.enrichment_status == 'pending' %}clock{% else %}exclamation-triangle{% endif %}"></i>
+                    Lead Intelligence
+                </h6>
+                <small>
+                    {% if company.enrichment_status == 'completed' %}
+                        Analyzed {{ company.enriched_at.strftime('%b %d, %Y') if company.enriched_at else '' }}
+                    {% elif company.enrichment_status == 'processing' %}
+                        Analysis in progress...
+                    {% elif company.enrichment_status == 'pending' %}
+                        Queued for analysis
+                    {% else %}
+                        Analysis failed: {{ company.enrichment_error }}
+                    {% endif %}
+                </small>
+            </div>
+
+            {% if company.enrichment_status == 'completed' and company.lead_score is not none %}
+            <div class="col-md-2">
+                <div class="text-center">
+                    <div class="h2 mb-0">
+                        <span class="badge bg-{{ 'success' if company.lead_score >= 70 else 'warning' if company.lead_score >= 50 else 'secondary' }} fs-3">
+                            {{ company.lead_score }}
+                        </span>
+                    </div>
+                    <small class="text-muted">Lead Score</small>
+                </div>
+            </div>
+
+            <div class="col-md-8">
+                {% if company.enrichment_summary %}
+                <p class="mb-2"><strong>Summary:</strong> {{ company.enrichment_summary }}</p>
+                {% endif %}
+
+                {% if company.buying_signals %}
+                <div>
+                    <strong>Buying Signals:</strong>
+                    {% set signals = company.buying_signals | from_json if company.buying_signals else [] %}
+                    {% if signals %}
+                        {% for signal in signals %}
+                        <span class="badge bg-primary me-1">{{ signal }}</span>
+                        {% endfor %}
+                    {% else %}
+                        <span class="text-muted">None detected</span>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
     <div class="row">
         <!-- Main Content -->
         <div class="col-lg-8">

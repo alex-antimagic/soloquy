@@ -133,6 +133,10 @@ def create_app(config_name='default'):
     from app.utils.message_formatter import format_message_content
     app.jinja_env.filters['format_message'] = format_message_content
 
+    # JSON parsing filter for templates
+    import json
+    app.jinja_env.filters['from_json'] = lambda x: json.loads(x) if x else []
+
     # Context processor for templates
     @app.context_processor
     def inject_tenant():
