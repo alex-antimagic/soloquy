@@ -1,0 +1,262 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('department.index') }}">Departments</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('department.view', department_id=department.id) }}">{{ department.name }}</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('department.agent_versions', agent_id=agent.id) }}">{{ agent.name }} Versions</a></li>
+                    <li class="breadcrumb-item active">Compare Versions</li>
+                </ol>
+            </nav>
+
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h2>
+                        <i class="bi bi-file-diff"></i>
+                        Compare Versions
+                    </h2>
+                    <p class="text-muted">
+                        Version {{ comparison.version1.version_number }}
+                        <i class="bi bi-arrow-left-right mx-2"></i>
+                        Version {{ comparison.version2.version_number }}
+                    </p>
+                </div>
+                <div>
+                    <a href="{{ url_for('department.agent_versions', agent_id=agent.id) }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left"></i> Back to History
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Version Info Cards -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card border-secondary">
+                <div class="card-header bg-secondary">
+                    <h5 class="mb-0">
+                        Version {{ comparison.version1.version_number }}
+                        {% if comparison.version1.version_tag %}
+                        <span class="badge bg-dark ms-2">{{ comparison.version1.version_tag }}</span>
+                        {% endif %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="mb-1">
+                        <small class="text-muted">
+                            <i class="bi bi-clock"></i> {{ comparison.version1.created_at[:19] }}
+                        </small>
+                    </p>
+                    <p class="mb-0">
+                        <small class="text-muted">
+                            <i class="bi bi-person"></i> {{ comparison.version1.changed_by.name if comparison.version1.changed_by else 'System' }}
+                        </small>
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card border-primary">
+                <div class="card-header bg-primary">
+                    <h5 class="mb-0">
+                        Version {{ comparison.version2.version_number }}
+                        {% if comparison.version2.is_active_version %}
+                        <span class="badge bg-success ms-2">Active</span>
+                        {% endif %}
+                        {% if comparison.version2.version_tag %}
+                        <span class="badge bg-dark ms-2">{{ comparison.version2.version_tag }}</span>
+                        {% endif %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="mb-1">
+                        <small class="text-muted">
+                            <i class="bi bi-clock"></i> {{ comparison.version2.created_at[:19] }}
+                        </small>
+                    </p>
+                    <p class="mb-0">
+                        <small class="text-muted">
+                            <i class="bi bi-person"></i> {{ comparison.version2.changed_by.name if comparison.version2.changed_by else 'System' }}
+                        </small>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Changes Summary -->
+    {% if comparison.changes %}
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i>
+                <strong>{{ comparison.changes|length }} field(s) changed</strong> between these versions
+            </div>
+        </div>
+    </div>
+
+    <!-- Field-by-Field Comparison -->
+    {% for change in comparison.changes %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card {% if change.security_sensitive %}border-warning{% endif %}">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        {{ change.display_name }}
+                        {% if change.security_sensitive %}
+                        <span class="badge bg-warning text-dark ms-2">
+                            <i class="bi bi-shield-lock"></i> Security Sensitive
+                        </span>
+                        {% endif %}
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    {% if change.type == 'text' and change.diff_lines %}
+                    <!-- Line-by-line diff for text fields -->
+                    <div class="diff-container">
+                        <div class="row g-0">
+                            <div class="col-md-6 diff-side border-end">
+                                <div class="diff-header bg-secondary text-white px-3 py-2">
+                                    <small>Version {{ comparison.version1.version_number }}</small>
+                                </div>
+                                <div class="diff-content">
+                                    {% for line in change.diff_lines %}
+                                        {% if line.type in ['unchanged', 'remove', 'context'] %}
+                                        <div class="diff-line diff-{{ line.type }}">
+                                            <code>{{ line.content }}</code>
+                                        </div>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <div class="col-md-6 diff-side">
+                                <div class="diff-header bg-primary text-white px-3 py-2">
+                                    <small>Version {{ comparison.version2.version_number }}</small>
+                                </div>
+                                <div class="diff-content">
+                                    {% for line in change.diff_lines %}
+                                        {% if line.type in ['unchanged', 'add', 'context'] %}
+                                        <div class="diff-line diff-{{ line.type }}">
+                                            <code>{{ line.content }}</code>
+                                        </div>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% elif change.type == 'boolean' %}
+                    <!-- Boolean comparison -->
+                    <div class="row g-0">
+                        <div class="col-md-6 border-end p-3 text-center">
+                            {% if change.old_value %}
+                            <span class="badge bg-success fs-5">
+                                <i class="bi bi-check-circle"></i> Enabled
+                            </span>
+                            {% else %}
+                            <span class="badge bg-secondary fs-5">
+                                <i class="bi bi-x-circle"></i> Disabled
+                            </span>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6 p-3 text-center">
+                            {% if change.new_value %}
+                            <span class="badge bg-success fs-5">
+                                <i class="bi bi-check-circle"></i> Enabled
+                            </span>
+                            {% else %}
+                            <span class="badge bg-secondary fs-5">
+                                <i class="bi bi-x-circle"></i> Disabled
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% else %}
+                    <!-- Simple field comparison -->
+                    <div class="row g-0">
+                        <div class="col-md-6 border-end p-3">
+                            <div class="bg-danger bg-opacity-10 p-2 rounded">
+                                <code>{{ change.old_value or '-' }}</code>
+                            </div>
+                        </div>
+                        <div class="col-md-6 p-3">
+                            <div class="bg-success bg-opacity-10 p-2 rounded">
+                                <code>{{ change.new_value or '-' }}</code>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+
+    {% else %}
+    <div class="alert alert-success">
+        <i class="bi bi-check-circle"></i>
+        <strong>No changes</strong> between these versions
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.diff-container {
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+}
+
+.diff-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.diff-content {
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.diff-line {
+    padding: 2px 8px;
+    white-space: pre-wrap;
+    word-break: break-all;
+    min-height: 1.5rem;
+}
+
+.diff-line code {
+    background: none;
+    color: inherit;
+    padding: 0;
+}
+
+.diff-unchanged {
+    background: var(--bs-dark);
+}
+
+.diff-add {
+    background: rgba(40, 167, 69, 0.2);
+    border-left: 3px solid #28a745;
+}
+
+.diff-remove {
+    background: rgba(220, 53, 69, 0.2);
+    border-left: 3px solid #dc3545;
+}
+
+.diff-context {
+    background: rgba(255, 193, 7, 0.1);
+    color: var(--bs-warning);
+    font-style: italic;
+}
+
+.diff-side {
+    background: var(--bs-dark);
+}
+</style>
+{% endblock %}

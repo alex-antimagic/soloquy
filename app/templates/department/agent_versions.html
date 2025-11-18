@@ -38,6 +38,31 @@
         No version history available yet. Versions are created automatically when you update the agent configuration.
     </div>
     {% else %}
+
+    <!-- Compare Tool -->
+    <div class="row mb-4">
+        <div class="col-lg-10">
+            <div class="card bg-dark border-primary">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h6 class="mb-0">
+                                <i class="bi bi-file-diff"></i>
+                                Compare Versions
+                            </h6>
+                            <small class="text-muted">Select two versions below and click Compare to see differences</small>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <button type="button" class="btn btn-primary" id="compareBtn" disabled>
+                                <i class="bi bi-arrow-left-right"></i> Compare Selected
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="row">
         <div class="col-lg-10">
             <!-- Version Timeline -->
@@ -61,26 +86,105 @@
                             <div class="card-header">
                                 <div class="row align-items-center">
                                     <div class="col-md-6">
-                                        <h5 class="mb-0">
-                                            Version {{ version.version_number }}
-                                            {% if version.is_active_version %}
-                                            <span class="badge bg-success ms-2">Active</span>
-                                            {% endif %}
-                                            {% if version.version_tag %}
-                                            <span class="badge bg-secondary ms-2">{{ version.version_tag }}</span>
-                                            {% endif %}
-                                        </h5>
+                                        <div class="form-check d-inline-block me-3">
+                                            <input class="form-check-input version-checkbox"
+                                                   type="checkbox"
+                                                   value="{{ version.id }}"
+                                                   id="version{{ version.id }}">
+                                            <label class="form-check-label" for="version{{ version.id }}">
+                                                <h5 class="mb-0 d-inline">
+                                                    Version {{ version.version_number }}
+                                                </h5>
+                                            </label>
+                                        </div>
+                                        {% if version.is_active_version %}
+                                        <span class="badge bg-success ms-2">Active</span>
+                                        {% endif %}
+                                        {% if version.version_tag %}
+                                        <span class="badge
+                                            {% if version.version_tag == 'stable' %}bg-success
+                                            {% elif version.version_tag == 'beta' %}bg-warning
+                                            {% elif version.version_tag == 'production' %}bg-primary
+                                            {% elif version.version_tag == 'experimental' %}bg-info
+                                            {% else %}bg-secondary
+                                            {% endif %} ms-2">
+                                            {{ version.version_tag }}
+                                        </span>
+                                        {% endif %}
+                                        <br>
                                         <small class="text-muted">
                                             {{ version.created_at.strftime('%B %d, %Y at %I:%M %p') }}
                                             by {{ version.changed_by.full_name if version.changed_by else 'System' }}
                                         </small>
                                     </div>
                                     <div class="col-md-6 text-end">
+                                        <!-- Tag Dropdown -->
+                                        <div class="btn-group me-2">
+                                            <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle"
+                                                    data-bs-toggle="dropdown">
+                                                <i class="bi bi-tag"></i> Tag
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-dark">
+                                                <li><h6 class="dropdown-header">Add Tag</h6></li>
+                                                <li>
+                                                    <form method="POST" action="{{ url_for('department.tag_agent_version', agent_id=agent.id, version_id=version.id) }}">
+                                                        {{ csrf_token() }}
+                                                        <button type="submit" name="tag" value="stable" class="dropdown-item">
+                                                            <span class="badge bg-success">stable</span>
+                                                        </button>
+                                                    </form>
+                                                </li>
+                                                <li>
+                                                    <form method="POST" action="{{ url_for('department.tag_agent_version', agent_id=agent.id, version_id=version.id) }}">
+                                                        {{ csrf_token() }}
+                                                        <button type="submit" name="tag" value="beta" class="dropdown-item">
+                                                            <span class="badge bg-warning text-dark">beta</span>
+                                                        </button>
+                                                    </form>
+                                                </li>
+                                                <li>
+                                                    <form method="POST" action="{{ url_for('department.tag_agent_version', agent_id=agent.id, version_id=version.id) }}">
+                                                        {{ csrf_token() }}
+                                                        <button type="submit" name="tag" value="production" class="dropdown-item">
+                                                            <span class="badge bg-primary">production</span>
+                                                        </button>
+                                                    </form>
+                                                </li>
+                                                <li>
+                                                    <form method="POST" action="{{ url_for('department.tag_agent_version', agent_id=agent.id, version_id=version.id) }}">
+                                                        {{ csrf_token() }}
+                                                        <button type="submit" name="tag" value="experimental" class="dropdown-item">
+                                                            <span class="badge bg-info">experimental</span>
+                                                        </button>
+                                                    </form>
+                                                </li>
+                                                <li>
+                                                    <form method="POST" action="{{ url_for('department.tag_agent_version', agent_id=agent.id, version_id=version.id) }}">
+                                                        {{ csrf_token() }}
+                                                        <button type="submit" name="tag" value="backup" class="dropdown-item">
+                                                            <span class="badge bg-secondary">backup</span>
+                                                        </button>
+                                                    </form>
+                                                </li>
+                                                {% if version.version_tag %}
+                                                <li><hr class="dropdown-divider"></li>
+                                                <li>
+                                                    <form method="POST" action="{{ url_for('department.tag_agent_version', agent_id=agent.id, version_id=version.id) }}">
+                                                        {{ csrf_token() }}
+                                                        <button type="submit" name="tag" value="none" class="dropdown-item text-danger">
+                                                            <i class="bi bi-x-circle"></i> Remove Tag
+                                                        </button>
+                                                    </form>
+                                                </li>
+                                                {% endif %}
+                                            </ul>
+                                        </div>
+
                                         {% if not version.is_active_version %}
                                         <button type="button" class="btn btn-sm btn-outline-warning"
                                                 data-bs-toggle="modal"
                                                 data-bs-target="#rollbackModal{{ version.id }}">
-                                            <i class="bi bi-arrow-counterclockwise"></i> Restore This Version
+                                            <i class="bi bi-arrow-counterclockwise"></i> Restore
                                         </button>
                                         {% endif %}
                                     </div>
@@ -268,4 +372,46 @@ details summary:hover {
     text-decoration: underline;
 }
 </style>
+
+<script>
+// Compare versions functionality
+const checkboxes = document.querySelectorAll('.version-checkbox');
+const compareBtn = document.getElementById('compareBtn');
+let selectedVersions = [];
+
+checkboxes.forEach(checkbox => {
+    checkbox.addEventListener('change', function() {
+        if (this.checked) {
+            if (selectedVersions.length < 2) {
+                selectedVersions.push(this.value);
+            } else {
+                // Uncheck oldest selection
+                const oldestId = selectedVersions.shift();
+                document.querySelector(`input[value="${oldestId}"]`).checked = false;
+                selectedVersions.push(this.value);
+            }
+        } else {
+            selectedVersions = selectedVersions.filter(id => id !== this.value);
+        }
+
+        // Enable compare button only when exactly 2 versions are selected
+        compareBtn.disabled = selectedVersions.length !== 2;
+
+        // Update compare button text
+        if (selectedVersions.length === 2) {
+            compareBtn.innerHTML = '<i class="bi bi-arrow-left-right"></i> Compare Selected';
+        } else if (selectedVersions.length === 1) {
+            compareBtn.innerHTML = '<i class="bi bi-arrow-left-right"></i> Select One More';
+        } else {
+            compareBtn.innerHTML = '<i class="bi bi-arrow-left-right"></i> Compare Selected';
+        }
+    });
+});
+
+compareBtn.addEventListener('click', function() {
+    if (selectedVersions.length === 2) {
+        window.location.href = `{{ url_for('department.compare_agent_versions', agent_id=agent.id) }}?v1=${selectedVersions[0]}&v2=${selectedVersions[1]}`;
+    }
+});
+</script>
 {% endblock %}

@@ -278,3 +278,110 @@ def rollback_agent_version(agent_id, version_id):
         flash('An error occurred while rolling back the agent.', 'danger')
 
     return redirect(url_for('department.agent_versions', agent_id=agent.id))
+
+
+@department_bp.route('/agent/<int:agent_id>/versions/compare')
+@login_required
+def compare_agent_versions(agent_id):
+    """Compare two versions of an agent side-by-side"""
+    agent = Agent.query.get_or_404(agent_id)
+    department = agent.department
+
+    # Check tenant access
+    if department.tenant_id != g.current_tenant.id:
+        flash('Access denied.', 'danger')
+        return redirect(url_for('department.index'))
+
+    # Get version IDs from query params
+    from flask import request
+    v1_id = request.args.get('v1', type=int)
+    v2_id = request.args.get('v2', type=int)
+
+    if not v1_id or not v2_id:
+        flash('Please select two versions to compare.', 'warning')
+        return redirect(url_for('department.agent_versions', agent_id=agent.id))
+
+    try:
+        comparison = agent.compare_versions(v1_id, v2_id)
+    except ValueError as e:
+        flash(f'Error: {str(e)}', 'danger')
+        return redirect(url_for('department.agent_versions', agent_id=agent.id))
+
+    # Generate line-by-line diff for text fields
+    import difflib
+    for change in comparison.get('changes', []):
+        if change.get('type') == 'text' and change.get('old_value') and change.get('new_value'):
+            old_lines = change['old_value'].split('\n')
+            new_lines = change['new_value'].split('\n')
+
+            # Create unified diff
+            diff = difflib.unified_diff(
+                old_lines,
+                new_lines,
+                lineterm='',
+                n=3  # Context lines
+            )
+
+            # Convert to HTML-friendly format
+            diff_lines = []
+            for line in diff:
+                if line.startswith('---') or line.startswith('+++'):
+                    continue
+                elif line.startswith('@@'):
+                    diff_lines.append({'type': 'context', 'content': line})
+                elif line.startswith('-'):
+                    diff_lines.append({'type': 'remove', 'content': line[1:]})
+                elif line.startswith('+'):
+                    diff_lines.append({'type': 'add', 'content': line[1:]})
+                else:
+                    diff_lines.append({'type': 'unchanged', 'content': line[1:] if line.startswith(' ') else line})
+
+            change['diff_lines'] = diff_lines
+
+    return render_template('department/agent_compare.html',
+                          title=f'Compare Versions - {agent.name}',
+                          agent=agent,
+                          department=department,
+                          comparison=comparison)
+
+
+@department_bp.route('/agent/<int:agent_id>/versions/<int:version_id>/tag', methods=['POST'])
+@login_required
+def tag_agent_version(agent_id, version_id):
+    """Add or update a tag for an agent version"""
+    from app.models.agent_version import AgentVersion
+
+    agent = Agent.query.get_or_404(agent_id)
+    department = agent.department
+
+    # Check tenant access
+    if department.tenant_id != g.current_tenant.id:
+        flash('Access denied.', 'danger')
+        return redirect(url_for('department.index'))
+
+    # Check user role (owner/admin only)
+    user_role = current_user.get_role_in_tenant(g.current_tenant.id)
+    if user_role not in ['owner', 'admin']:
+        flash('Only workspace owners and admins can tag versions.', 'danger')
+        return redirect(url_for('department.agent_versions', agent_id=agent.id))
+
+    version = AgentVersion.query.get_or_404(version_id)
+
+    if version.agent_id != agent.id:
+        flash('Invalid version.', 'danger')
+        return redirect(url_for('department.agent_versions', agent_id=agent.id))
+
+    from flask import request
+    tag = request.form.get('tag', '').strip()
+
+    # Allow removing tag
+    if tag == '' or tag == 'none':
+        version.version_tag = None
+        flash('Tag removed.', 'success')
+    else:
+        version.version_tag = tag
+        flash(f'Version {version.version_number} tagged as "{tag}".', 'success')
+
+    db.session.commit()
+
+    return redirect(url_for('department.agent_versions', agent_id=agent.id))
