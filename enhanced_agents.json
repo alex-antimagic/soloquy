@@ -449,7 +449,7 @@
     },
     {
       "name": "Hannah",
-      "department": "HR",
+      "department": "HR/People",
       "icon": "\ud83d\udc65",
       "color": "#06B6D4",
       "current_description": "HR and people operations specialist",
@@ -512,7 +512,7 @@
     },
     {
       "name": "Ian",
-      "department": "IT",
+      "department": "IT/Engineering",
       "icon": "\ud83d\udcbb",
       "color": "#64748B",
       "current_description": "IT infrastructure and engineering expert",
