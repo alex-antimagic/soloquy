@@ -199,8 +199,57 @@ def index():
         }
     ]
 
+    # Get workspace members for admin helper UI (admin only)
+    workspace_members_with_integrations = []
+    if is_admin and g.current_tenant:
+        workspace_members = g.current_tenant.get_members()
+
+        for member in workspace_members:
+            # Skip current user (they use normal personal integrations UI)
+            if member.id == current_user.id:
+                continue
+
+            # Check member's personal integrations
+            member_gmail = Integration.query.filter_by(
+                tenant_id=g.current_tenant.id,
+                integration_type='gmail',
+                owner_type='user',
+                owner_id=member.id
+            ).first()
+
+            member_outlook = Integration.query.filter_by(
+                tenant_id=g.current_tenant.id,
+                integration_type='outlook',
+                owner_type='user',
+                owner_id=member.id
+            ).first()
+
+            member_drive = Integration.query.filter_by(
+                tenant_id=g.current_tenant.id,
+                integration_type='google_drive',
+                owner_type='user',
+                owner_id=member.id
+            ).first()
+
+            workspace_members_with_integrations.append({
+                'user': member,
+                'gmail': {
+                    'connected': member_gmail is not None and member_gmail.is_active,
+                    'configured': member_gmail is not None and bool(member_gmail.client_id)
+                },
+                'outlook': {
+                    'connected': member_outlook is not None and member_outlook.is_active,
+                    'configured': member_outlook is not None and bool(member_outlook.client_id)
+                },
+                'google_drive': {
+                    'connected': member_drive is not None and member_drive.is_active,
+                    'configured': member_drive is not None and bool(member_drive.client_id)
+                }
+            })
+
     return render_template('integrations/index.html',
                          title='Integrations',
                          workspace_integrations=workspace_integrations,
                          personal_integrations=personal_integrations,
-                         is_admin=is_admin)
+                         is_admin=is_admin,
+                         workspace_members_with_integrations=workspace_members_with_integrations)

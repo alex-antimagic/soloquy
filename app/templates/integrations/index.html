@@ -60,6 +60,100 @@
         </div>
     </div>
 
+    <!-- Admin Helper: Setup Integrations for Users -->
+    {% if is_admin and workspace_members_with_integrations %}
+    <div class="mt-5">
+        <div class="d-flex align-items-center mb-3">
+            <i class="bi bi-people me-2 text-warning"></i>
+            <h4 class="mb-0">Help Users Setup Integrations</h4>
+            <span class="badge bg-warning ms-2">Admin Tool</span>
+        </div>
+        <p class="text-muted small mb-3">
+            As an admin, you can help workspace members set up their personal integrations.
+            You'll configure OAuth credentials and authorize access on their behalf.
+        </p>
+
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                <th class="text-center">Gmail</th>
+                                <th class="text-center">Outlook</th>
+                                <th class="text-center">Google Drive</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for member_data in workspace_members_with_integrations %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        {% if member_data.user.avatar_url %}
+                                            <img src="{{ member_data.user.avatar_url }}"
+                                                 alt="{{ member_data.user.full_name }}"
+                                                 class="rounded-circle me-2"
+                                                 style="width: 32px; height: 32px; object-fit: cover;">
+                                        {% else %}
+                                            <div class="rounded-circle bg-secondary text-white me-2 d-flex align-items-center justify-content-center"
+                                                 style="width: 32px; height: 32px; font-size: 14px;">
+                                                {{ member_data.user.full_name[0]|upper }}
+                                            </div>
+                                        {% endif %}
+                                        <div>
+                                            <strong>{{ member_data.user.full_name }}</strong>
+                                            <br>
+                                            <small class="text-muted">{{ member_data.user.email }}</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="text-center align-middle">
+                                    {% if member_data.gmail.connected %}
+                                        <span class="badge bg-success">
+                                            <i class="bi bi-check-circle me-1"></i>Connected
+                                        </span>
+                                    {% else %}
+                                        <a href="{{ url_for('integrations.gmail_configure', scope='user', for_user_id=member_data.user.id) }}"
+                                           class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-gear me-1"></i>Help Setup
+                                        </a>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center align-middle">
+                                    {% if member_data.outlook.connected %}
+                                        <span class="badge bg-success">
+                                            <i class="bi bi-check-circle me-1"></i>Connected
+                                        </span>
+                                    {% else %}
+                                        <a href="{{ url_for('integrations.outlook_configure', scope='user', for_user_id=member_data.user.id) }}"
+                                           class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-gear me-1"></i>Help Setup
+                                        </a>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center align-middle">
+                                    {% if member_data.google_drive.connected %}
+                                        <span class="badge bg-success">
+                                            <i class="bi bi-check-circle me-1"></i>Connected
+                                        </span>
+                                    {% else %}
+                                        <a href="{{ url_for('integrations.google_drive_configure', scope='user', for_user_id=member_data.user.id) }}"
+                                           class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-gear me-1"></i>Help Setup
+                                        </a>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     {% if not workspace_integrations and not personal_integrations %}
     <div class="row">
         <div class="col text-center py-5">

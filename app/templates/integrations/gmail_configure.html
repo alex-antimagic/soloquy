@@ -13,6 +13,8 @@
             <h2>
                 {% if is_workspace %}
                     <i class="bi bi-building me-2"></i>Set Up Workspace Gmail
+                {% elif for_user_id and target_user %}
+                    <i class="bi bi-people me-2"></i>Help {{ target_user.full_name }} Set Up Gmail
                 {% else %}
                     <i class="bi bi-person me-2"></i>Set Up Personal Gmail
                 {% endif %}
@@ -20,12 +22,32 @@
             <p class="text-muted">
                 {% if is_workspace %}
                     Configure a shared Gmail account for your entire workspace (e.g., support@company.com, sales@company.com)
+                {% elif for_user_id and target_user %}
+                    You're helping {{ target_user.full_name }} ({{ target_user.email }}) set up their personal Gmail integration
                 {% else %}
                     Connect your personal Gmail account for AI agent access to your emails, labels, and drafts
                 {% endif %}
             </p>
         </div>
     </div>
+
+    {% if for_user_id and target_user %}
+    <div class="row mb-3">
+        <div class="col-lg-8">
+            <div class="alert alert-warning d-flex align-items-start" role="alert">
+                <i class="bi bi-info-circle-fill me-3 fs-4 flex-shrink-0"></i>
+                <div>
+                    <h6 class="alert-heading mb-2">Admin-Assisted Setup</h6>
+                    <p class="mb-0 small">
+                        You're setting up a personal integration for <strong>{{ target_user.full_name }}</strong>.
+                        The integration will be owned by {{ target_user.full_name }} and only accessible to agents they create.
+                        When authorizing, make sure to use {{ target_user.full_name }}'s Gmail account credentials.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
     <div class="row">
         <div class="col-lg-8">

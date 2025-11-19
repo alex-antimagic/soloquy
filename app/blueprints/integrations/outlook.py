@@ -27,26 +27,56 @@ def outlook_configure():
     """
     Configure Outlook OAuth credentials
 
-    Supports two modes:
+    Supports three modes:
     - workspace: Shared Outlook account for entire workspace (admin only)
     - user: Personal Outlook account for individual user
+    - user with for_user_id: Admin helping specific user set up their personal integration
 
     Query params:
     - scope: 'workspace' or 'user' (default: 'workspace')
+    - for_user_id: User ID to help (admin only, requires scope='user')
     """
     # Check scope (workspace or user)
     scope = request.args.get('scope', 'workspace')
+    for_user_id = request.args.get('for_user_id', type=int)
+
+    # Get current user's role
+    role = current_user.get_role_in_tenant(g.current_tenant.id)
+    is_admin = role in ['owner', 'admin']
 
     # Workspace scope requires admin
     if scope == 'workspace':
-        role = current_user.get_role_in_tenant(g.current_tenant.id)
-        if role not in ['owner', 'admin']:
+        if not is_admin:
             flash('Only workspace owners and admins can configure workspace integrations.', 'danger')
             return redirect(url_for('integrations.index'))
 
-    # Check if integration already exists
+    # Admin-assisted user setup
+    if for_user_id:
+        # Only admins can help other users
+        if not is_admin:
+            flash('Only admins can set up integrations for other users.', 'danger')
+            return redirect(url_for('integrations.index'))
+
+        # Verify target user is in the same workspace
+        from app.models.user import User
+        target_user = User.query.get(for_user_id)
+        if not target_user or target_user.get_role_in_tenant(g.current_tenant.id) is None:
+            flash('User not found in this workspace.', 'danger')
+            return redirect(url_for('integrations.index'))
+
+        # Cannot help yourself (use normal flow)
+        if for_user_id == current_user.id:
+            flash('Use the regular personal integration setup for your own account.', 'warning')
+            return redirect(url_for('integrations.outlook_configure', scope='user'))
+
+    # Determine owner_type and owner_id
     owner_type = 'tenant' if scope == 'workspace' else 'user'
-    owner_id = g.current_tenant.id if scope == 'workspace' else current_user.id
+    if scope == 'workspace':
+        owner_id = g.current_tenant.id
+    elif for_user_id:
+        owner_id = for_user_id  # Admin helping this user
+    else:
+        owner_id = current_user.id  # User setting up their own
 
     integration = Integration.query.filter_by(
         tenant_id=g.current_tenant.id,
@@ -80,10 +110,16 @@ def outlook_configure():
         # Set credentials and display name
         integration.client_id = client_id
         integration.client_secret = client_secret
-        integration.display_name = display_name or (
-            f"{g.current_tenant.name} Outlook" if scope == 'workspace'
-            else f"{current_user.full_name}'s Outlook"
-        )
+
+        # Generate appropriate display name
+        if scope == 'workspace':
+            integration.display_name = display_name or f"{g.current_tenant.name} Outlook"
+        elif for_user_id:
+            from app.models.user import User
+            target_user = User.query.get(for_user_id)
+            integration.display_name = display_name or f"{target_user.full_name}'s Outlook"
+        else:
+            integration.display_name = display_name or f"{current_user.full_name}'s Outlook"
 
         # Build redirect URI (no query params - Azure doesn't allow them)
         integration.redirect_uri = url_for(
@@ -94,15 +130,26 @@ def outlook_configure():
 
         db.session.commit()
 
-        flash('Outlook credentials saved! Now authorize access to your Outlook account.', 'success')
-        return redirect(url_for('integrations.outlook_connect', scope=scope))
+        flash('Outlook credentials saved! Now authorize access to Outlook account.', 'success')
+        connect_url = url_for('integrations.outlook_connect', scope=scope)
+        if for_user_id:
+            connect_url = url_for('integrations.outlook_connect', scope=scope, for_user_id=for_user_id)
+        return redirect(connect_url)
+
+    # Get target user info if helping someone
+    target_user = None
+    if for_user_id:
+        from app.models.user import User
+        target_user = User.query.get(for_user_id)
 
     return render_template(
         'integrations/outlook_configure.html',
         title='Configure Outlook',
         integration=integration,
         scope=scope,
-        is_workspace=scope == 'workspace'
+        is_workspace=scope == 'workspace',
+        for_user_id=for_user_id,
+        target_user=target_user
     )
 
 
@@ -117,19 +164,43 @@ def outlook_connect():
 
     Query params:
     - scope: 'workspace' or 'user'
+    - for_user_id: User ID to help (admin only, requires scope='user')
     """
     scope = request.args.get('scope', 'workspace')
+    for_user_id = request.args.get('for_user_id', type=int)
+
+    # Get current user's role
+    role = current_user.get_role_in_tenant(g.current_tenant.id)
+    is_admin = role in ['owner', 'admin']
 
     # Workspace scope requires admin
     if scope == 'workspace':
-        role = current_user.get_role_in_tenant(g.current_tenant.id)
-        if role not in ['owner', 'admin']:
+        if not is_admin:
             flash('Only workspace owners and admins can connect workspace integrations.', 'danger')
             return redirect(url_for('integrations.index'))
 
-    # Get integration
+    # Admin-assisted user setup
+    if for_user_id:
+        # Only admins can help other users
+        if not is_admin:
+            flash('Only admins can set up integrations for other users.', 'danger')
+            return redirect(url_for('integrations.index'))
+
+        # Verify target user is in the same workspace
+        from app.models.user import User
+        target_user = User.query.get(for_user_id)
+        if not target_user or target_user.get_role_in_tenant(g.current_tenant.id) is None:
+            flash('User not found in this workspace.', 'danger')
+            return redirect(url_for('integrations.index'))
+
+    # Determine owner_type and owner_id
     owner_type = 'tenant' if scope == 'workspace' else 'user'
-    owner_id = g.current_tenant.id if scope == 'workspace' else current_user.id
+    if scope == 'workspace':
+        owner_id = g.current_tenant.id
+    elif for_user_id:
+        owner_id = for_user_id  # Admin helping this user
+    else:
+        owner_id = current_user.id  # User setting up their own
 
     integration = Integration.query.filter_by(
         tenant_id=g.current_tenant.id,
@@ -163,6 +234,8 @@ def outlook_connect():
 
         # Store scope in session for callback
         session['outlook_oauth_scope'] = scope
+        if for_user_id:
+            session['outlook_oauth_for_user_id'] = for_user_id
 
         return redirect(auth_url)
 
@@ -195,10 +268,16 @@ def outlook_callback(scope):
         return redirect(url_for('integrations.index'))
 
     scope_type = scope
+    for_user_id = session.get('outlook_oauth_for_user_id')
 
-    # Get integration
+    # Determine owner_type and owner_id
     owner_type = 'tenant' if scope_type == 'workspace' else 'user'
-    owner_id = g.current_tenant.id if scope_type == 'workspace' else current_user.id
+    if scope_type == 'workspace':
+        owner_id = g.current_tenant.id
+    elif for_user_id:
+        owner_id = for_user_id  # Admin helped this user
+    else:
+        owner_id = current_user.id  # User set up their own
 
     integration = Integration.query.filter_by(
         tenant_id=g.current_tenant.id,
@@ -238,13 +317,21 @@ def outlook_callback(scope):
         integration.is_active = True
 
         success = True
-        message = "Connected successfully"
+
+        # Generate appropriate success message
+        if for_user_id:
+            from app.models.user import User
+            target_user = User.query.get(for_user_id)
+            message = f"Outlook connected successfully for {target_user.full_name}!"
+        else:
+            message = "Outlook connected successfully!"
 
         db.session.commit()
-        flash(f'Outlook connected successfully! {message}', 'success')
+        flash(message, 'success')
 
         # Clear session
         session.pop('outlook_oauth_scope', None)
+        session.pop('outlook_oauth_for_user_id', None)
 
         return redirect(url_for('integrations.index'))
 
