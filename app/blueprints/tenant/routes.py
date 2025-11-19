@@ -9,6 +9,7 @@ from app.models.user import User
 from app.services.default_departments import create_default_departments
 from app.services.applet_manager import initialize_applets_for_tenant
 from app.services.cloudinary_service import upload_image
+from app.utils.security_decorators import require_tenant_role
 
 
 @tenant_bp.route('/')
@@ -455,6 +456,7 @@ def wizard():
 
 @tenant_bp.route('/invite', methods=['GET', 'POST'])
 @login_required
+@require_tenant_role('owner', 'admin')
 def invite():
     """Invite a user to the current tenant"""
     if not g.current_tenant:
@@ -611,20 +613,16 @@ def accept_invitation(token):
 
 @tenant_bp.route('/settings')
 @login_required
+@require_tenant_role('owner', 'admin')
 def settings():
     """Workspace settings and administration"""
     if not g.current_tenant:
         flash('Please select a workspace first.', 'warning')
         return redirect(url_for('tenant.home'))
 
-    # Check if user is owner or admin
-    user_role = current_user.get_role_in_tenant(g.current_tenant.id)
-    if user_role not in ['owner', 'admin']:
-        flash('You do not have permission to access workspace settings.', 'danger')
-        return redirect(url_for('tenant.home'))
-
     # Get all members with their roles
     members = g.current_tenant.get_members()
+    user_role = current_user.get_role_in_tenant(g.current_tenant.id)
 
     return render_template('tenant/settings.html',
                           title='Workspace Settings',
@@ -634,21 +632,17 @@ def settings():
 
 @tenant_bp.route('/settings/applets')
 @login_required
+@require_tenant_role('owner', 'admin')
 def applets_settings():
     """Manage workspace applets"""
     if not g.current_tenant:
         flash('Please select a workspace first.', 'warning')
         return redirect(url_for('tenant.home'))
 
-    # Check if user is owner or admin
-    user_role = current_user.get_role_in_tenant(g.current_tenant.id)
-    if user_role not in ['owner', 'admin']:
-        flash('You do not have permission to manage applets.', 'danger')
-        return redirect(url_for('tenant.home'))
-
     # Get applet status
     from app.services.applet_manager import get_applet_status
     applet_status = get_applet_status(g.current_tenant.id)
+    user_role = current_user.get_role_in_tenant(g.current_tenant.id)
 
     return render_template('tenant/applets.html',
                           title='Manage Applets',
@@ -658,15 +652,11 @@ def applets_settings():
 
 @tenant_bp.route('/settings/applets/<applet_key>/enable', methods=['POST'])
 @login_required
+@require_tenant_role('owner', 'admin')
 def enable_applet(applet_key):
     """Enable an applet"""
     if not g.current_tenant:
         return jsonify({'error': 'No workspace selected'}), 400
-
-    # Check if user is owner or admin
-    user_role = current_user.get_role_in_tenant(g.current_tenant.id)
-    if user_role not in ['owner', 'admin']:
-        return jsonify({'error': 'Permission denied'}), 403
 
     from app.services.applet_manager import enable_applet as enable_applet_service
     success = enable_applet_service(g.current_tenant.id, applet_key)
@@ -679,15 +669,11 @@ def enable_applet(applet_key):
 
 @tenant_bp.route('/settings/applets/<applet_key>/disable', methods=['POST'])
 @login_required
+@require_tenant_role('owner', 'admin')
 def disable_applet(applet_key):
     """Disable an applet"""
     if not g.current_tenant:
         return jsonify({'error': 'No workspace selected'}), 400
-
-    # Check if user is owner or admin
-    user_role = current_user.get_role_in_tenant(g.current_tenant.id)
-    if user_role not in ['owner', 'admin']:
-        return jsonify({'error': 'Permission denied'}), 403
 
     from app.services.applet_manager import disable_applet as disable_applet_service
     success = disable_applet_service(g.current_tenant.id, applet_key)
@@ -829,6 +815,7 @@ def edit_context():
 
 @tenant_bp.route('/delete/<int:tenant_id>', methods=['GET', 'POST'])
 @login_required
+@require_tenant_role('owner')
 def delete_workspace(tenant_id):
     """Delete a workspace (owner only)"""
     from app.models.project import Project
@@ -836,10 +823,9 @@ def delete_workspace(tenant_id):
 
     tenant = Tenant.query.get_or_404(tenant_id)
 
-    # Check if user is owner
-    user_role = current_user.get_role_in_tenant(tenant_id)
-    if user_role != 'owner':
-        flash('Only workspace owners can delete a workspace.', 'danger')
+    # Verify user is accessing their own tenant
+    if tenant.id != g.current_tenant.id:
+        flash('Access denied.', 'danger')
         return redirect(url_for('tenant.home'))
 
     # GET request - show confirmation page
@@ -875,16 +861,12 @@ def delete_workspace(tenant_id):
 
 @tenant_bp.route('/refresh-context', methods=['POST'])
 @login_required
+@require_tenant_role('owner', 'admin')
 def refresh_context():
     """Manually trigger business context refresh"""
     if not g.current_tenant:
         flash('Please select a workspace first.', 'warning')
         return redirect(url_for('tenant.home'))
-
-    user_role = current_user.get_role_in_tenant(g.current_tenant.id)
-    if user_role not in ['owner', 'admin']:
-        flash('You do not have permission to refresh business context.', 'danger')
-        return redirect(url_for('tenant.settings'))
 
     if not g.current_tenant.website_url:
         flash('No website URL configured.', 'warning')

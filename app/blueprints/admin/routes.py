@@ -30,7 +30,8 @@ def get_connection_pool():
     if _redis_pool is None:
         redis_url = current_app.config['REDIS_URL']
         if redis_url.startswith('rediss://'):
-            redis_url += '?ssl_cert_reqs=none'
+            # Enable proper SSL certificate verification for secure connections
+            redis_url += '?ssl_cert_reqs=required'
 
         # Create a connection pool with robust settings
         _redis_pool = ConnectionPool.from_url(
