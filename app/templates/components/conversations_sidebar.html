@@ -260,30 +260,20 @@ async function markAsRead(type, id) {
 // Fetch unread counts on page load
 fetchUnreadCounts();
 
-// Refresh unread counts every 10 seconds
-setInterval(fetchUnreadCounts, 10000);
+// Refresh unread counts every 30 seconds (less aggressive polling since we have Socket.IO)
+setInterval(fetchUnreadCounts, 30000);
 
 // Listen for new messages via Socket.IO to update unread counts in real-time
-if (typeof io !== 'undefined') {
-    // Create a global unread count listener
-    const unreadSocket = io({
-        transports: ['websocket', 'polling']
-    });
-
-    unreadSocket.on('connect', () => {
-        console.log('Unread counts Socket.IO connected');
-        // Join a global room for unread count updates
-        unreadSocket.emit('join_conversation', { conversation_id: 'global_unread' });
-    });
-
-    unreadSocket.on('new_message', () => {
+// Use the global socket connection from base.html instead of creating a new one
+if (typeof socket !== 'undefined') {
+    socket.on('new_message', () => {
         // Refresh counts when a new message arrives
         fetchUnreadCounts();
     });
 
-    unreadSocket.on('connect_error', () => {
-        // Silently fail - we'll still poll every 10 seconds
-        console.log('Unread counts Socket.IO connection error');
+    socket.on('message_read', () => {
+        // Refresh counts when messages are marked as read
+        fetchUnreadCounts();
     });
 }
 </script>
