@@ -10,9 +10,10 @@ class TestAuthentication:
 
     def test_user_registration(self, client, db_session):
         """Test user can register with valid data"""
-        response = client.post('/auth/register', data={
+        response = client.post('/register', data={
             'email': 'newuser@example.com',
-            'full_name': 'New User',
+            'first_name': 'New',
+            'last_name': 'User',
             'password': 'SecurePass123!@#',
             'confirm_password': 'SecurePass123!@#'
         }, follow_redirects=True)
@@ -27,9 +28,10 @@ class TestAuthentication:
 
     def test_weak_password_rejected(self, client, db_session):
         """Test that weak passwords are rejected"""
-        response = client.post('/auth/register', data={
+        response = client.post('/register', data={
             'email': 'weak@example.com',
-            'full_name': 'Weak User',
+            'first_name': 'Weak',
+            'last_name': 'User',
             'password': '12345',  # Too weak
             'confirm_password': '12345'
         })
@@ -39,7 +41,7 @@ class TestAuthentication:
 
     def test_user_login(self, client, test_user):
         """Test user can login with correct credentials"""
-        response = client.post('/auth/login', data={
+        response = client.post('/login', data={
             'email': 'test@example.com',
             'password': 'Test123!@#'
         }, follow_redirects=False)
@@ -48,7 +50,7 @@ class TestAuthentication:
 
     def test_user_login_wrong_password(self, client, test_user):
         """Test login fails with wrong password"""
-        response = client.post('/auth/login', data={
+        response = client.post('/login', data={
             'email': 'test@example.com',
             'password': 'WrongPassword123!@#'
         })
@@ -60,13 +62,13 @@ class TestAuthentication:
         """Test account locks after multiple failed login attempts"""
         # Try to login with wrong password multiple times
         for i in range(6):  # Should lock after 5 attempts
-            client.post('/auth/login', data={
+            client.post('/login', data={
                 'email': 'test@example.com',
                 'password': 'WrongPassword123!@#'
             })
 
         # Next attempt should be locked
-        response = client.post('/auth/login', data={
+        response = client.post('/login', data={
             'email': 'test@example.com',
             'password': 'Test123!@#'  # Even correct password
         })

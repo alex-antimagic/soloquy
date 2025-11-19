@@ -2,6 +2,7 @@
 Pytest configuration and fixtures for Soloquy tests
 """
 import pytest
+from sqlalchemy import event
 from app import create_app, db
 from app.models.user import User
 from app.models.tenant import Tenant, TenantMembership
@@ -28,24 +29,28 @@ def _db(app):
     """Create test database"""
     db.create_all()
     yield db
-    db.session.close()
     db.drop_all()
+    db.session.close()
 
 
 @pytest.fixture(scope='function')
 def db_session(_db):
-    """Create a new database session for each test"""
-    connection = _db.engine.connect()
-    transaction = connection.begin()
+    """Provide the database session for tests"""
+    return _db.session
 
-    session = _db.session
-    session.begin_nested()
 
-    yield session
+@pytest.fixture(scope='function', autouse=True)
+def cleanup_db(_db):
+    """Clean up database after each test"""
+    yield
 
-    session.close()
-    transaction.rollback()
-    connection.close()
+    # Rollback any open transactions
+    _db.session.remove()
+
+    # Delete all data from tables
+    for table in reversed(_db.metadata.sorted_tables):
+        _db.session.execute(table.delete())
+    _db.session.commit()
 
 
 @pytest.fixture
