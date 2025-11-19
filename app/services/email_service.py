@@ -357,6 +357,97 @@ The Soloquy Team
             print(f"✗ Error sending welcome email to {user.email}: {e}")
             return False
 
+    def send_password_reset_email(self, user, reset_url):
+        """Send password reset email"""
+        if not self.client:
+            print(f"Skipping password reset email to {user.email} (SendGrid not configured)")
+            return False
+
+        try:
+            subject = "Reset Your Soloquy Password"
+            html_content = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+        .container {{ max-width: 600px; margin: 40px auto; background: #fff; border-radius: 8px; }}
+        .header {{ background: #667eea; color: white; padding: 40px 30px; text-align: center; border-radius: 8px 8px 0 0; }}
+        .content {{ padding: 40px 30px; }}
+        .button {{ display: inline-block; background: #667eea; color: white; text-decoration: none; padding: 14px 40px; border-radius: 6px; font-weight: 600; margin: 20px 0; }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header"><h1>Password Reset</h1></div>
+        <div class="content">
+            <p>Hi {user.first_name or 'there'},</p>
+            <p>We received a request to reset your Soloquy password.</p>
+            <p><a href="{reset_url}" class="button">Reset Password</a></p>
+            <p>This link will expire in 1 hour. If you didn't request this, please ignore this email.</p>
+        </div>
+    </div>
+</body>
+</html>"""
+
+            message = Mail(
+                from_email=Email(self.from_email, self.from_name),
+                to_emails=To(user.email),
+                subject=subject,
+                html_content=Content("text/html", html_content)
+            )
+            response = self.client.send(message)
+            return response.status_code in [200, 201, 202]
+        except Exception as e:
+            print(f"Error sending password reset email: {e}")
+            return False
+
+    def send_email_confirmation(self, user, confirmation_url):
+        """Send email confirmation"""
+        if not self.client:
+            print(f"Skipping confirmation email to {user.email} (SendGrid not configured)")
+            return False
+
+        try:
+            subject = "Confirm Your Soloquy Email"
+            html_content = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+        .container {{ max-width: 600px; margin: 40px auto; background: #fff; border-radius: 8px; }}
+        .header {{ background: #667eea; color: white; padding: 40px 30px; text-align: center; border-radius: 8px 8px 0 0; }}
+        .content {{ padding: 40px 30px; }}
+        .button {{ display: inline-block; background: #667eea; color: white; text-decoration: none; padding: 14px 40px; border-radius: 6px; font-weight: 600; margin: 20px 0; }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header"><h1>Welcome to Soloquy!</h1></div>
+        <div class="content">
+            <p>Hi {user.first_name or 'there'},</p>
+            <p>Thanks for signing up! Please confirm your email address to get started.</p>
+            <p><a href="{confirmation_url}" class="button">Confirm Email</a></p>
+        </div>
+    </div>
+</body>
+</html>"""
+
+            message = Mail(
+                from_email=Email(self.from_email, self.from_name),
+                to_emails=To(user.email),
+                subject=subject,
+                html_content=Content("text/html", html_content)
+            )
+            response = self.client.send(message)
+            return response.status_code in [200, 201, 202]
+        except Exception as e:
+            print(f"Error sending confirmation email: {e}")
+            return False
+
     def send_security_alert_email(self, user, alert_type, details):
         """
         Send security alert email to user

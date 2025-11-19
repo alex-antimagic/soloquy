@@ -198,3 +198,77 @@ class AuditLog(db.Model):
             cls.event_status.in_(['failure', 'denied']),
             cls.created_at >= threshold
         ).order_by(cls.created_at.desc()).all()
+
+    @staticmethod
+    def log_login_attempt(email, success=True, ip_address=None, user_agent=None, error_message=None):
+        """
+        Log login attempt (successful or failed)
+
+        Args:
+            email: Email address used in login attempt
+            success: Whether login was successful
+            ip_address: IP address of request
+            user_agent: User agent string
+            error_message: Error message if login failed
+        """
+        from app.models.user import User
+        user = User.query.filter_by(email=email).first()
+
+        # For login attempts, we may not have a tenant_id yet
+        # Use a sentinel value of 0 for pre-login events
+        log = AuditLog(
+            event_type='login_attempt',
+            event_status='success' if success else 'failure',
+            user_id=user.id if user else None,
+            tenant_id=0,  # Sentinel value for system-level events
+            ip_address=ip_address,
+            user_agent=user_agent,
+            error_message=error_message
+        )
+
+        details = {'email': email}
+        if not user:
+            details['reason'] = 'User not found'
+        log.set_details(details)
+
+        db.session.add(log)
+        db.session.commit()
+        return log
+
+    @staticmethod
+    def get_failed_login_attempts(user_id, minutes=15):
+        """
+        Get failed login attempts for a user in the last N minutes
+
+        Args:
+            user_id: User ID to check
+            minutes: Time window to check (default 15 minutes)
+
+        Returns:
+            Count of failed login attempts
+        """
+        from datetime import timedelta
+        threshold = datetime.utcnow() - timedelta(minutes=minutes)
+
+        return AuditLog.query.filter(
+            AuditLog.user_id == user_id,
+            AuditLog.event_type == 'login_attempt',
+            AuditLog.event_status == 'failure',
+            AuditLog.created_at >= threshold
+        ).count()
+
+    @staticmethod
+    def should_lock_account(user_id, threshold=5, window_minutes=15):
+        """
+        Check if account should be locked based on failed login attempts
+
+        Args:
+            user_id: User ID to check
+            threshold: Number of failed attempts before locking (default 5)
+            window_minutes: Time window to check (default 15 minutes)
+
+        Returns:
+            True if account should be locked
+        """
+        failed_attempts = AuditLog.get_failed_login_attempts(user_id, window_minutes)
+        return failed_attempts >= threshold

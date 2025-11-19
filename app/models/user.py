@@ -29,6 +29,14 @@ class User(UserMixin, db.Model):
     is_superadmin = db.Column(db.Boolean, default=False, nullable=False)  # Global admin access
     last_seen = db.Column(db.DateTime, default=datetime.utcnow)
 
+    # Security
+    email_confirmed = db.Column(db.Boolean, default=False, nullable=False)
+    email_confirmation_token = db.Column(db.String(100), unique=True, nullable=True)
+    email_confirmation_sent_at = db.Column(db.DateTime, nullable=True)
+    account_locked_until = db.Column(db.DateTime, nullable=True)
+    password_reset_token = db.Column(db.String(100), unique=True, nullable=True)
+    password_reset_sent_at = db.Column(db.DateTime, nullable=True)
+
     # Plan & Billing
     plan = db.Column(db.String(20), default='free', nullable=False)  # 'free' or 'pro'
     stripe_customer_id = db.Column(db.String(255))  # For Stripe integration
@@ -126,3 +134,78 @@ class User(UserMixin, db.Model):
     def is_pro(self):
         """Check if user has pro plan"""
         return self.plan == 'pro'
+
+    # Security methods
+
+    def is_account_locked(self):
+        """Check if account is currently locked"""
+        if self.account_locked_until:
+            if datetime.utcnow() < self.account_locked_until:
+                return True
+            else:
+                # Lock has expired, clear it
+                self.account_locked_until = None
+                db.session.commit()
+        return False
+
+    def lock_account(self, duration_minutes=30):
+        """Lock account for specified duration"""
+        from datetime import timedelta
+        self.account_locked_until = datetime.utcnow() + timedelta(minutes=duration_minutes)
+        db.session.commit()
+
+    def unlock_account(self):
+        """Unlock account"""
+        self.account_locked_until = None
+        db.session.commit()
+
+    def generate_confirmation_token(self):
+        """Generate email confirmation token"""
+        import secrets
+        self.email_confirmation_token = secrets.token_urlsafe(32)
+        self.email_confirmation_sent_at = datetime.utcnow()
+        db.session.commit()
+        return self.email_confirmation_token
+
+    def confirm_email(self, token):
+        """Confirm email with token"""
+        if self.email_confirmation_token == token:
+            self.email_confirmed = True
+            self.email_confirmation_token = None
+            self.email_confirmation_sent_at = None
+            db.session.commit()
+            return True
+        return False
+
+    def generate_password_reset_token(self):
+        """Generate password reset token"""
+        import secrets
+        self.password_reset_token = secrets.token_urlsafe(32)
+        self.password_reset_sent_at = datetime.utcnow()
+        db.session.commit()
+        return self.password_reset_token
+
+    def reset_password(self, token, new_password):
+        """Reset password with token"""
+        from datetime import timedelta
+        # Check token is valid and not expired (1 hour)
+        if self.password_reset_token == token:
+            if self.password_reset_sent_at:
+                expiry = self.password_reset_sent_at + timedelta(hours=1)
+                if datetime.utcnow() < expiry:
+                    self.set_password(new_password)
+                    self.password_reset_token = None
+                    self.password_reset_sent_at = None
+                    db.session.commit()
+                    return True
+        return False
+
+    @staticmethod
+    def find_by_reset_token(token):
+        """Find user by password reset token"""
+        return User.query.filter_by(password_reset_token=token).first()
+
+    @staticmethod
+    def find_by_confirmation_token(token):
+        """Find user by email confirmation token"""
+        return User.query.filter_by(email_confirmation_token=token).first()
