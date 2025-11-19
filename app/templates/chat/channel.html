@@ -439,19 +439,44 @@
             statusHtml = '<span class="avatar-status online"></span>';
         }
 
-        // Build image HTML if attachment exists
+        // Build attachment HTML if attachment exists
         let imageHtml = '';
-        if (attachmentUrl && attachmentType === 'image/jpeg' || attachmentType === 'image/png' || attachmentType === 'image/gif' || attachmentType === 'image/webp') {
-            imageHtml = `
-                <div class="mt-2">
-                    <a href="${attachmentUrl}" target="_blank">
-                        <img src="${attachmentUrl}"
-                             alt="${attachmentFilename || 'Image'}"
-                             class="img-fluid rounded"
-                             style="max-width: 400px; max-height: 300px; object-fit: contain; cursor: pointer;">
-                    </a>
-                </div>
-            `;
+        if (attachmentUrl) {
+            const isImage = attachmentType && (attachmentType.startsWith('image/') ||
+                           attachmentType === 'image/jpeg' ||
+                           attachmentType === 'image/png' ||
+                           attachmentType === 'image/gif' ||
+                           attachmentType === 'image/webp');
+
+            if (isImage) {
+                // Render image preview
+                imageHtml = `
+                    <div class="mt-2">
+                        <a href="${attachmentUrl}" target="_blank">
+                            <img src="${attachmentUrl}"
+                                 alt="${attachmentFilename || 'Image'}"
+                                 class="img-fluid rounded"
+                                 style="max-width: 400px; max-height: 300px; object-fit: contain; cursor: pointer;">
+                        </a>
+                    </div>
+                `;
+            } else {
+                // Render file download link for PDFs, documents, etc.
+                const fileIcon = attachmentType === 'application/pdf' ? 'bi-file-pdf' :
+                               attachmentType === 'text/csv' ? 'bi-file-earmark-spreadsheet' :
+                               attachmentType && attachmentType.includes('spreadsheet') ? 'bi-file-earmark-spreadsheet' :
+                               attachmentType && attachmentType.includes('word') ? 'bi-file-word' :
+                               attachmentType && attachmentType.includes('presentation') ? 'bi-file-ppt' :
+                               'bi-file-earmark';
+
+                imageHtml = `
+                    <div class="mt-2">
+                        <a href="${attachmentUrl}" target="_blank" class="btn btn-outline-primary btn-sm">
+                            <i class="bi ${fileIcon}"></i> ${attachmentFilename || 'Download File'}
+                        </a>
+                    </div>
+                `;
+            }
         }
 
         // Build message body (hide if only showing image)
@@ -617,11 +642,18 @@
             return;
         }
 
-        // Show preview
+        // Show loading state
+        const sendButton = messageForm.querySelector('button[type="submit"]');
+        const originalButtonContent = sendButton.innerHTML;
+        sendButton.disabled = true;
+        sendButton.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Uploading...';
+        imageButton.disabled = true;
+
+        // Show preview with loading indicator
         const reader = new FileReader();
         reader.onload = (e) => {
             previewThumbnail.src = e.target.result;
-            previewFilename.textContent = file.name;
+            previewFilename.textContent = file.name + ' (uploading...)';
             imagePreview.style.display = 'block';
         };
         reader.readAsDataURL(file);
@@ -643,14 +675,21 @@
             if (response.ok) {
                 const data = await response.json();
                 uploadedImageData = data;
+                // Update preview to show success
+                previewFilename.textContent = file.name;
             } else {
                 throw new Error('Upload failed');
             }
         } catch (error) {
             console.error('Error uploading image:', error);
-            alert('Failed to upload image. Please try again.');
+            alert('Failed to upload file. Please try again.');
             imagePreview.style.display = 'none';
             imageInput.value = '';
+        } finally {
+            // Restore button state
+            sendButton.disabled = false;
+            sendButton.innerHTML = originalButtonContent;
+            imageButton.disabled = false;
         }
     });
 

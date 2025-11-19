@@ -368,19 +368,41 @@
 
         const time = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 
-        // Build image attachment if present
+        // Build attachment HTML if attachment present
         let imageHtml = '';
-        if (message.attachment_url && message.message_type === 'image') {
-            imageHtml = `
-                <div class="mt-2">
-                    <a href="${message.attachment_url}" target="_blank">
-                        <img src="${message.attachment_url}"
-                             alt="${message.attachment_filename || 'Image'}"
-                             class="img-fluid rounded"
+        if (message.attachment_url) {
+            const isImage = message.attachment_type && (message.attachment_type.startsWith('image/') ||
+                           message.message_type === 'image');
+
+            if (isImage) {
+                // Render image preview
+                imageHtml = `
+                    <div class="mt-2">
+                        <a href="${message.attachment_url}" target="_blank">
+                            <img src="${message.attachment_url}"
+                                 alt="${message.attachment_filename || 'Image'}"
+                                 class="img-fluid rounded"
                              style="max-width: 400px; max-height: 300px; object-fit: contain; cursor: pointer;">
                     </a>
                 </div>
             `;
+            } else {
+                // Render file download link for PDFs, documents, etc.
+                const fileIcon = message.attachment_type === 'application/pdf' ? 'bi-file-pdf' :
+                               message.attachment_type === 'text/csv' ? 'bi-file-earmark-spreadsheet' :
+                               message.attachment_type && message.attachment_type.includes('spreadsheet') ? 'bi-file-earmark-spreadsheet' :
+                               message.attachment_type && message.attachment_type.includes('word') ? 'bi-file-word' :
+                               message.attachment_type && message.attachment_type.includes('presentation') ? 'bi-file-ppt' :
+                               'bi-file-earmark';
+
+                imageHtml = `
+                    <div class="mt-2">
+                        <a href="${message.attachment_url}" target="_blank" class="btn btn-outline-primary btn-sm">
+                            <i class="bi ${fileIcon}"></i> ${message.attachment_filename || 'Download File'}
+                        </a>
+                    </div>
+                `;
+            }
         }
 
         // Build task cards if agent mentioned any tasks
@@ -560,11 +582,18 @@
             return;
         }
 
-        // Show preview
+        // Show loading state
+        const sendButton = messageForm.querySelector('button[type="submit"]');
+        const originalButtonContent = sendButton.innerHTML;
+        sendButton.disabled = true;
+        sendButton.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Uploading...';
+        imageButton.disabled = true;
+
+        // Show preview with loading indicator
         const reader = new FileReader();
         reader.onload = (e) => {
             previewThumbnail.src = e.target.result;
-            previewFilename.textContent = file.name;
+            previewFilename.textContent = file.name + ' (uploading...)';
             imagePreview.style.display = 'block';
         };
         reader.readAsDataURL(file);
@@ -586,14 +615,21 @@
             if (response.ok) {
                 const data = await response.json();
                 uploadedImageData = data;
+                // Update preview to show success
+                previewFilename.textContent = file.name;
             } else {
                 throw new Error('Upload failed');
             }
         } catch (error) {
-            console.error('Error uploading image:', error);
-            alert('Failed to upload image. Please try again.');
+            console.error('Error uploading file:', error);
+            alert('Failed to upload file. Please try again.');
             imagePreview.style.display = 'none';
             imageInput.value = '';
+        } finally {
+            // Restore button state
+            sendButton.disabled = false;
+            sendButton.innerHTML = originalButtonContent;
+            imageButton.disabled = false;
         }
     });
 
