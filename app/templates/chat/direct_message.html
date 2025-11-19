@@ -91,7 +91,7 @@
                                                             {% if task.description %}
                                                                 <p class="text-muted small mb-2">{{ task.description }}</p>
                                                             {% endif %}
-                                                            <button class="btn btn-sm btn-success" onclick="createTaskFromInitialSuggestion({title: {{ task.title | tojson }}, description: {{ task.description | tojson }}, priority: {{ task.priority | tojson }}, due_date: {{ task.due_date.strftime('%Y-%m-%d') | tojson if task.due_date else 'null' }}}, this)">
+                                                            <button class="btn btn-sm btn-success" onclick='createTaskFromInitialSuggestion({title: {{ task.title | tojson }}, description: {{ task.description | tojson }}, priority: {{ task.priority | tojson }}, due_date: {{ task.due_date.strftime("%Y-%m-%d") | tojson if task.due_date else "null" }}}, this)'>
                                                                 <i class="bi bi-plus-circle"></i> Create Task
                                                             </button>
                                                         </div>
