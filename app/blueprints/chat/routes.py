@@ -1101,29 +1101,57 @@ def remove_channel_agent(slug):
 @chat_bp.route('/unread-counts', methods=['GET'])
 @login_required
 def get_unread_counts():
-    """Get unread message counts for all conversations"""
+    """Get unread message counts for all conversations (optimized)"""
+    from sqlalchemy import func, and_, or_
+    from app.models.message_read import MessageRead
+
     unread_counts = {}
 
-    # Get all channels
-    channels = Channel.query.filter_by(tenant_id=g.current_tenant.id).all()
-    for channel in channels:
-        count = Message.count_unread_in_channel(channel.id, current_user.id)
-        if count > 0:
-            unread_counts[f'channel_{channel.slug}'] = count
+    # Single optimized query: Get all unread messages with counts grouped by conversation
+    # This replaces dozens of separate queries with one efficient query
+    unread_messages = db.session.query(
+        Message.channel_id,
+        Message.agent_id,
+        Message.sender_id,
+        Message.recipient_id,
+        func.count(Message.id).label('count')
+    ).outerjoin(
+        MessageRead,
+        and_(
+            MessageRead.message_id == Message.id,
+            MessageRead.user_id == current_user.id
+        )
+    ).filter(
+        MessageRead.id.is_(None),  # Only unread messages
+        Message.sender_id != current_user.id,  # Don't count own messages
+        or_(
+            Message.channel_id.isnot(None),  # Channel messages
+            and_(Message.agent_id.isnot(None), Message.sender_id.is_(None)),  # Agent messages
+            Message.recipient_id == current_user.id  # DMs to current user
+        )
+    ).group_by(
+        Message.channel_id,
+        Message.agent_id,
+        Message.sender_id,
+        Message.recipient_id
+    ).all()
 
-    # Get all agents
-    for department in g.current_tenant.get_departments():
-        for agent in department.get_agents():
-            count = Message.count_unread_from_agent(agent.id, current_user.id)
-            if count > 0:
-                unread_counts[f'agent_{agent.id}'] = count
-
-    # Get all users (for DMs)
-    for member in g.current_tenant.get_members():
-        if member.id != current_user.id:
-            count = Message.count_unread_from_user(member.id, current_user.id)
-            if count > 0:
-                unread_counts[f'user_{member.id}'] = count
+    # Process results: Group by conversation type
+    for msg in unread_messages:
+        if msg.channel_id:
+            # Channel message
+            channel = Channel.query.get(msg.channel_id)
+            if channel and channel.tenant_id == g.current_tenant.id:
+                key = f'channel_{channel.slug}'
+                unread_counts[key] = unread_counts.get(key, 0) + msg.count
+        elif msg.agent_id:
+            # Agent message
+            key = f'agent_{msg.agent_id}'
+            unread_counts[key] = unread_counts.get(key, 0) + msg.count
+        elif msg.sender_id and msg.recipient_id == current_user.id:
+            # User DM
+            key = f'user_{msg.sender_id}'
+            unread_counts[key] = unread_counts.get(key, 0) + msg.count
 
     return jsonify(unread_counts)
 
