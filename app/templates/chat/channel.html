@@ -147,9 +147,17 @@
                                                             {% if task.description %}
                                                                 <p class="text-muted small mb-2">{{ task.description }}</p>
                                                             {% endif %}
-                                                            <button class="btn btn-sm btn-success" onclick='createTaskFromInitialSuggestion({title: {{ task.title | tojson }}, description: {{ task.description | tojson }}, priority: {{ task.priority | tojson }}, due_date: {{ task.due_date.strftime("%Y-%m-%d") | tojson if task.due_date else "null" }}}, this)'>
-                                                                <i class="bi bi-plus-circle"></i> Create Task
-                                                            </button>
+                                                            <div class="d-flex gap-2 align-items-center">
+                                                                <select class="form-select form-select-sm flex-grow-1 task-assign-select">
+                                                                    <option value="user:{{ current_user.id }}">Assign to Me</option>
+                                                                    {% for agent in associated_agents %}
+                                                                    <option value="agent:{{ agent.id }}" {% if message.agent_id == agent.id %}selected{% endif %}>Assign to {{ agent.name }}</option>
+                                                                    {% endfor %}
+                                                                </select>
+                                                                <button class="btn btn-sm btn-success" onclick='createTaskFromInitialSuggestion({title: {{ task.title | tojson }}, description: {{ task.description | tojson }}, priority: {{ task.priority | tojson }}, due_date: {{ task.due_date.strftime("%Y-%m-%d") | tojson if task.due_date else "null" }}}, this)'>
+                                                                    <i class="bi bi-plus-circle"></i> Create
+                                                                </button>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 {% endfor %}
@@ -542,9 +550,20 @@
                                 </div>
                             </div>
                             ${task.description ? `<p class="text-muted small mb-2">${escapeHtml(task.description)}</p>` : ''}
-                            <button class="btn btn-sm btn-success" onclick="createTaskFromSuggestion(${index}, this)">
-                                <i class="bi bi-plus-circle"></i> Create Task
-                            </button>
+                            <div class="d-flex gap-2 align-items-center">
+                                <select class="form-select form-select-sm flex-grow-1 task-assign-select">
+                                    <option value="user:${currentUserId}">Assign to Me</option>
+                                    ${Object.keys(agentAvatars).map(agentName => {
+                                        // Find agent ID by name from agentAvatars object
+                                        const agentId = message.agent_id || '';
+                                        const selected = message.agent_name === agentName ? 'selected' : '';
+                                        return `<option value="agent:${agentId}" ${selected}>Assign to ${agentName}</option>`;
+                                    }).join('')}
+                                </select>
+                                <button class="btn btn-sm btn-success" onclick="createTaskFromSuggestion(${index}, this)">
+                                    <i class="bi bi-plus-circle"></i> Create
+                                </button>
+                            </div>
                         </div>
                     </div>
                 `;
@@ -1012,9 +1031,22 @@
     // Create task from initial suggestion (from server-side rendered messages)
     async function createTaskFromInitialSuggestion(suggestion, buttonElement) {
         try {
-            // Get agent_id from the message div if available
-            const messageDiv = buttonElement.closest('.message');
-            const agentId = messageDiv ? messageDiv.getAttribute('data-agent-id') : null;
+            // Get the assignment selection
+            const cardDiv = buttonElement.closest('.card-body');
+            const assignSelect = cardDiv.querySelector('.task-assign-select');
+            const assignTo = assignSelect ? assignSelect.value : null;
+
+            // Parse assignment (user:123 or agent:456)
+            let assignedToId = null;
+            let assignedToAgentId = null;
+            if (assignTo) {
+                const [type, id] = assignTo.split(':');
+                if (type === 'user') {
+                    assignedToId = parseInt(id);
+                } else if (type === 'agent') {
+                    assignedToAgentId = parseInt(id);
+                }
+            }
 
             // Disable the button and show loading state
             const originalButtonContent = buttonElement.innerHTML;
@@ -1030,9 +1062,12 @@
                 due_date: suggestion.due_date || null
             };
 
-            // Assign to agent if agent_id is available
-            if (agentId) {
-                taskData.assigned_to_agent_id = parseInt(agentId);
+            // Add assignment if selected
+            if (assignedToId) {
+                taskData.assigned_to_id = assignedToId;
+            }
+            if (assignedToAgentId) {
+                taskData.assigned_to_agent_id = assignedToAgentId;
             }
 
             const response = await fetch('/tasks/create', {
@@ -1086,8 +1121,22 @@
                 return;
             }
 
-            // Get agent_id from the message div if available
-            const agentId = messageDiv.getAttribute('data-agent-id');
+            // Get the assignment selection
+            const cardDiv = buttonElement.closest('.card-body');
+            const assignSelect = cardDiv.querySelector('.task-assign-select');
+            const assignTo = assignSelect ? assignSelect.value : null;
+
+            // Parse assignment (user:123 or agent:456)
+            let assignedToId = null;
+            let assignedToAgentId = null;
+            if (assignTo) {
+                const [type, id] = assignTo.split(':');
+                if (type === 'user') {
+                    assignedToId = parseInt(id);
+                } else if (type === 'agent') {
+                    assignedToAgentId = parseInt(id);
+                }
+            }
 
             // Disable the button and show loading state
             const originalButtonContent = buttonElement.innerHTML;
@@ -1103,9 +1152,12 @@
                 due_date: suggestion.due_date ? suggestion.due_date.split('T')[0] : null
             };
 
-            // Assign to agent if agent_id is available
-            if (agentId) {
-                taskData.assigned_to_agent_id = parseInt(agentId);
+            // Add assignment if selected
+            if (assignedToId) {
+                taskData.assigned_to_id = assignedToId;
+            }
+            if (assignedToAgentId) {
+                taskData.assigned_to_agent_id = assignedToAgentId;
             }
 
             const response = await fetch('/tasks/create', {

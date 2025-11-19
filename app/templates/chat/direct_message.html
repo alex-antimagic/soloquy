@@ -91,9 +91,17 @@
                                                             {% if task.description %}
                                                                 <p class="text-muted small mb-2">{{ task.description }}</p>
                                                             {% endif %}
-                                                            <button class="btn btn-sm btn-success" onclick='createTaskFromInitialSuggestion({title: {{ task.title | tojson }}, description: {{ task.description | tojson }}, priority: {{ task.priority | tojson }}, due_date: {{ task.due_date.strftime("%Y-%m-%d") | tojson if task.due_date else "null" }}}, this)'>
-                                                                <i class="bi bi-plus-circle"></i> Create Task
-                                                            </button>
+                                                            <div class="d-flex gap-2 align-items-center">
+                                                                <select class="form-select form-select-sm flex-grow-1 task-assign-select">
+                                                                    <option value="user:{{ current_user.id }}">Assign to Me</option>
+                                                                    {% if is_agent %}
+                                                                    <option value="agent:{{ recipient_id }}" selected>Assign to {{ recipient_name }}</option>
+                                                                    {% endif %}
+                                                                </select>
+                                                                <button class="btn btn-sm btn-success" onclick='createTaskFromInitialSuggestion({title: {{ task.title | tojson }}, description: {{ task.description | tojson }}, priority: {{ task.priority | tojson }}, due_date: {{ task.due_date.strftime("%Y-%m-%d") | tojson if task.due_date else "null" }}}, this)'>
+                                                                    <i class="bi bi-plus-circle"></i> Create
+                                                                </button>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 {% endfor %}
@@ -506,9 +514,17 @@
                                 </div>
                             </div>
                             ${task.description ? `<p class="text-muted small mb-2">${escapeHtml(task.description)}</p>` : ''}
-                            <button class="btn btn-sm btn-success" onclick="createTaskFromSuggestion(${index}, this)">
-                                <i class="bi bi-plus-circle"></i> Create Task
-                            </button>
+                            <div class="d-flex gap-2 align-items-center">
+                                <select class="form-select form-select-sm flex-grow-1 task-assign-select">
+                                    <option value="user:${currentUserId}">Assign to Me</option>
+                                    {% if is_agent %}
+                                    <option value="agent:${recipientId}" selected>Assign to ${recipientName}</option>
+                                    {% endif %}
+                                </select>
+                                <button class="btn btn-sm btn-success" onclick="createTaskFromSuggestion(${index}, this)">
+                                    <i class="bi bi-plus-circle"></i> Create
+                                </button>
+                            </div>
                         </div>
                     </div>
                 `;
@@ -843,26 +859,51 @@
 
     async function createTaskFromInitialSuggestion(suggestion, buttonElement) {
         try {
+            // Get the assignment selection
+            const cardDiv = buttonElement.closest('.card-body');
+            const assignSelect = cardDiv.querySelector('.task-assign-select');
+            const assignTo = assignSelect ? assignSelect.value : null;
+
+            // Parse assignment (user:123 or agent:456)
+            let assignedToId = null;
+            let assignedToAgentId = null;
+            if (assignTo) {
+                const [type, id] = assignTo.split(':');
+                if (type === 'user') {
+                    assignedToId = parseInt(id);
+                } else if (type === 'agent') {
+                    assignedToAgentId = parseInt(id);
+                }
+            }
+
             // Disable the button and show loading state
             const originalButtonContent = buttonElement.innerHTML;
             buttonElement.disabled = true;
             buttonElement.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Creating...';
 
             const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+            const taskData = {
+                title: suggestion.title,
+                description: suggestion.description || '',
+                priority: suggestion.priority || 'medium',
+                due_date: suggestion.due_date || null
+            };
+
+            // Add assignment if selected
+            if (assignedToId) {
+                taskData.assigned_to_id = assignedToId;
+            }
+            if (assignedToAgentId) {
+                taskData.assigned_to_agent_id = assignedToAgentId;
+            }
+
             const response = await fetch('/tasks/create', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': csrfToken
                 },
-                body: JSON.stringify({
-                    title: suggestion.title,
-                    description: suggestion.description || '',
-                    priority: suggestion.priority || 'medium',
-                    due_date: suggestion.due_date || null{% if is_agent %},
-                    assigned_to_agent_id: recipientId  // Assign to the agent that suggested it
-                    {% endif %}
-                })
+                body: JSON.stringify(taskData)
             });
 
             if (response.ok) {
@@ -906,26 +947,51 @@
                 return;
             }
 
+            // Get the assignment selection
+            const cardDiv = buttonElement.closest('.card-body');
+            const assignSelect = cardDiv.querySelector('.task-assign-select');
+            const assignTo = assignSelect ? assignSelect.value : null;
+
+            // Parse assignment (user:123 or agent:456)
+            let assignedToId = null;
+            let assignedToAgentId = null;
+            if (assignTo) {
+                const [type, id] = assignTo.split(':');
+                if (type === 'user') {
+                    assignedToId = parseInt(id);
+                } else if (type === 'agent') {
+                    assignedToAgentId = parseInt(id);
+                }
+            }
+
             // Disable the button and show loading state
             const originalButtonContent = buttonElement.innerHTML;
             buttonElement.disabled = true;
             buttonElement.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Creating...';
 
             const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+            const taskData = {
+                title: suggestion.title,
+                description: suggestion.description || '',
+                priority: suggestion.priority || 'medium',
+                due_date: suggestion.due_date ? suggestion.due_date.split('T')[0] : null
+            };
+
+            // Add assignment if selected
+            if (assignedToId) {
+                taskData.assigned_to_id = assignedToId;
+            }
+            if (assignedToAgentId) {
+                taskData.assigned_to_agent_id = assignedToAgentId;
+            }
+
             const response = await fetch('/tasks/create', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': csrfToken
                 },
-                body: JSON.stringify({
-                    title: suggestion.title,
-                    description: suggestion.description || '',
-                    priority: suggestion.priority || 'medium',
-                    due_date: suggestion.due_date ? suggestion.due_date.split('T')[0] : null{% if is_agent %},
-                    assigned_to_agent_id: recipientId  // Assign to the agent that suggested it
-                    {% endif %}
-                })
+                body: JSON.stringify(taskData)
             });
 
             if (response.ok) {
