@@ -313,9 +313,53 @@ def send_message():
                 api_messages = []
                 for msg in conversation_messages:
                     if msg.sender_id == current_user.id:  # User message
+                        # Build content array for multi-modal support
+                        message_content = []
+
+                        # Add attachment if present
+                        if msg.attachment_url:
+                            if msg.attachment_type and msg.attachment_type.startswith('image/'):
+                                # For images, use vision API format
+                                import requests
+                                import base64
+                                try:
+                                    # Fetch image and convert to base64
+                                    response = requests.get(msg.attachment_url, timeout=10)
+                                    if response.status_code == 200:
+                                        image_data = base64.b64encode(response.content).decode('utf-8')
+                                        message_content.append({
+                                            "type": "image",
+                                            "source": {
+                                                "type": "base64",
+                                                "media_type": msg.attachment_type,
+                                                "data": image_data
+                                            }
+                                        })
+                                except Exception as e:
+                                    print(f"Error fetching image for vision: {e}")
+                                    # Fall back to text description
+                                    message_content.append({
+                                        "type": "text",
+                                        "text": f"[Image attached: {msg.attachment_filename or 'image'}]"
+                                    })
+                            else:
+                                # For PDFs and documents, add text description
+                                file_type = msg.attachment_type or 'file'
+                                message_content.append({
+                                    "type": "text",
+                                    "text": f"[{file_type} file attached: {msg.attachment_filename}, URL: {msg.attachment_url}]"
+                                })
+
+                        # Add text content
+                        if msg.content:
+                            message_content.append({
+                                "type": "text",
+                                "text": msg.content
+                            })
+
                         api_messages.append({
                             'role': 'user',
-                            'content': msg.content
+                            'content': message_content if message_content else msg.content
                         })
                     elif msg.agent_id == agent.id:  # Agent message
                         api_messages.append({
@@ -323,10 +367,49 @@ def send_message():
                             'content': msg.content
                         })
 
-                # Add current message
+                # Add current message (with attachment if present)
+                current_message_content = []
+
+                if attachment_url:
+                    if attachment_type and attachment_type.startswith('image/'):
+                        # For images, use vision API format
+                        import requests
+                        import base64
+                        try:
+                            response = requests.get(attachment_url, timeout=10)
+                            if response.status_code == 200:
+                                image_data = base64.b64encode(response.content).decode('utf-8')
+                                current_message_content.append({
+                                    "type": "image",
+                                    "source": {
+                                        "type": "base64",
+                                        "media_type": attachment_type,
+                                        "data": image_data
+                                    }
+                                })
+                        except Exception as e:
+                            print(f"Error fetching image for vision: {e}")
+                            current_message_content.append({
+                                "type": "text",
+                                "text": f"[Image attached: {attachment_filename or 'image'}]"
+                            })
+                    else:
+                        # For PDFs and documents
+                        file_type = attachment_type or 'file'
+                        current_message_content.append({
+                            "type": "text",
+                            "text": f"[{file_type} file attached: {attachment_filename}, URL: {attachment_url}]"
+                        })
+
+                if content:
+                    current_message_content.append({
+                        "type": "text",
+                        "text": content
+                    })
+
                 api_messages.append({
                     'role': 'user',
-                    'content': content
+                    'content': current_message_content if current_message_content else content
                 })
 
                 # Fetch agent's assigned tasks (exclude completed)
@@ -407,12 +490,17 @@ Return ONLY the task numbers (1, 2, 3, etc.) that the agent mentioned or address
                         print(f"Error detecting task mentions: {e}")
                         # Continue without task detection
 
+                # Parse task suggestions from agent message
+                task_suggestions = agent_message.parse_task_suggestions()
+                clean_content = agent_message.get_content_without_task_suggestions() if task_suggestions else agent_message.content
+
                 agent_response = {
                     'id': agent_message.id,
-                    'content': agent_message.content,
+                    'content': clean_content,  # Show clean content without task suggestion blocks
                     'sender': agent.name,
                     'created_at': agent_message.created_at.isoformat(),
-                    'mentioned_tasks': mentioned_tasks
+                    'mentioned_tasks': mentioned_tasks,
+                    'task_suggestions': task_suggestions  # Add task suggestions to response
                 }
 
             except Exception as e:
@@ -597,36 +685,65 @@ def send_channel_message(slug):
     data = request.get_json()
     content = data.get('content', '').strip()
 
-    # Validate message content
-    is_valid, error = validate_message_content(content)
-    if not is_valid:
-        return jsonify({'error': error}), 400
+    # Attachment data (if file was uploaded)
+    attachment_url = data.get('attachment_url')
+    attachment_type = data.get('attachment_type')
+    attachment_filename = data.get('attachment_filename')
+    attachment_size = data.get('attachment_size')
 
-    # Sanitize AI input to prevent prompt injection
-    is_safe, result = sanitize_ai_input(content)
-    if not is_safe:
-        return jsonify({'error': result}), 400
+    # Validate message content (allow empty if there's an attachment)
+    if not content and not attachment_url:
+        return jsonify({'error': 'Message cannot be empty'}), 400
+
+    if content:
+        is_valid, error = validate_message_content(content)
+        if not is_valid:
+            return jsonify({'error': error}), 400
+
+        # Sanitize AI input to prevent prompt injection
+        is_safe, result = sanitize_ai_input(content)
+        if not is_safe:
+            return jsonify({'error': result}), 400
+
+    # Determine message type
+    message_type = 'image' if attachment_url else 'text'
 
     # Create user's message
     message = Message(
         channel_id=channel.id,
         sender_id=current_user.id,
-        content=content,
-        message_type='text'
+        content=content or '(file)',
+        message_type=message_type,
+        attachment_url=attachment_url,
+        attachment_type=attachment_type,
+        attachment_filename=attachment_filename,
+        attachment_size=attachment_size
     )
     db.session.add(message)
     db.session.commit()
 
-    # Broadcast user message via SSE
-    conversation_id = f"channel_{slug}"
-    socketio.emit('new_message', {
+    # Build message data for broadcast
+    message_data = {
         'id': message.id,
         'content': message.content,
         'sender_id': current_user.id,
         'sender': current_user.full_name,
-        'message_type': 'text',
+        'message_type': message.message_type,
         'created_at': message.created_at.isoformat()
-    }, room=conversation_id)
+    }
+
+    # Include attachment data if present
+    if message.attachment_url:
+        message_data.update({
+            'attachment_url': message.attachment_url,
+            'attachment_type': message.attachment_type,
+            'attachment_filename': message.attachment_filename,
+            'attachment_size': message.attachment_size
+        })
+
+    # Broadcast user message via Socket.IO
+    conversation_id = f"channel_{slug}"
+    socketio.emit('new_message', message_data, room=conversation_id)
 
     # Parse mentions from the message
     mentions = message.parse_mentions()
@@ -658,13 +775,54 @@ def send_channel_message(slug):
             ).order_by(Message.created_at.desc()).limit(20).all()
             channel_messages.reverse()
 
-            # Build API messages
+            # Build API messages with multi-modal support
             api_messages = []
             for msg in channel_messages:
                 if msg.sender_id:
+                    message_content = []
+
+                    # Add attachment if present
+                    if msg.attachment_url:
+                        if msg.attachment_type and msg.attachment_type.startswith('image/'):
+                            # For images, use vision API format
+                            import requests
+                            import base64
+                            try:
+                                response = requests.get(msg.attachment_url, timeout=10)
+                                if response.status_code == 200:
+                                    image_data = base64.b64encode(response.content).decode('utf-8')
+                                    message_content.append({
+                                        "type": "image",
+                                        "source": {
+                                            "type": "base64",
+                                            "media_type": msg.attachment_type,
+                                            "data": image_data
+                                        }
+                                    })
+                            except Exception as e:
+                                print(f"Error fetching image for vision: {e}")
+                                message_content.append({
+                                    "type": "text",
+                                    "text": f"[Image attached by {msg.sender.full_name}: {msg.attachment_filename or 'image'}]"
+                                })
+                        else:
+                            # For PDFs and documents
+                            file_type = msg.attachment_type or 'file'
+                            message_content.append({
+                                "type": "text",
+                                "text": f"[{file_type} file attached by {msg.sender.full_name}: {msg.attachment_filename}, URL: {msg.attachment_url}]"
+                            })
+
+                    # Add text content with sender name
+                    if msg.content:
+                        message_content.append({
+                            "type": "text",
+                            "text": f"{msg.sender.full_name}: {msg.content}"
+                        })
+
                     api_messages.append({
                         'role': 'user',
-                        'content': f"{msg.sender.full_name}: {msg.content}"
+                        'content': message_content if message_content else f"{msg.sender.full_name}: "
                     })
                 elif msg.agent_id:
                     api_messages.append({
@@ -701,25 +859,39 @@ def send_channel_message(slug):
             db.session.add(agent_message)
             db.session.commit()
 
+            # Parse task suggestions from agent message
+            task_suggestions = agent_message.parse_task_suggestions()
+            clean_content = agent_message.get_content_without_task_suggestions() if task_suggestions else agent_message.content
+
             # Broadcast agent response via Socket.IO
-            socketio.emit('new_message', {
+            message_data = {
                 'id': agent_message.id,
-                'content': agent_message.content,
+                'content': clean_content,  # Show clean content without task suggestion blocks
                 'agent_id': agent.id,
                 'agent_name': agent.name,
                 'message_type': 'text',
                 'created_at': agent_message.created_at.isoformat(),
                 'was_mentioned': agent in mentioned_agents
-            }, room=conversation_id)
+            }
 
-            agent_responses.append({
+            # Include task suggestions if any
+            if task_suggestions:
+                message_data['task_suggestions'] = task_suggestions
+
+            socketio.emit('new_message', message_data, room=conversation_id)
+
+            response_data = {
                 'id': agent_message.id,
                 'agent_id': agent.id,
                 'agent_name': agent.name,
-                'content': agent_message.content,
+                'content': clean_content,  # Use clean content
                 'created_at': agent_message.created_at.isoformat(),
                 'was_mentioned': agent in mentioned_agents
-            })
+            }
+            if task_suggestions:
+                response_data['task_suggestions'] = task_suggestions
+
+            agent_responses.append(response_data)
 
         except Exception as e:
             print(f"Error generating agent response: {e}")

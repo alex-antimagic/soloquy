@@ -121,6 +121,91 @@ class Message(db.Model):
 
         return result
 
+    def parse_task_suggestions(self):
+        """
+        Parse task suggestions from agent message content.
+        Returns: List of task dictionaries with suggested task data.
+        Format:
+            [TASK] Title: Task title here
+            [TASK] Description: Task description (optional)
+            [TASK] Priority: low|medium|high|urgent (optional)
+            [TASK] Due: YYYY-MM-DD (optional)
+            [TASK_END]
+        """
+        import re
+        from datetime import datetime
+
+        # Only parse task suggestions from agent messages
+        if not self.is_from_agent():
+            return []
+
+        tasks = []
+
+        # Find all task suggestion blocks
+        task_pattern = r'\[TASK\](.*?)\[TASK_END\]'
+        task_blocks = re.findall(task_pattern, self.content, re.DOTALL)
+
+        for block in task_blocks:
+            task_data = {
+                'title': None,
+                'description': None,
+                'priority': 'medium',  # Default priority
+                'due_date': None
+            }
+
+            # Parse individual fields within the task block
+            lines = block.strip().split('\n')
+            for line in lines:
+                line = line.strip()
+
+                # Parse title
+                title_match = re.match(r'\[TASK\]\s*Title:\s*(.+)', line)
+                if title_match:
+                    task_data['title'] = title_match.group(1).strip()[:200]  # Limit to 200 chars
+                    continue
+
+                # Parse description
+                desc_match = re.match(r'\[TASK\]\s*Description:\s*(.+)', line)
+                if desc_match:
+                    task_data['description'] = desc_match.group(1).strip()
+                    continue
+
+                # Parse priority
+                priority_match = re.match(r'\[TASK\]\s*Priority:\s*(low|medium|high|urgent)', line, re.IGNORECASE)
+                if priority_match:
+                    task_data['priority'] = priority_match.group(1).lower()
+                    continue
+
+                # Parse due date
+                due_match = re.match(r'\[TASK\]\s*Due:\s*(\d{4}-\d{2}-\d{2})', line)
+                if due_match:
+                    try:
+                        task_data['due_date'] = datetime.strptime(due_match.group(1), '%Y-%m-%d')
+                    except ValueError:
+                        pass  # Invalid date, skip
+                    continue
+
+            # Only add task if it has a title
+            if task_data['title']:
+                tasks.append(task_data)
+
+        return tasks
+
+    def get_content_without_task_suggestions(self):
+        """
+        Get message content with task suggestion blocks removed.
+        Useful for displaying clean message text to users.
+        """
+        import re
+
+        # Remove task suggestion blocks
+        clean_content = re.sub(r'\[TASK\].*?\[TASK_END\]', '', self.content, flags=re.DOTALL)
+
+        # Clean up extra whitespace
+        clean_content = re.sub(r'\n\n+', '\n\n', clean_content).strip()
+
+        return clean_content
+
     @staticmethod
     def get_conversation(department_id=None, user1_id=None, user2_id=None, limit=50):
         """
