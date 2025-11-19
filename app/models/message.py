@@ -154,30 +154,31 @@ class Message(db.Model):
             }
 
             # Parse individual fields within the task block
+            # Claude may or may not include [TASK] prefix on each line
             lines = block.strip().split('\n')
             for line in lines:
                 line = line.strip()
 
-                # Parse title
-                title_match = re.match(r'\[TASK\]\s*Title:\s*(.+)', line)
+                # Parse title - with or without [TASK] prefix
+                title_match = re.match(r'(?:\[TASK\]\s*)?Title:\s*(.+)', line)
                 if title_match:
                     task_data['title'] = title_match.group(1).strip()[:200]  # Limit to 200 chars
                     continue
 
-                # Parse description
-                desc_match = re.match(r'\[TASK\]\s*Description:\s*(.+)', line)
+                # Parse description - with or without [TASK] prefix
+                desc_match = re.match(r'(?:\[TASK\]\s*)?Description:\s*(.+)', line)
                 if desc_match:
                     task_data['description'] = desc_match.group(1).strip()
                     continue
 
-                # Parse priority
-                priority_match = re.match(r'\[TASK\]\s*Priority:\s*(low|medium|high|urgent)', line, re.IGNORECASE)
+                # Parse priority - with or without [TASK] prefix
+                priority_match = re.match(r'(?:\[TASK\]\s*)?Priority:\s*(low|medium|high|urgent)', line, re.IGNORECASE)
                 if priority_match:
                     task_data['priority'] = priority_match.group(1).lower()
                     continue
 
-                # Parse due date
-                due_match = re.match(r'\[TASK\]\s*Due:\s*(\d{4}-\d{2}-\d{2})', line)
+                # Parse due date - with or without [TASK] prefix
+                due_match = re.match(r'(?:\[TASK\]\s*)?Due:\s*(\d{4}-\d{2}-\d{2})', line)
                 if due_match:
                     try:
                         task_data['due_date'] = datetime.strptime(due_match.group(1), '%Y-%m-%d')
