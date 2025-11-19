@@ -1103,7 +1103,7 @@ def remove_channel_agent(slug):
 def get_unread_counts():
     """Get unread message counts for all conversations (optimized)"""
     from sqlalchemy import func, and_, or_
-    from app.models.message_read import MessageRead
+    from app.models.read_receipt import ReadReceipt
 
     unread_counts = {}
 
@@ -1116,13 +1116,13 @@ def get_unread_counts():
         Message.recipient_id,
         func.count(Message.id).label('count')
     ).outerjoin(
-        MessageRead,
+        ReadReceipt,
         and_(
-            MessageRead.message_id == Message.id,
-            MessageRead.user_id == current_user.id
+            ReadReceipt.message_id == Message.id,
+            ReadReceipt.user_id == current_user.id
         )
     ).filter(
-        MessageRead.id.is_(None),  # Only unread messages
+        ReadReceipt.id.is_(None),  # Only unread messages
         Message.sender_id != current_user.id,  # Don't count own messages
         or_(
             Message.channel_id.isnot(None),  # Channel messages
