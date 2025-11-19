@@ -22,11 +22,23 @@
     {% if department.access_control == 'all' %}
     <div class="row mb-4">
         <div class="col-lg-10">
-            <div class="alert alert-info">
-                <i class="bi bi-info-circle me-2"></i>
-                <strong>Department is open to all workspace members.</strong>
-                All users in your workspace can access this department. To restrict access, change the access control setting in
-                <a href="{{ url_for('department.edit', department_id=department.id) }}">Department Settings</a>.
+            <div class="alert alert-warning">
+                <div class="d-flex align-items-start">
+                    <i class="bi bi-exclamation-triangle-fill me-3 fs-4 flex-shrink-0"></i>
+                    <div>
+                        <h6 class="alert-heading mb-2">Department is Open to All Workspace Members</h6>
+                        <p class="mb-2">
+                            Currently, all users in your workspace can access this department.
+                            The member list below is for reference only and will not restrict access.
+                        </p>
+                        <p class="mb-0">
+                            <strong>To restrict access:</strong> Go to
+                            <a href="{{ url_for('department.edit', department_id=department.id) }}" class="alert-link">
+                                Department Settings
+                            </a> and change the access mode to "Restricted - Only department members can access".
+                        </p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -90,7 +102,7 @@
                                         {% set user_role = member.get_role_in_tenant(current_tenant.id) %}
                                         {% if user_role in ['owner', 'admin'] %}
                                             <span class="text-muted small">Always has access</span>
-                                        {% elif department.access_control == 'members' %}
+                                        {% else %}
                                             <form method="POST" action="{{ url_for('department.remove_member', department_id=department.id) }}" class="d-inline">
                                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                 <input type="hidden" name="user_id" value="{{ member.id }}">
@@ -99,8 +111,6 @@
                                                     <i class="bi bi-x-circle"></i> Remove
                                                 </button>
                                             </form>
-                                        {% else %}
-                                            <span class="text-muted small">-</span>
                                         {% endif %}
                                     </td>
                                 </tr>
@@ -116,8 +126,7 @@
         </div>
     </div>
 
-    <!-- Add Members (only show if department is restricted) -->
-    {% if department.access_control == 'members' %}
+    <!-- Add Members -->
     <div class="row">
         <div class="col-lg-10">
             <div class="card">
@@ -127,6 +136,14 @@
                     </h6>
                 </div>
                 <div class="card-body">
+                    {% if department.access_control == 'all' %}
+                    <div class="alert alert-info mb-3">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <strong>Note:</strong> These members will only be used for access control once you set the department to "Restricted" mode.
+                        Currently, all workspace members can access this department.
+                    </div>
+                    {% endif %}
+
                     {% if available_users %}
                     <form method="POST" action="{{ url_for('department.add_member', department_id=department.id) }}">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -157,6 +174,5 @@
             </div>
         </div>
     </div>
-    {% endif %}
 </div>
 {% endblock %}
