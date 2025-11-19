@@ -65,8 +65,9 @@ def test_user(db_session):
     """Create a test user"""
     user = User(
         email='test@example.com',
-        full_name='Test User',
-        is_email_confirmed=True
+        first_name='Test',
+        last_name='User',
+        email_confirmed=True
     )
     user.set_password('Test123!@#')
     db_session.add(user)
@@ -79,8 +80,9 @@ def test_user_2(db_session):
     """Create a second test user"""
     user = User(
         email='test2@example.com',
-        full_name='Test User 2',
-        is_email_confirmed=True
+        first_name='Test',
+        last_name='User2',
+        email_confirmed=True
     )
     user.set_password('Test123!@#')
     db_session.add(user)
