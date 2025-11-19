@@ -63,7 +63,7 @@
                                 {{ form.icon(class="form-control" + (" is-invalid" if form.icon.errors else ""), placeholder="e.g., 💼 or briefcase") }}
                                 {% if form.icon.errors %}
                                     <div class="invalid-feedback">
-                                        {% for error in form.icon.errors %}<div>{{ error }}</div>
+                                        {% for error in form.icon.errors %}<div>{{ error }}</div>{% endfor %}
                                     </div>
                                 {% endif %}
                                 <div class="form-text">Emoji or icon name (optional)</div>
