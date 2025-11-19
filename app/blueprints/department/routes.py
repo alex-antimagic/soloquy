@@ -85,9 +85,6 @@ def view(department_id):
     ai_interactions = department.get_ai_interaction_count(days=7)
     weekly_activity = department.get_weekly_activity()
 
-    # Get recent messages
-    recent_messages = department.get_recent_messages(limit=10)
-
     # Get primary agent for chat button
     agent = department.get_primary_agent()
 
@@ -98,8 +95,7 @@ def view(department_id):
                           total_messages=total_messages,
                           active_members=active_members,
                           ai_interactions=ai_interactions,
-                          weekly_activity=weekly_activity,
-                          recent_messages=recent_messages)
+                          weekly_activity=weekly_activity)
 
 
 @department_bp.route('/create', methods=['GET', 'POST'])
