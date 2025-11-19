@@ -51,8 +51,9 @@
                                     <span class="message-time">{{ message.created_at.strftime('%I:%M %p') }}</span>
                                 </div>
                                 <div class="message-content">
-                                    {% if message.content and message.content != '(image)' %}
-                                        <div class="message-body">{{ message.content | format_message }}</div>
+                                    {% set clean_content = message.get_content_without_task_suggestions() if message.is_from_agent() else message.content %}
+                                    {% if clean_content and clean_content != '(image)' %}
+                                        <div class="message-body">{{ clean_content | format_message }}</div>
                                     {% endif %}
                                     {% if message.attachment_url and message.message_type == 'image' %}
                                         <div class="mt-2">
@@ -63,6 +64,41 @@
                                                      style="max-width: 400px; max-height: 300px; object-fit: contain; cursor: pointer;">
                                             </a>
                                         </div>
+                                    {% endif %}
+                                    {% if is_agent and message.is_from_agent() %}
+                                        {% set task_suggestions = message.parse_task_suggestions() %}
+                                        {% if task_suggestions %}
+                                            <div class="mt-2">
+                                                {% for task in task_suggestions %}
+                                                    {% set priority_class = 'danger' if task.priority == 'urgent' else 'warning' if task.priority == 'high' else 'primary' if task.priority == 'medium' else 'secondary' %}
+                                                    {% set priority_icon = 'bi-exclamation-triangle-fill' if task.priority == 'urgent' else 'bi-arrow-up-circle' if task.priority == 'high' else 'bi-dash-circle' %}
+                                                    <div class="card border-start border-{{ priority_class }} border-3 mb-2" style="background-color: rgba(var(--bs-primary-rgb), 0.05);">
+                                                        <div class="card-body py-2 px-3">
+                                                            <div class="d-flex justify-content-between align-items-start mb-1">
+                                                                <div class="flex-grow-1">
+                                                                    <small class="text-muted d-block mb-1">
+                                                                        <i class="bi bi-lightbulb"></i> Suggested Task
+                                                                    </small>
+                                                                    <strong>{{ task.title }}</strong>
+                                                                    <span class="badge bg-{{ priority_class }} ms-2">
+                                                                        <i class="bi {{ priority_icon }}"></i> {{ task.priority }}
+                                                                    </span>
+                                                                    {% if task.due_date %}
+                                                                        <span class="text-muted small ms-2"><i class="bi bi-calendar"></i> {{ task.due_date.strftime('%Y-%m-%d') }}</span>
+                                                                    {% endif %}
+                                                                </div>
+                                                            </div>
+                                                            {% if task.description %}
+                                                                <p class="text-muted small mb-2">{{ task.description }}</p>
+                                                            {% endif %}
+                                                            <button class="btn btn-sm btn-success" onclick="createTaskFromInitialSuggestion({{ task | tojson }}, this)">
+                                                                <i class="bi bi-plus-circle"></i> Create Task
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
                                     {% endif %}
                                 </div>
                             </div>
@@ -803,6 +839,57 @@
 
     function viewTask(taskId) {
         window.location.href = `/tasks/${taskId}`;
+    }
+
+    async function createTaskFromInitialSuggestion(suggestion, buttonElement) {
+        try {
+            // Disable the button and show loading state
+            const originalButtonContent = buttonElement.innerHTML;
+            buttonElement.disabled = true;
+            buttonElement.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Creating...';
+
+            const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+            const response = await fetch('/tasks/create', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({
+                    title: suggestion.title,
+                    description: suggestion.description || '',
+                    priority: suggestion.priority || 'medium',
+                    due_date: suggestion.due_date || null
+                })
+            });
+
+            if (response.ok) {
+                const task = await response.json();
+                // Replace button with success message
+                buttonElement.outerHTML = '<span class="badge bg-success"><i class="bi bi-check-circle"></i> Task Created</span>';
+
+                // Show toast notification
+                const toast = document.createElement('div');
+                toast.className = 'alert alert-success alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3';
+                toast.style.zIndex = '9999';
+                toast.innerHTML = `
+                    <i class="bi bi-check-circle-fill"></i> Task "${suggestion.title}" created successfully!
+                    <a href="/tasks/${task.id}" class="alert-link ms-2">View Task</a>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
+                document.body.appendChild(toast);
+                setTimeout(() => toast.remove(), 5000);
+            } else {
+                buttonElement.disabled = false;
+                buttonElement.innerHTML = originalButtonContent;
+                alert('Failed to create task. Please try again.');
+            }
+        } catch (error) {
+            console.error('Error creating task from suggestion:', error);
+            buttonElement.disabled = false;
+            buttonElement.innerHTML = originalButtonContent;
+            alert('Failed to create task. Please try again.');
+        }
     }
 
     async function createTaskFromSuggestion(suggestionIndex, buttonElement) {
