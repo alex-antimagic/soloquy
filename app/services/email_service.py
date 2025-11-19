@@ -357,6 +357,221 @@ The Soloquy Team
             print(f"✗ Error sending welcome email to {user.email}: {e}")
             return False
 
+    def send_security_alert_email(self, user, alert_type, details):
+        """
+        Send security alert email to user
+
+        Args:
+            user: User model instance
+            alert_type: Type of alert (e.g., 'failed_login', 'account_lockout', 'suspicious_activity')
+            details: Dictionary containing alert details (ip_address, location, timestamp, etc.)
+
+        Returns:
+            bool: True if email sent successfully, False otherwise
+        """
+        if not self.client:
+            print(f"Skipping security alert email to {user.email} (SendGrid not configured)")
+            return False
+
+        try:
+            # Customize subject and message based on alert type
+            alert_messages = {
+                'failed_login': {
+                    'subject': 'Failed Login Attempt on Your Account',
+                    'title': '⚠️ Failed Login Attempt',
+                    'message': 'We detected a failed login attempt on your account.'
+                },
+                'account_lockout': {
+                    'subject': 'Your Account Has Been Locked',
+                    'title': '🔒 Account Locked',
+                    'message': 'Your account has been temporarily locked due to multiple failed login attempts.'
+                },
+                'suspicious_activity': {
+                    'subject': 'Suspicious Activity Detected',
+                    'title': '⚠️ Suspicious Activity',
+                    'message': 'We detected suspicious activity on your account.'
+                }
+            }
+
+            alert_config = alert_messages.get(alert_type, alert_messages['suspicious_activity'])
+            subject = alert_config['subject']
+
+            # Format details for display
+            ip_address = details.get('ip_address', 'Unknown')
+            timestamp = details.get('timestamp', 'Unknown')
+            attempt_count = details.get('attempt_count', 0)
+
+            html_content = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }}
+        .container {{
+            max-width: 600px;
+            margin: 40px auto;
+            background: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }}
+        .header {{
+            background: #dc3545;
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+        }}
+        .header h1 {{
+            margin: 0;
+            font-size: 28px;
+            font-weight: 600;
+        }}
+        .content {{
+            padding: 40px 30px;
+        }}
+        .content p {{
+            margin: 0 0 20px 0;
+            font-size: 16px;
+        }}
+        .alert-box {{
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px 20px;
+            margin: 25px 0;
+        }}
+        .detail-box {{
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 20px 0;
+            font-family: monospace;
+            font-size: 14px;
+        }}
+        .detail-box div {{
+            margin: 5px 0;
+        }}
+        .cta-button {{
+            display: inline-block;
+            background: #dc3545;
+            color: white;
+            text-decoration: none;
+            padding: 14px 40px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 16px;
+            margin: 20px 0;
+        }}
+        .footer {{
+            background: #f8f9fa;
+            padding: 30px;
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+        }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>{alert_config['title']}</h1>
+        </div>
+
+        <div class="content">
+            <p>Hi {user.first_name or 'there'},</p>
+
+            <p>{alert_config['message']}</p>
+
+            <div class="alert-box">
+                <strong>Security Alert Details:</strong>
+            </div>
+
+            <div class="detail-box">
+                <div><strong>Time:</strong> {timestamp}</div>
+                <div><strong>IP Address:</strong> {ip_address}</div>
+                {"<div><strong>Failed Attempts:</strong> " + str(attempt_count) + "</div>" if attempt_count > 0 else ""}
+            </div>
+
+            <p><strong>What should you do?</strong></p>
+            <ul>
+                <li>If this was you, you can safely ignore this email</li>
+                <li>If this wasn't you, we recommend changing your password immediately</li>
+                <li>Consider enabling two-factor authentication for added security</li>
+            </ul>
+
+            <p style="font-size: 14px; color: #666; margin-top: 30px;">
+                If you have any concerns or questions about this alert, please contact our support team.
+            </p>
+        </div>
+
+        <div class="footer">
+            <p>This is an automated security alert from Soloquy</p>
+            <p>Please do not reply to this email</p>
+        </div>
+    </div>
+</body>
+</html>
+            """
+
+            text_content = f"""
+{alert_config['title']}
+
+Hi {user.first_name or 'there'},
+
+{alert_config['message']}
+
+Security Alert Details:
+- Time: {timestamp}
+- IP Address: {ip_address}
+{"- Failed Attempts: " + str(attempt_count) if attempt_count > 0 else ""}
+
+What should you do?
+- If this was you, you can safely ignore this email
+- If this wasn't you, we recommend changing your password immediately
+- Consider enabling two-factor authentication for added security
+
+If you have any concerns or questions about this alert, please contact our support team.
+
+---
+This is an automated security alert from Soloquy
+Please do not reply to this email
+            """
+
+            # Create SendGrid message
+            if not SENDGRID_AVAILABLE:
+                print(f"Cannot send email - sendgrid not installed")
+                return False
+
+            message = Mail(
+                from_email=Email(self.from_email, self.from_name),
+                to_emails=To(user.email),
+                subject=subject,
+                plain_text_content=Content("text/plain", text_content),
+                html_content=Content("text/html", html_content)
+            )
+
+            response = self.client.send(message)
+
+            if response.status_code in [200, 201, 202]:
+                print(f"✓ Security alert email sent to {user.email}")
+                return True
+            else:
+                print(f"✗ Failed to send security alert email to {user.email}: Status {response.status_code}")
+                return False
+
+        except Exception as e:
+            print(f"✗ Error sending security alert email to {user.email}: {e}")
+            return False
+
 
 # Singleton instance
 email_service = EmailService()

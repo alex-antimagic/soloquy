@@ -42,6 +42,11 @@ class Config:
     # Error Tracking
     SENTRY_DSN = os.environ.get('SENTRY_DSN')
 
+    # Email Configuration (SendGrid)
+    SENDGRID_API_KEY = os.environ.get('SENDGRID_API_KEY')
+    MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER', 'noreply@soloquy.app')
+    MAIL_ADMIN_EMAIL = os.environ.get('MAIL_ADMIN_EMAIL', 'admin@soloquy.app')
+
     # Cloudinary (File Storage)
     CLOUDINARY_CLOUD_NAME = os.environ.get('CLOUDINARY_CLOUD_NAME')
     CLOUDINARY_API_KEY = os.environ.get('CLOUDINARY_API_KEY')
