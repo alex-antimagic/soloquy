@@ -89,7 +89,7 @@
     <div class="row">
         <div class="col-12">
             {% for department in departments %}
-                {% set dept_agents = department.get_agents() %}
+                {% set dept_agents = department.accessible_agents %}
                 {% if dept_agents %}
                 <div class="card mb-4">
                     <div class="card-header d-flex justify-content-between align-items-center">

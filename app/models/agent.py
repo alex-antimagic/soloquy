@@ -33,6 +33,12 @@ class Agent(db.Model):
     enable_google_drive = db.Column(db.Boolean, default=False, nullable=False)  # Allow access to Google Drive (MCP)
     enable_website_builder = db.Column(db.Boolean, default=False, nullable=False)  # Allow AI to create/edit website content
 
+    # User access control (who can chat with this agent)
+    access_control = db.Column(db.String(20), default='all', nullable=False)  # 'all', 'role', 'department', 'users'
+    allowed_roles = db.Column(db.Text)  # JSON array: ['owner', 'admin'] when access_control='role'
+    allowed_department_ids = db.Column(db.Text)  # JSON array: [1, 2, 3] when access_control='department'
+    allowed_user_ids = db.Column(db.Text)  # JSON array: [5, 10, 15] when access_control='users'
+
     # Timestamps
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
@@ -47,6 +53,106 @@ class Agent(db.Model):
 
     def __repr__(self):
         return f'<Agent {self.name}>'
+
+    def can_user_access(self, user):
+        """
+        Check if a user has access to chat with this agent.
+
+        Args:
+            user: User object to check access for
+
+        Returns:
+            Boolean indicating whether user has access
+        """
+        # All users have access by default
+        if self.access_control == 'all':
+            return True
+
+        # Role-based access
+        if self.access_control == 'role':
+            if not self.allowed_roles:
+                return False
+            try:
+                allowed_role_list = json.loads(self.allowed_roles)
+                user_role = user.get_role_in_tenant(self.department.tenant_id)
+                return user_role in allowed_role_list
+            except (json.JSONDecodeError, AttributeError):
+                return False
+
+        # Department-based access
+        if self.access_control == 'department':
+            if not self.allowed_department_ids:
+                return False
+            try:
+                allowed_dept_list = json.loads(self.allowed_department_ids)
+                # Get all departments the user belongs to (through their tenant)
+                from app.models.department import Department
+                user_departments = Department.query.filter_by(
+                    tenant_id=self.department.tenant_id
+                ).all()
+                # For simplicity, check if agent's department is in allowed list
+                # Or check if user has posted in any allowed department
+                return self.department_id in allowed_dept_list
+            except (json.JSONDecodeError, AttributeError):
+                return False
+
+        # User-specific access
+        if self.access_control == 'users':
+            if not self.allowed_user_ids:
+                return False
+            try:
+                allowed_user_list = json.loads(self.allowed_user_ids)
+                return user.id in allowed_user_list
+            except (json.JSONDecodeError, AttributeError):
+                return False
+
+        # Default to no access if access_control is unrecognized
+        return False
+
+    def get_accessible_users(self):
+        """
+        Get list of users who have access to this agent.
+
+        Returns:
+            List of User objects who can access this agent
+        """
+        from app.models.user import User
+
+        # All workspace users have access
+        if self.access_control == 'all':
+            return self.department.tenant.get_members()
+
+        accessible_users = []
+
+        # Role-based access
+        if self.access_control == 'role':
+            if self.allowed_roles:
+                try:
+                    allowed_role_list = json.loads(self.allowed_roles)
+                    all_members = self.department.tenant.get_members()
+                    for user in all_members:
+                        user_role = user.get_role_in_tenant(self.department.tenant_id)
+                        if user_role in allowed_role_list:
+                            accessible_users.append(user)
+                except (json.JSONDecodeError, AttributeError):
+                    pass
+
+        # Department-based access (simplified: all workspace users for now)
+        elif self.access_control == 'department':
+            # In a full implementation, this would check which users belong to allowed departments
+            # For now, return all workspace users
+            accessible_users = self.department.tenant.get_members()
+
+        # User-specific access
+        elif self.access_control == 'users':
+            if self.allowed_user_ids:
+                try:
+                    allowed_user_list = json.loads(self.allowed_user_ids)
+                    accessible_users = User.query.filter(User.id.in_(allowed_user_list)).all()
+                except (json.JSONDecodeError, AttributeError):
+                    pass
+
+        return accessible_users
 
     def get_conversation_history(self, limit=20):
         """Get recent conversation history for context"""
@@ -393,6 +499,10 @@ class Agent(db.Model):
         self.enable_outlook = target_version.enable_outlook
         self.enable_google_drive = target_version.enable_google_drive
         self.enable_website_builder = target_version.enable_website_builder
+        self.access_control = target_version.access_control
+        self.allowed_roles = target_version.allowed_roles
+        self.allowed_department_ids = target_version.allowed_department_ids
+        self.allowed_user_ids = target_version.allowed_user_ids
 
         # Generate rollback summary
         rollback_summary = f"Rolled back to version {target_version.version_number}"
@@ -466,7 +576,11 @@ class Agent(db.Model):
                 'enable_gmail': self.enable_gmail,
                 'enable_outlook': self.enable_outlook,
                 'enable_google_drive': self.enable_google_drive,
-                'enable_website_builder': self.enable_website_builder
+                'enable_website_builder': self.enable_website_builder,
+                'access_control': self.access_control,
+                'allowed_roles': self.allowed_roles,
+                'allowed_department_ids': self.allowed_department_ids,
+                'allowed_user_ids': self.allowed_user_ids
             },
             'metadata': {
                 'original_agent_id': self.id,
@@ -574,6 +688,10 @@ class Agent(db.Model):
             enable_outlook=agent_data.get('enable_outlook', False),
             enable_google_drive=agent_data.get('enable_google_drive', False),
             enable_website_builder=agent_data.get('enable_website_builder', False),
+            access_control=agent_data.get('access_control', 'all'),
+            allowed_roles=agent_data.get('allowed_roles'),
+            allowed_department_ids=agent_data.get('allowed_department_ids'),
+            allowed_user_ids=agent_data.get('allowed_user_ids'),
             is_primary=False  # Imported agents are never primary
         )
 

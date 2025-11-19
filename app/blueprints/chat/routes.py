@@ -62,6 +62,10 @@ def agent_chat(agent_id):
     if agent.department.tenant_id != g.current_tenant.id:
         return "Access denied", 403
 
+    # Verify user has access to this agent
+    if not agent.can_user_access(current_user):
+        return "Access denied - you don't have permission to chat with this agent", 403
+
     # Get conversation history between THIS user and THIS agent
     # This maintains separate conversation threads - each user has their own chat with each agent
     messages = agent.get_conversation_with_user(

@@ -249,6 +249,82 @@
                     </div>
                 </div>
 
+                <!-- Access Control -->
+                <div class="card mb-4">
+                    <div class="card-header bg-white">
+                        <h6 class="mb-0">
+                            <i class="bi bi-shield-lock me-2"></i>Access Control
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted small mb-3">
+                            Control who can chat with this agent. By default, all workspace members have access.
+                        </p>
+
+                        <!-- Access Control Type Selection -->
+                        <div class="mb-3">
+                            {{ form.access_control.label(class="form-label") }}
+                            {{ form.access_control(class="form-select", id="access-control-select") }}
+                        </div>
+
+                        <!-- Hidden fields for storing JSON data -->
+                        {{ form.allowed_roles_str(class="form-control", type="hidden", id="allowed-roles-str") }}
+                        {{ form.allowed_department_ids_str(class="form-control", type="hidden", id="allowed-departments-str") }}
+                        {{ form.allowed_user_ids_str(class="form-control", type="hidden", id="allowed-users-str") }}
+
+                        <!-- Role-based access options (shown when access_control='role') -->
+                        <div id="role-access-options" class="access-options" style="display: none;">
+                            <label class="form-label">Select Allowed Roles:</label>
+                            <div class="form-check">
+                                <input class="form-check-input role-checkbox" type="checkbox" value="owner" id="role-owner">
+                                <label class="form-check-label" for="role-owner">
+                                    Owner
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input role-checkbox" type="checkbox" value="admin" id="role-admin">
+                                <label class="form-check-label" for="role-admin">
+                                    Admin
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input role-checkbox" type="checkbox" value="member" id="role-member">
+                                <label class="form-check-label" for="role-member">
+                                    Member
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Department-based access options (shown when access_control='department') -->
+                        <div id="department-access-options" class="access-options" style="display: none;">
+                            <label class="form-label">Select Allowed Departments:</label>
+                            {% for dept in workspace_departments %}
+                            <div class="form-check">
+                                <input class="form-check-input department-checkbox" type="checkbox" value="{{ dept.id }}" id="dept-{{ dept.id }}">
+                                <label class="form-check-label" for="dept-{{ dept.id }}">
+                                    {{ dept.name }}
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- User-specific access options (shown when access_control='users') -->
+                        <div id="user-access-options" class="access-options" style="display: none;">
+                            <label class="form-label">Select Allowed Users:</label>
+                            <div style="max-height: 300px; overflow-y: auto;">
+                                {% for member in workspace_members %}
+                                <div class="form-check">
+                                    <input class="form-check-input user-checkbox" type="checkbox" value="{{ member.id }}" id="user-{{ member.id }}">
+                                    <label class="form-check-label" for="user-{{ member.id }}">
+                                        {{ member.full_name }} {% if member.email %}<small class="text-muted">({{ member.email }})</small>{% endif %}
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Action Buttons -->
                 <div class="d-flex justify-content-between mb-4">
                     <a href="{{ url_for('department.view', department_id=department.id) }}" class="btn btn-secondary">
@@ -302,4 +378,118 @@
         </div>
     </div>
 </div>
+
+<!-- Access Control JavaScript -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const accessControlSelect = document.getElementById('access-control-select');
+    const roleOptions = document.getElementById('role-access-options');
+    const departmentOptions = document.getElementById('department-access-options');
+    const userOptions = document.getElementById('user-access-options');
+
+    // Hidden fields
+    const allowedRolesStr = document.getElementById('allowed-roles-str');
+    const allowedDepartmentsStr = document.getElementById('allowed-departments-str');
+    const allowedUsersStr = document.getElementById('allowed-users-str');
+
+    // Checkboxes
+    const roleCheckboxes = document.querySelectorAll('.role-checkbox');
+    const departmentCheckboxes = document.querySelectorAll('.department-checkbox');
+    const userCheckboxes = document.querySelectorAll('.user-checkbox');
+
+    // Show/hide appropriate options based on access control type
+    function updateAccessOptions() {
+        const accessType = accessControlSelect.value;
+
+        // Hide all options
+        roleOptions.style.display = 'none';
+        departmentOptions.style.display = 'none';
+        userOptions.style.display = 'none';
+
+        // Show appropriate option
+        if (accessType === 'role') {
+            roleOptions.style.display = 'block';
+        } else if (accessType === 'department') {
+            departmentOptions.style.display = 'block';
+        } else if (accessType === 'users') {
+            userOptions.style.display = 'block';
+        }
+    }
+
+    // Update hidden field for roles
+    function updateRolesField() {
+        const selected = Array.from(roleCheckboxes)
+            .filter(cb => cb.checked)
+            .map(cb => cb.value);
+        allowedRolesStr.value = selected.length > 0 ? JSON.stringify(selected) : '';
+    }
+
+    // Update hidden field for departments
+    function updateDepartmentsField() {
+        const selected = Array.from(departmentCheckboxes)
+            .filter(cb => cb.checked)
+            .map(cb => parseInt(cb.value));
+        allowedDepartmentsStr.value = selected.length > 0 ? JSON.stringify(selected) : '';
+    }
+
+    // Update hidden field for users
+    function updateUsersField() {
+        const selected = Array.from(userCheckboxes)
+            .filter(cb => cb.checked)
+            .map(cb => parseInt(cb.value));
+        allowedUsersStr.value = selected.length > 0 ? JSON.stringify(selected) : '';
+    }
+
+    // Load existing values from hidden fields
+    function loadExistingValues() {
+        // Load roles
+        if (allowedRolesStr.value) {
+            try {
+                const roles = JSON.parse(allowedRolesStr.value);
+                roleCheckboxes.forEach(cb => {
+                    cb.checked = roles.includes(cb.value);
+                });
+            } catch (e) {
+                console.error('Error parsing allowed roles:', e);
+            }
+        }
+
+        // Load departments
+        if (allowedDepartmentsStr.value) {
+            try {
+                const depts = JSON.parse(allowedDepartmentsStr.value);
+                departmentCheckboxes.forEach(cb => {
+                    cb.checked = depts.includes(parseInt(cb.value));
+                });
+            } catch (e) {
+                console.error('Error parsing allowed departments:', e);
+            }
+        }
+
+        // Load users
+        if (allowedUsersStr.value) {
+            try {
+                const users = JSON.parse(allowedUsersStr.value);
+                userCheckboxes.forEach(cb => {
+                    cb.checked = users.includes(parseInt(cb.value));
+                });
+            } catch (e) {
+                console.error('Error parsing allowed users:', e);
+            }
+        }
+    }
+
+    // Event listeners
+    accessControlSelect.addEventListener('change', updateAccessOptions);
+
+    roleCheckboxes.forEach(cb => cb.addEventListener('change', updateRolesField));
+    departmentCheckboxes.forEach(cb => cb.addEventListener('change', updateDepartmentsField));
+    userCheckboxes.forEach(cb => cb.addEventListener('change', updateUsersField));
+
+    // Initialize
+    loadExistingValues();
+    updateAccessOptions();
+});
+</script>
+
 {% endblock %}

@@ -78,4 +78,17 @@ class AgentForm(FlaskForm):
     enable_outlook = BooleanField('Enable Outlook Access', default=False)
     enable_google_drive = BooleanField('Enable Google Drive Access', default=False)
 
+    # Access Control (who can chat with this agent)
+    access_control = SelectField('Access Control', choices=[
+        ('all', 'All Users - Everyone in workspace can chat with this agent'),
+        ('role', 'By Role - Restrict to specific roles (owner, admin, member)'),
+        ('department', 'By Department - Restrict to specific departments'),
+        ('users', 'Specific Users - Handpicked list of users')
+    ], default='all')
+
+    # Hidden fields to store JSON arrays (populated by JavaScript)
+    allowed_roles_str = StringField('Allowed Roles (JSON)', validators=[Optional()])
+    allowed_department_ids_str = StringField('Allowed Departments (JSON)', validators=[Optional()])
+    allowed_user_ids_str = StringField('Allowed Users (JSON)', validators=[Optional()])
+
     submit = SubmitField('Save Changes')

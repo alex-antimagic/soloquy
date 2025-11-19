@@ -230,6 +230,12 @@ def edit_agent(agent_id):
         agent.enable_outlook = form.enable_outlook.data if hasattr(form, 'enable_outlook') else agent.enable_outlook
         agent.enable_google_drive = form.enable_google_drive.data if hasattr(form, 'enable_google_drive') else agent.enable_google_drive
 
+        # Update access control
+        agent.access_control = form.access_control.data
+        agent.allowed_roles = form.allowed_roles_str.data if form.allowed_roles_str.data else None
+        agent.allowed_department_ids = form.allowed_department_ids_str.data if form.allowed_department_ids_str.data else None
+        agent.allowed_user_ids = form.allowed_user_ids_str.data if form.allowed_user_ids_str.data else None
+
         # Commit agent changes first (without versioning)
         db.session.commit()
 
@@ -246,12 +252,24 @@ def edit_agent(agent_id):
 
         return redirect(url_for('department.view', department_id=department.id))
 
+    # Populate hidden fields on GET request
+    if not form.is_submitted():
+        form.allowed_roles_str.data = agent.allowed_roles
+        form.allowed_department_ids_str.data = agent.allowed_department_ids
+        form.allowed_user_ids_str.data = agent.allowed_user_ids
+
+    # Get workspace members and departments for access control UI
+    workspace_members = g.current_tenant.get_members()
+    workspace_departments = g.current_tenant.get_departments()
+
     return render_template('department/agent_edit.html',
                           title=f'Edit {agent.name}',
                           form=form,
                           agent=agent,
                           department=department,
-                          qb_integration=qb_integration)
+                          qb_integration=qb_integration,
+                          workspace_members=workspace_members,
+                          workspace_departments=workspace_departments)
 
 
 @department_bp.route('/agent/<int:agent_id>/versions')

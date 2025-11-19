@@ -57,9 +57,10 @@
             </div>
             <div class="collapse show" id="dmSection">
                 {% if current_tenant %}
-                    <!-- Show all AI agents from all departments -->
+                    <!-- Show all AI agents from all departments (filtered by access) -->
                     {% for department in current_tenant.get_departments() %}
                         {% for agent in department.get_agents() %}
+                            {% if agent.can_user_access(current_user) %}
                             <a href="{{ url_for('chat.agent_chat', agent_id=agent.id) }}"
                                class="conversation-item {% if request.endpoint == 'chat.agent_chat' and request.view_args.get('agent_id') == agent.id %}active{% endif %}"
                                data-conversation-type="agent"
@@ -76,6 +77,7 @@
                                 <span class="conversation-name" data-key="agent_{{ agent.id }}">{{ agent.name }}</span>
                                 <span class="unread-badge" data-key="agent_{{ agent.id }}" style="display: none;"></span>
                             </a>
+                            {% endif %}
                         {% endfor %}
                     {% endfor %}
 

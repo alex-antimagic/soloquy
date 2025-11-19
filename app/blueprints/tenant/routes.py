@@ -709,13 +709,15 @@ def agents():
     # Get all departments with their agents
     departments = g.current_tenant.get_departments()
 
-    # Count total agents and stats
+    # Count total agents and stats, filtering by access
     total_agents = 0
     active_agents = 0
     for dept in departments:
         dept_agents = dept.get_agents()
-        total_agents += len(dept_agents)
-        active_agents += sum(1 for agent in dept_agents if agent.is_active)
+        # Filter agents by user access
+        dept.accessible_agents = [agent for agent in dept_agents if agent.can_user_access(current_user)]
+        total_agents += len(dept.accessible_agents)
+        active_agents += sum(1 for agent in dept.accessible_agents if agent.is_active)
 
     # Check user role for edit permissions
     user_role = current_user.get_role_in_tenant(g.current_tenant.id)
