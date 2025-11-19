@@ -39,3 +39,28 @@ class RegistrationForm(FlaskForm):
         is_valid, error = validate_password_strength(password.data)
         if not is_valid:
             raise ValidationError(error)
+
+
+class ForgotPasswordForm(FlaskForm):
+    """Forgot password form"""
+    email = StringField('Email', validators=[DataRequired(), Email()])
+    submit = SubmitField('Send Reset Link')
+
+
+class ResetPasswordForm(FlaskForm):
+    """Reset password form"""
+    password = PasswordField('New Password', validators=[
+        DataRequired(),
+        Length(min=8, message='Password must be at least 8 characters')
+    ])
+    password2 = PasswordField('Confirm Password', validators=[
+        DataRequired(),
+        EqualTo('password', message='Passwords must match')
+    ])
+    submit = SubmitField('Reset Password')
+
+    def validate_password(self, password):
+        """Check password meets security requirements"""
+        is_valid, error = validate_password_strength(password.data)
+        if not is_valid:
+            raise ValidationError(error)

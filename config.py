@@ -45,7 +45,7 @@ class Config:
     # Email Configuration (SendGrid)
     SENDGRID_API_KEY = os.environ.get('SENDGRID_API_KEY')
     MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER', 'noreply@soloquy.app')
-    MAIL_ADMIN_EMAIL = os.environ.get('MAIL_ADMIN_EMAIL', 'admin@soloquy.app')
+    MAIL_ADMIN_EMAIL = os.environ.get('MAIL_ADMIN_EMAIL', 'support@antimagic.com')
 
     # Cloudinary (File Storage)
     CLOUDINARY_CLOUD_NAME = os.environ.get('CLOUDINARY_CLOUD_NAME')
