@@ -85,14 +85,15 @@ class Agent(db.Model):
                 return False
             try:
                 allowed_dept_list = json.loads(self.allowed_department_ids)
-                # Get all departments the user belongs to (through their tenant)
+
+                # Check if user has access to ANY of the allowed departments
                 from app.models.department import Department
-                user_departments = Department.query.filter_by(
-                    tenant_id=self.department.tenant_id
-                ).all()
-                # For simplicity, check if agent's department is in allowed list
-                # Or check if user has posted in any allowed department
-                return self.department_id in allowed_dept_list
+                for dept_id in allowed_dept_list:
+                    department = Department.query.get(dept_id)
+                    if department and department.can_user_access(user):
+                        return True
+
+                return False
             except (json.JSONDecodeError, AttributeError):
                 return False
 

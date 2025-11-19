@@ -17,6 +17,10 @@ class Department(db.Model):
     color = db.Column(db.String(7), default='#6C757D')  # Hex color code
     icon = db.Column(db.String(50))  # Icon class or emoji
 
+    # Access Control
+    access_control = db.Column(db.String(20), default='all', nullable=False)
+    # Values: 'all' (all workspace members), 'members' (explicit membership required)
+
     # Status
     is_active = db.Column(db.Boolean, default=True, nullable=False)
 
@@ -28,6 +32,8 @@ class Department(db.Model):
     tenant = db.relationship('Tenant', back_populates='departments')
     agents = db.relationship('Agent', back_populates='department', lazy='dynamic', cascade='all, delete-orphan')
     messages = db.relationship('Message', back_populates='department', lazy='dynamic')
+    memberships = db.relationship('DepartmentMembership', back_populates='department',
+                                   cascade='all, delete-orphan', lazy='dynamic')
 
     # Unique constraint: one slug per tenant
     __table_args__ = (
@@ -85,3 +91,125 @@ class Department(db.Model):
         since = datetime.utcnow() - timedelta(days=7)
 
         return self.messages.filter(Message.created_at >= since).count()
+
+    def can_user_access(self, user):
+        """
+        Check if a user has access to this department
+
+        Args:
+            user: User object
+
+        Returns:
+            Boolean indicating if user can access this department
+        """
+        # Check workspace access first
+        if not user.has_tenant_access(self.tenant_id):
+            return False
+
+        # Workspace owners and admins always have access (bypass restrictions)
+        user_role = user.get_role_in_tenant(self.tenant_id)
+        if user_role in ['owner', 'admin']:
+            return True
+
+        # If department is open to all workspace members
+        if self.access_control == 'all':
+            return True
+
+        # Check explicit membership
+        from app.models.department_membership import DepartmentMembership
+        membership = DepartmentMembership.query.filter_by(
+            department_id=self.id,
+            user_id=user.id,
+            is_active=True
+        ).first()
+
+        return membership is not None
+
+    def get_members(self):
+        """
+        Get all users who have access to this department
+
+        Returns:
+            List of User objects
+        """
+        from app.models.user import User
+
+        # If department is open to all, return all workspace members
+        if self.access_control == 'all':
+            return self.tenant.get_members()
+
+        # Return only explicit members
+        from app.models.department_membership import DepartmentMembership
+        member_users = User.query.join(DepartmentMembership).filter(
+            DepartmentMembership.department_id == self.id,
+            DepartmentMembership.is_active == True
+        ).all()
+
+        # Also include workspace owners and admins (they always have access)
+        admin_users = [u for u in self.tenant.get_members()
+                       if u.get_role_in_tenant(self.tenant_id) in ['owner', 'admin']]
+
+        # Combine and deduplicate
+        all_members = list(set(member_users + admin_users))
+        return all_members
+
+    def add_member(self, user):
+        """
+        Add a user to this department
+
+        Args:
+            user: User object to add
+
+        Returns:
+            DepartmentMembership object
+        """
+        from app.models.department_membership import DepartmentMembership
+
+        # Check if membership already exists
+        existing = DepartmentMembership.query.filter_by(
+            department_id=self.id,
+            user_id=user.id
+        ).first()
+
+        if existing:
+            # Reactivate if inactive
+            existing.is_active = True
+            existing.updated_at = datetime.utcnow()
+            return existing
+
+        # Create new membership
+        membership = DepartmentMembership(
+            department_id=self.id,
+            user_id=user.id,
+            is_active=True
+        )
+        db.session.add(membership)
+        return membership
+
+    def remove_member(self, user):
+        """
+        Remove a user from this department
+
+        Args:
+            user: User object to remove
+
+        Returns:
+            Boolean indicating if member was removed
+        """
+        from app.models.department_membership import DepartmentMembership
+
+        membership = DepartmentMembership.query.filter_by(
+            department_id=self.id,
+            user_id=user.id
+        ).first()
+
+        if membership:
+            membership.is_active = False
+            membership.updated_at = datetime.utcnow()
+            return True
+
+        return False
+
+    def get_member_count(self):
+        """Get count of users with access to this department"""
+        return len(self.get_members())

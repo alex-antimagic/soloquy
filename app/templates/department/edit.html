@@ -66,6 +66,52 @@
                             </div>
                         </div>
 
+                        <hr class="my-4">
+
+                        <!-- Access Control Section -->
+                        <div class="mb-4">
+                            <h5 class="mb-3">
+                                <i class="bi bi-shield-lock me-2"></i>Access Control
+                            </h5>
+                            <p class="text-muted small mb-3">
+                                Control who can access this department's dashboard, agents, and resources.
+                            </p>
+
+                            <form method="POST" action="{{ url_for('department.update_access_control', department_id=department.id) }}" id="access-control-form">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                                <div class="mb-3">
+                                    <label class="form-label">Access Mode</label>
+                                    <select name="access_control" class="form-select" onchange="document.getElementById('access-control-form').submit()">
+                                        <option value="all" {% if department.access_control == 'all' %}selected{% endif %}>
+                                            All workspace members can access
+                                        </option>
+                                        <option value="members" {% if department.access_control == 'members' %}selected{% endif %}>
+                                            Restricted - Only department members can access
+                                        </option>
+                                    </select>
+                                </div>
+                            </form>
+
+                            {% if department.access_control == 'all' %}
+                            <div class="alert alert-info mb-0">
+                                <i class="bi bi-info-circle me-2"></i>
+                                All workspace members can access this department.
+                            </div>
+                            {% else %}
+                            <div class="alert alert-warning mb-2">
+                                <i class="bi bi-shield-lock-fill me-2"></i>
+                                <strong>Restricted:</strong> Only department members can access this department.
+                                Workspace owners and admins always have access.
+                            </div>
+                            <a href="{{ url_for('department.manage_members', department_id=department.id) }}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-people"></i> Manage Members ({{ department.get_member_count() }})
+                            </a>
+                            {% endif %}
+                        </div>
+
+                        <hr class="my-4">
+
                         <div class="d-flex justify-content-between">
                             <a href="{{ url_for('department.index') }}" class="btn btn-secondary">Cancel</a>
                             {{ form.submit(value="Update Department", class="btn btn-primary") }}

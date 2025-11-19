@@ -2,6 +2,7 @@
 from app.models.user import User
 from app.models.tenant import Tenant, TenantMembership
 from app.models.department import Department
+from app.models.department_membership import DepartmentMembership
 from app.models.agent import Agent
 from app.models.agent_version import AgentVersion
 from app.models.channel import Channel

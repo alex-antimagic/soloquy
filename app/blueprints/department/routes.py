@@ -57,15 +57,21 @@ def require_role(*roles):
 @department_bp.route('/')
 @login_required
 def index():
-    """Department management page"""
+    """Department management page - show only accessible departments"""
     if not g.current_tenant:
         flash('Please select a workspace first.', 'warning')
         return redirect(url_for('tenant.home'))
 
-    departments = g.current_tenant.get_departments()
+    # Get all departments and filter by user access
+    all_departments = g.current_tenant.get_departments()
+    accessible_departments = [
+        dept for dept in all_departments
+        if dept.can_user_access(current_user)
+    ]
+
     return render_template('department/index.html',
                           title='Departments',
-                          departments=departments)
+                          departments=accessible_departments)
 
 
 @department_bp.route('/<int:department_id>')
@@ -74,9 +80,14 @@ def view(department_id):
     """Department dashboard with metrics and data"""
     department = Department.query.get_or_404(department_id)
 
-    # Check access
+    # Check tenant access
     if department.tenant_id != g.current_tenant.id:
         flash('Access denied.', 'danger')
+        return redirect(url_for('department.index'))
+
+    # Check department access
+    if not department.can_user_access(current_user):
+        flash('You do not have access to this department.', 'danger')
         return redirect(url_for('department.index'))
 
     # Get metrics
@@ -493,3 +504,122 @@ def import_agent(department_id):
     return render_template('department/agent_import.html',
                           title='Import Agent',
                           department=department)
+
+
+@department_bp.route('/<int:department_id>/members')
+@login_required
+@require_role('owner', 'admin')
+def manage_members(department_id):
+    """View and manage department members (admin only)"""
+    department = get_department_secure(department_id)
+
+    # Get current members
+    members = department.get_members()
+
+    # Get available users (workspace members not in department or inactive)
+    from app.models.department_membership import DepartmentMembership
+    all_workspace_members = g.current_tenant.get_members()
+
+    # Get current active member IDs
+    active_member_ids = [m.id for m in members]
+
+    # Filter available users (not admins, not already members)
+    available_users = []
+    for user in all_workspace_members:
+        user_role = user.get_role_in_tenant(g.current_tenant.id)
+        # Skip admins (they always have access)
+        if user_role in ['owner', 'admin']:
+            continue
+        # Skip if already a member
+        if user.id in active_member_ids:
+            continue
+        available_users.append(user)
+
+    return render_template('department/members.html',
+                          title=f'{department.name} - Members',
+                          department=department,
+                          members=members,
+                          available_users=available_users)
+
+
+@department_bp.route('/<int:department_id>/members/add', methods=['POST'])
+@login_required
+@require_role('owner', 'admin')
+def add_member(department_id):
+    """Add a user to department (admin only)"""
+    department = get_department_secure(department_id)
+
+    user_id = request.form.get('user_id', type=int)
+
+    if not user_id:
+        flash('Please select a user.', 'danger')
+        return redirect(url_for('department.manage_members', department_id=department.id))
+
+    from app.models.user import User
+    user = User.query.get_or_404(user_id)
+
+    # Verify user is in workspace
+    if not user.has_tenant_access(g.current_tenant.id):
+        flash('User not found in workspace.', 'danger')
+        return redirect(url_for('department.manage_members', department_id=department.id))
+
+    # Add member
+    department.add_member(user)
+    db.session.commit()
+
+    flash(f'{user.full_name} added to {department.name}', 'success')
+    return redirect(url_for('department.manage_members', department_id=department.id))
+
+
+@department_bp.route('/<int:department_id>/members/remove', methods=['POST'])
+@login_required
+@require_role('owner', 'admin')
+def remove_member(department_id):
+    """Remove a user from department (admin only)"""
+    department = get_department_secure(department_id)
+
+    user_id = request.form.get('user_id', type=int)
+
+    if not user_id:
+        flash('Invalid request.', 'danger')
+        return redirect(url_for('department.manage_members', department_id=department.id))
+
+    from app.models.user import User
+    user = User.query.get_or_404(user_id)
+
+    # Verify user is not an admin (admins always have access, can't be removed)
+    user_role = user.get_role_in_tenant(g.current_tenant.id)
+    if user_role in ['owner', 'admin']:
+        flash('Cannot remove workspace admins from departments (they always have access).', 'warning')
+        return redirect(url_for('department.manage_members', department_id=department.id))
+
+    # Remove member
+    department.remove_member(user)
+    db.session.commit()
+
+    flash(f'{user.full_name} removed from {department.name}', 'info')
+    return redirect(url_for('department.manage_members', department_id=department.id))
+
+
+@department_bp.route('/<int:department_id>/access', methods=['POST'])
+@login_required
+@require_role('owner', 'admin')
+def update_access_control(department_id):
+    """Update department access control mode (admin only)"""
+    department = get_department_secure(department_id)
+
+    access_control = request.form.get('access_control')
+
+    if access_control not in ['all', 'members']:
+        flash('Invalid access control mode.', 'danger')
+        return redirect(url_for('department.edit', department_id=department.id))
+
+    department.access_control = access_control
+    db.session.commit()
+
+    if access_control == 'all':
+        flash(f'{department.name} is now accessible to all workspace members.', 'success')
+    else:
+        flash(f'{department.name} is now restricted to department members only.', 'info')
+
+    return redirect(url_for('department.edit', department_id=department.id))

@@ -1,0 +1,162 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('department.index') }}">Departments</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('department.view', department_id=department.id) }}">{{ department.name }}</a></li>
+                    <li class="breadcrumb-item active">Members</li>
+                </ol>
+            </nav>
+            <h2>
+                <i class="bi bi-people me-2"></i>{{ department.name }} - Members
+            </h2>
+            <p class="text-muted">Manage who can access this department</p>
+        </div>
+    </div>
+
+    {% if department.access_control == 'all' %}
+    <div class="row mb-4">
+        <div class="col-lg-10">
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle me-2"></i>
+                <strong>Department is open to all workspace members.</strong>
+                All users in your workspace can access this department. To restrict access, change the access control setting in
+                <a href="{{ url_for('department.edit', department_id=department.id) }}">Department Settings</a>.
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Current Members -->
+    <div class="row mb-4">
+        <div class="col-lg-10">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="bi bi-people-fill me-2"></i>
+                        Department Members ({{ members|length }})
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if members %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>User</th>
+                                    <th>Role</th>
+                                    <th class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for member in members %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            {% if member.avatar_url %}
+                                                <img src="{{ member.avatar_url }}"
+                                                     alt="{{ member.full_name }}"
+                                                     class="rounded-circle me-2"
+                                                     style="width: 32px; height: 32px; object-fit: cover;">
+                                            {% else %}
+                                                <div class="rounded-circle bg-secondary text-white me-2 d-flex align-items-center justify-content-center"
+                                                     style="width: 32px; height: 32px; font-size: 14px;">
+                                                    {{ member.full_name[0]|upper }}
+                                                </div>
+                                            {% endif %}
+                                            <div>
+                                                <strong>{{ member.full_name }}</strong>
+                                                <br>
+                                                <small class="text-muted">{{ member.email }}</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        {% set user_role = member.get_role_in_tenant(current_tenant.id) %}
+                                        {% if user_role == 'owner' %}
+                                            <span class="badge bg-danger">Owner</span>
+                                        {% elif user_role == 'admin' %}
+                                            <span class="badge bg-warning">Admin</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Member</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end">
+                                        {% set user_role = member.get_role_in_tenant(current_tenant.id) %}
+                                        {% if user_role in ['owner', 'admin'] %}
+                                            <span class="text-muted small">Always has access</span>
+                                        {% elif department.access_control == 'members' %}
+                                            <form method="POST" action="{{ url_for('department.remove_member', department_id=department.id) }}" class="d-inline">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <input type="hidden" name="user_id" value="{{ member.id }}">
+                                                <button type="submit" class="btn btn-sm btn-outline-danger"
+                                                        onclick="return confirm('Remove {{ member.full_name }} from this department?')">
+                                                    <i class="bi bi-x-circle"></i> Remove
+                                                </button>
+                                            </form>
+                                        {% else %}
+                                            <span class="text-muted small">-</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted mb-0">No members yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Members (only show if department is restricted) -->
+    {% if department.access_control == 'members' %}
+    <div class="row">
+        <div class="col-lg-10">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="bi bi-person-plus me-2"></i>Add Members
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if available_users %}
+                    <form method="POST" action="{{ url_for('department.add_member', department_id=department.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                        <div class="mb-3">
+                            <label class="form-label">Select User</label>
+                            <select name="user_id" class="form-select" required>
+                                <option value="">Choose a user...</option>
+                                {% for user in available_users %}
+                                <option value="{{ user.id }}">
+                                    {{ user.full_name }} ({{ user.email }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <small class="text-muted">
+                                Workspace owners and admins always have access and are not listed here.
+                            </small>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-person-plus"></i> Add Member
+                        </button>
+                    </form>
+                    {% else %}
+                    <p class="text-muted mb-0">All non-admin workspace members are already in this department.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
