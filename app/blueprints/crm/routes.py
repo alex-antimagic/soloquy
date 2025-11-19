@@ -608,10 +608,17 @@ def move_deal(deal_id):
     if not new_stage_id:
         return jsonify({'error': 'Stage ID is required'}), 400
 
-    # Verify stage belongs to same pipeline
-    new_stage = DealStage.query.get_or_404(new_stage_id)
+    # Verify stage belongs to same pipeline AND current tenant
+    new_stage = DealStage.query.join(DealPipeline).filter(
+        DealStage.id == new_stage_id,
+        DealPipeline.tenant_id == g.current_tenant.id
+    ).first()
+
+    if not new_stage:
+        return jsonify({'error': 'Invalid stage'}), 404
+
     if new_stage.pipeline_id != deal.pipeline_id:
-        return jsonify({'error': 'Invalid stage'}), 400
+        return jsonify({'error': 'Stage must be in the same pipeline'}), 400
 
     # Update deal
     deal.stage_id = new_stage_id

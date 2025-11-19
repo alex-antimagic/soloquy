@@ -556,10 +556,16 @@ def add_member(department_id):
         return redirect(url_for('department.manage_members', department_id=department.id))
 
     from app.models.user import User
-    user = User.query.get_or_404(user_id)
+    from app.models.tenant import TenantMembership
 
-    # Verify user is in workspace
-    if not user.has_tenant_access(g.current_tenant.id):
+    # Fetch user with tenant scope validation (secure by default)
+    user = User.query.join(TenantMembership).filter(
+        User.id == user_id,
+        TenantMembership.tenant_id == g.current_tenant.id,
+        TenantMembership.is_active == True
+    ).first()
+
+    if not user:
         flash('User not found in workspace.', 'danger')
         return redirect(url_for('department.manage_members', department_id=department.id))
 
@@ -585,7 +591,18 @@ def remove_member(department_id):
         return redirect(url_for('department.manage_members', department_id=department.id))
 
     from app.models.user import User
-    user = User.query.get_or_404(user_id)
+    from app.models.tenant import TenantMembership
+
+    # Fetch user with tenant scope validation (secure by default)
+    user = User.query.join(TenantMembership).filter(
+        User.id == user_id,
+        TenantMembership.tenant_id == g.current_tenant.id,
+        TenantMembership.is_active == True
+    ).first()
+
+    if not user:
+        flash('User not found in workspace.', 'danger')
+        return redirect(url_for('department.manage_members', department_id=department.id))
 
     # Verify user is not an admin (admins always have access, can't be removed)
     user_role = user.get_role_in_tenant(g.current_tenant.id)
