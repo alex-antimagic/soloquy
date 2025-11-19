@@ -77,7 +77,7 @@
                 {% if messages %}
                     {% for message in messages %}
                         {% set is_from_me = message.sender_id == current_user.id %}
-                        <div class="message {{ 'message-right' if is_from_me else 'message-left' }}">
+                        <div class="message {{ 'message-right' if is_from_me else 'message-left' }}"{% if message.agent_id %} data-agent-id="{{ message.agent_id }}"{% endif %}>
                             <div class="message-avatar">
                                 {% if is_from_me %}
                                     {% if current_user.avatar_url %}
@@ -284,13 +284,8 @@
 
             // Only add if message is from someone else (sender already sees their own message)
             if (messageData.sender_id !== currentUserId) {
-                if (messageData.agent_id) {
-                    // Agent message
-                    addMessageToUI(messageData.content, messageData.agent_name, true);
-                } else {
-                    // User message
-                    addMessageToUI(messageData.content, messageData.sender, false);
-                }
+                // Pass full messageData object to addMessageToUI
+                addMessageToUI(messageData);
                 // Play notification sound
                 notificationSound.play().catch(e => console.log('Audio play failed:', e));
             }
@@ -442,13 +437,14 @@
     // Add message to UI
     function addMessageToUI(message, legacyAuthor = null, legacyIsAgent = false) {
         // Support both new object format and legacy parameters
-        let content, author, isAgent, attachmentUrl, attachmentType, attachmentFilename;
+        let content, author, isAgent, attachmentUrl, attachmentType, attachmentFilename, agentId;
 
         if (typeof message === 'object' && message.content !== undefined) {
             // New format
             content = message.content;
-            author = message.author;
-            isAgent = message.isAgent || false;
+            author = message.agent_name || message.sender || message.author;
+            isAgent = !!message.agent_id;
+            agentId = message.agent_id;
             attachmentUrl = message.attachment_url;
             attachmentType = message.attachment_type;
             attachmentFilename = message.attachment_filename;
@@ -555,8 +551,11 @@
             });
             taskSuggestionsHtml += '</div>';
 
-            // Store suggestions in a data attribute for later use
+            // Store suggestions and agent_id in data attributes for later use
             messageDiv.setAttribute('data-task-suggestions', JSON.stringify(message.task_suggestions));
+            if (agentId) {
+                messageDiv.setAttribute('data-agent-id', agentId);
+            }
         }
 
         messageDiv.innerHTML = `
@@ -1013,24 +1012,36 @@
     // Create task from initial suggestion (from server-side rendered messages)
     async function createTaskFromInitialSuggestion(suggestion, buttonElement) {
         try {
+            // Get agent_id from the message div if available
+            const messageDiv = buttonElement.closest('.message');
+            const agentId = messageDiv ? messageDiv.getAttribute('data-agent-id') : null;
+
             // Disable the button and show loading state
             const originalButtonContent = buttonElement.innerHTML;
             buttonElement.disabled = true;
             buttonElement.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Creating...';
 
             const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+            const taskData = {
+                title: suggestion.title,
+                description: suggestion.description || '',
+                priority: suggestion.priority || 'medium',
+                due_date: suggestion.due_date || null
+            };
+
+            // Assign to agent if agent_id is available
+            if (agentId) {
+                taskData.assigned_to_agent_id = parseInt(agentId);
+            }
+
             const response = await fetch('/tasks/create', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': csrfToken
                 },
-                body: JSON.stringify({
-                    title: suggestion.title,
-                    description: suggestion.description || '',
-                    priority: suggestion.priority || 'medium',
-                    due_date: suggestion.due_date || null
-                })
+                body: JSON.stringify(taskData)
             });
 
             if (response.ok) {
@@ -1075,24 +1086,35 @@
                 return;
             }
 
+            // Get agent_id from the message div if available
+            const agentId = messageDiv.getAttribute('data-agent-id');
+
             // Disable the button and show loading state
             const originalButtonContent = buttonElement.innerHTML;
             buttonElement.disabled = true;
             buttonElement.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Creating...';
 
             const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+            const taskData = {
+                title: suggestion.title,
+                description: suggestion.description || '',
+                priority: suggestion.priority || 'medium',
+                due_date: suggestion.due_date ? suggestion.due_date.split('T')[0] : null
+            };
+
+            // Assign to agent if agent_id is available
+            if (agentId) {
+                taskData.assigned_to_agent_id = parseInt(agentId);
+            }
+
             const response = await fetch('/tasks/create', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': csrfToken
                 },
-                body: JSON.stringify({
-                    title: suggestion.title,
-                    description: suggestion.description || '',
-                    priority: suggestion.priority || 'medium',
-                    due_date: suggestion.due_date ? suggestion.due_date.split('T')[0] : null
-                })
+                body: JSON.stringify(taskData)
             });
 
             if (response.ok) {

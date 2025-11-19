@@ -19,7 +19,7 @@
                 {% if messages %}
                     {% for message in messages %}
                         {% set is_from_me = message.sender_id == current_user.id %}
-                        <div class="message {{ 'message-right' if is_from_me else 'message-left' }}">
+                        <div class="message {{ 'message-right' if is_from_me else 'message-left' }}"{% if message.agent_id %} data-agent-id="{{ message.agent_id }}"{% endif %}>
                             <div class="message-avatar">
                                 {% if is_from_me %}
                                     {% if current_user.avatar_url %}
@@ -859,7 +859,10 @@
                     title: suggestion.title,
                     description: suggestion.description || '',
                     priority: suggestion.priority || 'medium',
-                    due_date: suggestion.due_date || null
+                    due_date: suggestion.due_date || null,
+                    {% if is_agent %}
+                    assigned_to_agent_id: recipientId  // Assign to the agent that suggested it
+                    {% endif %}
                 })
             });
 
@@ -920,7 +923,10 @@
                     title: suggestion.title,
                     description: suggestion.description || '',
                     priority: suggestion.priority || 'medium',
-                    due_date: suggestion.due_date ? suggestion.due_date.split('T')[0] : null
+                    due_date: suggestion.due_date ? suggestion.due_date.split('T')[0] : null,
+                    {% if is_agent %}
+                    assigned_to_agent_id: recipientId  // Assign to the agent that suggested it
+                    {% endif %}
                 })
             });
 
