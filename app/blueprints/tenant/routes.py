@@ -99,8 +99,8 @@ def home():
 
                 for task in recent_tasks:
                     assignee_name = 'Unassigned'
-                    if task.assigned_to_user:
-                        assignee_name = task.assigned_to_user.full_name
+                    if task.assigned_to:
+                        assignee_name = task.assigned_to.full_name
                     elif task.assigned_to_agent:
                         assignee_name = task.assigned_to_agent.name
 
