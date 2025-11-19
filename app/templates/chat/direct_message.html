@@ -295,11 +295,11 @@
     // Also cleanup when page visibility changes (user switches tabs/windows)
     document.addEventListener('visibilitychange', () => {
         if (document.hidden) {
-            console.log('Page hidden, closing SSE');
+            console.log('Page hidden, cleaning up connections');
             cleanupConnections();
         } else {
-            console.log('Page visible, reconnecting SSE');
-            connectSSE();
+            console.log('Page visible, Socket.IO will auto-reconnect');
+            // Socket.IO handles reconnection automatically
         }
     });
 
