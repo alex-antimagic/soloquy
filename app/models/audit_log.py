@@ -19,7 +19,7 @@ class AuditLog(db.Model):
 
     # Actor information
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True, index=True)
-    tenant_id = db.Column(db.Integer, db.ForeignKey('tenants.id'), nullable=False, index=True)
+    tenant_id = db.Column(db.Integer, db.ForeignKey('tenants.id'), nullable=True, index=True)
     agent_id = db.Column(db.Integer, db.ForeignKey('agents.id'), nullable=True, index=True)
 
     # Resource information
@@ -215,12 +215,12 @@ class AuditLog(db.Model):
         user = User.query.filter_by(email=email).first()
 
         # For login attempts, we may not have a tenant_id yet
-        # Use a sentinel value of 0 for pre-login events
+        # Use None for system-level events
         log = AuditLog(
             event_type='login_attempt',
             event_status='success' if success else 'failure',
             user_id=user.id if user else None,
-            tenant_id=0,  # Sentinel value for system-level events
+            tenant_id=None,  # System-level events don't require a tenant
             ip_address=ip_address,
             user_agent=user_agent,
             error_message=error_message
