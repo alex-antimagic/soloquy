@@ -15,11 +15,11 @@ from app import create_app, db
 # Create Flask application
 app = create_app(os.getenv('FLASK_ENV', 'production'))
 
-# Redis connection with SSL certificate verification enabled
+# Redis connection (SSL encryption enabled, cert verification disabled for Heroku)
 redis_url = app.config.get('REDIS_URL', 'redis://localhost:6379/0')
 if redis_url.startswith('rediss://'):
-    # Enable proper SSL certificate verification for secure connections
-    redis_url += '?ssl_cert_reqs=required'
+    # Heroku Redis uses self-signed certificates in chain
+    redis_url += '?ssl_cert_reqs=none'
 redis_conn = Redis.from_url(redis_url)
 
 # List of queues to listen on

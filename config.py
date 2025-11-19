@@ -75,12 +75,12 @@ class Config:
     # Redis (for SocketIO message queue)
     REDIS_URL = os.environ.get('REDIS_URL') or 'redis://localhost:6379/0'
 
-    # For rediss:// (SSL) connections, Heroku Redis uses proper SSL certificates
-    # Enable certificate verification for secure connections
+    # For rediss:// (SSL) connections, disable strict certificate verification
+    # Heroku Redis uses self-signed certificates in chain
     _redis_url = os.environ.get('REDIS_URL') or 'redis://localhost:6379/0'
     if _redis_url.startswith('rediss://'):
-        # Use required SSL certificate verification (secure default)
-        _redis_url += '?ssl_cert_reqs=required'
+        # SSL encryption enabled, but cert chain has self-signed cert
+        _redis_url += '?ssl_cert_reqs=none'
 
     # SocketIO
     SOCKETIO_MESSAGE_QUEUE = _redis_url
