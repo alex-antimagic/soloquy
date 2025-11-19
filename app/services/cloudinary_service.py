@@ -63,6 +63,45 @@ def upload_image(file_content, folder: str = "bug_reports") -> Optional[Dict[str
         raise
 
 
+def upload_file(file_content, folder: str = "chat_files") -> Optional[Dict[str, str]]:
+    """
+    Upload any file type to Cloudinary (PDFs, CSVs, documents, etc.)
+
+    Args:
+        file_content: File object or file path to upload
+        folder: Cloudinary folder to store the file (default: "chat_files")
+
+    Returns:
+        Dictionary with 'url', 'secure_url', 'public_id', 'format', and 'bytes' if successful
+
+    Raises:
+        Exception: If upload fails
+    """
+    try:
+        # Initialize Cloudinary if not already done
+        init_cloudinary()
+
+        # Upload the file to Cloudinary as a raw resource
+        result = cloudinary.uploader.upload(
+            file_content,
+            folder=folder,
+            resource_type="raw"  # Allows any file type
+        )
+
+        return {
+            'url': result.get('url'),
+            'secure_url': result.get('secure_url'),
+            'public_id': result.get('public_id'),
+            'format': result.get('format'),
+            'bytes': result.get('bytes'),
+            'resource_type': result.get('resource_type')
+        }
+
+    except Exception as e:
+        current_app.logger.error(f"Failed to upload file to Cloudinary: {str(e)}")
+        raise
+
+
 def delete_image(public_id: str) -> bool:
     """
     Delete an image from Cloudinary

@@ -54,7 +54,23 @@ class Config:
 
     # File Upload Settings
     MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
-    ALLOWED_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+    ALLOWED_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+    ALLOWED_FILE_EXTENSIONS = {
+        # Images
+        'png', 'jpg', 'jpeg', 'gif', 'webp',
+        # Documents
+        'pdf', 'doc', 'docx', 'txt', 'rtf', 'odt',
+        # Spreadsheets
+        'csv', 'xls', 'xlsx', 'ods',
+        # Presentations
+        'ppt', 'pptx', 'odp',
+        # Archives
+        'zip', 'tar', 'gz',
+        # Code
+        'py', 'js', 'html', 'css', 'json', 'xml', 'md',
+        # Data
+        'sql', 'yaml', 'yml'
+    }
 
     # Redis (for SocketIO message queue)
     REDIS_URL = os.environ.get('REDIS_URL') or 'redis://localhost:6379/0'

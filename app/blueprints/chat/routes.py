@@ -109,13 +109,13 @@ def agent_chat(agent_id):
 @chat_bp.route('/upload-image', methods=['POST'])
 @login_required
 def upload_chat_image():
-    """Upload an image for chat messages"""
+    """Upload a file (image or document) for chat messages"""
     try:
-        # Validate file upload
-        if 'image' not in request.files:
-            return jsonify({'error': 'No image provided'}), 400
+        # Validate file upload - accept both 'image' and 'file' form fields for backwards compatibility
+        file = request.files.get('image') or request.files.get('file')
 
-        file = request.files['image']
+        if not file:
+            return jsonify({'error': 'No file provided'}), 400
 
         if file.filename == '':
             return jsonify({'error': 'No file selected'}), 400
@@ -130,37 +130,69 @@ def upload_chat_image():
             return jsonify({'error': f'File too large. Maximum size is {max_size // (1024 * 1024)}MB'}), 400
 
         # Validate file type
-        allowed_extensions = current_app.config.get('ALLOWED_IMAGE_EXTENSIONS', {'png', 'jpg', 'jpeg', 'gif', 'webp'})
+        allowed_extensions = current_app.config.get('ALLOWED_FILE_EXTENSIONS', {'png', 'jpg', 'jpeg', 'gif', 'webp', 'pdf', 'csv', 'txt', 'doc', 'docx', 'xls', 'xlsx'})
         file_ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else ''
 
         if file_ext not in allowed_extensions:
-            return jsonify({'error': f'Invalid file type. Allowed: {", ".join(allowed_extensions)}'}), 400
+            return jsonify({'error': f'Invalid file type. Allowed: images, PDFs, documents, spreadsheets'}), 400
 
         # Determine MIME type
         mime_types = {
+            # Images
             'png': 'image/png',
             'jpg': 'image/jpeg',
             'jpeg': 'image/jpeg',
             'gif': 'image/gif',
-            'webp': 'image/webp'
+            'webp': 'image/webp',
+            # Documents
+            'pdf': 'application/pdf',
+            'doc': 'application/msword',
+            'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'txt': 'text/plain',
+            'rtf': 'application/rtf',
+            # Spreadsheets
+            'csv': 'text/csv',
+            'xls': 'application/vnd.ms-excel',
+            'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            # Presentations
+            'ppt': 'application/vnd.ms-powerpoint',
+            'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            # Code/Data
+            'json': 'application/json',
+            'xml': 'application/xml',
+            'yaml': 'application/x-yaml',
+            'yml': 'application/x-yaml',
+            'md': 'text/markdown',
+            'py': 'text/x-python',
+            'js': 'text/javascript',
+            'html': 'text/html',
+            'css': 'text/css',
         }
-        mime_type = mime_types.get(file_ext, 'image/png')
+        mime_type = mime_types.get(file_ext, 'application/octet-stream')
+
+        # Check if it's an image
+        is_image = file_ext in current_app.config.get('ALLOWED_IMAGE_EXTENSIONS', {'png', 'jpg', 'jpeg', 'gif', 'webp'})
 
         # Upload to Cloudinary
         file.seek(0)
-        upload_result = upload_image(file, folder="chat_images")
+        if is_image:
+            upload_result = upload_image(file, folder="chat_images")
+        else:
+            from app.services.cloudinary_service import upload_file
+            upload_result = upload_file(file, folder="chat_files")
 
         return jsonify({
             'success': True,
             'url': upload_result['secure_url'],
             'filename': file.filename,
             'size': file_size,
-            'type': mime_type
+            'type': mime_type,
+            'is_image': is_image
         })
 
     except Exception as e:
-        current_app.logger.error(f"Error uploading chat image: {str(e)}")
-        return jsonify({'error': 'Failed to upload image. Please try again.'}), 500
+        current_app.logger.error(f"Error uploading chat file: {str(e)}")
+        return jsonify({'error': 'Failed to upload file. Please try again.'}), 500
 
 
 @chat_bp.route('/send', methods=['POST'])
