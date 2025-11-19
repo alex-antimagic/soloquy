@@ -859,8 +859,7 @@
                     title: suggestion.title,
                     description: suggestion.description || '',
                     priority: suggestion.priority || 'medium',
-                    due_date: suggestion.due_date || null,
-                    {% if is_agent %}
+                    due_date: suggestion.due_date || null{% if is_agent %},
                     assigned_to_agent_id: recipientId  // Assign to the agent that suggested it
                     {% endif %}
                 })
@@ -923,8 +922,7 @@
                     title: suggestion.title,
                     description: suggestion.description || '',
                     priority: suggestion.priority || 'medium',
-                    due_date: suggestion.due_date ? suggestion.due_date.split('T')[0] : null,
-                    {% if is_agent %}
+                    due_date: suggestion.due_date ? suggestion.due_date.split('T')[0] : null{% if is_agent %},
                     assigned_to_agent_id: recipientId  // Assign to the agent that suggested it
                     {% endif %}
                 })
