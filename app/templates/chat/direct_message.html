@@ -451,6 +451,7 @@
 
         // Build task cards if agent mentioned any tasks
         let taskCardsHtml = '';
+        let taskSuggestionsHtml = '';
         {% if is_agent %}
         if (!isFromMe && message.mentioned_tasks && message.mentioned_tasks.length > 0) {
             taskCardsHtml = '<div class="mt-2">';
@@ -490,7 +491,6 @@
         }
 
         // Build task suggestion cards
-        let taskSuggestionsHtml = '';
         if (!isFromMe && message.task_suggestions && message.task_suggestions.length > 0) {
             taskSuggestionsHtml = '<div class="mt-2">';
             message.task_suggestions.forEach((task, index) => {
