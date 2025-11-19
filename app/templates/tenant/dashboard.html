@@ -167,25 +167,59 @@
                         <h5 class="mb-0">Quick Actions</h5>
                     </div>
                     <div class="list-group list-group-flush">
+                        <!-- Core Actions -->
+                        <a href="{{ url_for('department.create') }}" class="list-group-item list-group-item-action">
+                            <i class="bi bi-diagram-3 me-2 text-primary"></i> Create Department
+                        </a>
+                        <a href="{{ url_for('department.index') }}" class="list-group-item list-group-item-action">
+                            <i class="bi bi-robot me-2 text-info"></i> Create AI Agent
+                        </a>
                         <a href="{{ url_for('tenant.settings') }}" class="list-group-item list-group-item-action">
-                            <i class="bi bi-person-plus me-2"></i> Invite Team Member
+                            <i class="bi bi-person-plus me-2 text-success"></i> Invite Team Member
                         </a>
-                        {% if 'tasks' in enabled_applets or 'projects' in enabled_applets %}
-                        <a href="{{ url_for('tasks.index') }}" class="list-group-item list-group-item-action">
-                            <i class="bi bi-check2-square me-2"></i> Create Task
-                        </a>
-                        <a href="{{ url_for('projects.index') }}" class="list-group-item list-group-item-action">
-                            <i class="bi bi-kanban me-2"></i> Create Project
-                        </a>
-                        {% endif %}
+
+                        <div class="dropdown-divider"></div>
+
+                        <!-- CRM Actions -->
                         {% if 'crm' in enabled_applets %}
+                        <a href="{{ url_for('crm.leads') }}" class="list-group-item list-group-item-action">
+                            <i class="bi bi-trophy me-2 text-warning"></i> Create Lead
+                        </a>
                         <a href="{{ url_for('crm.contacts') }}" class="list-group-item list-group-item-action">
-                            <i class="bi bi-person-vcard me-2"></i> Add Contact
+                            <i class="bi bi-person-vcard me-2 text-secondary"></i> Add Contact
+                        </a>
+                        <a href="{{ url_for('crm.companies') }}" class="list-group-item list-group-item-action">
+                            <i class="bi bi-building me-2 text-primary"></i> Add Company
                         </a>
                         <a href="{{ url_for('crm.deals') }}" class="list-group-item list-group-item-action">
-                            <i class="bi bi-currency-dollar me-2"></i> Create Deal
+                            <i class="bi bi-currency-dollar me-2 text-success"></i> Create Deal
                         </a>
+                        <div class="dropdown-divider"></div>
                         {% endif %}
+
+                        <!-- Tasks & Projects -->
+                        {% if 'tasks' in enabled_applets or 'projects' in enabled_applets %}
+                        <a href="{{ url_for('tasks.create') }}" class="list-group-item list-group-item-action">
+                            <i class="bi bi-check2-square me-2 text-info"></i> Create Task
+                        </a>
+                        <a href="{{ url_for('projects.create') }}" class="list-group-item list-group-item-action">
+                            <i class="bi bi-kanban me-2 text-warning"></i> Create Project
+                        </a>
+                        <div class="dropdown-divider"></div>
+                        {% endif %}
+
+                        <!-- Support -->
+                        {% if 'support' in enabled_applets %}
+                        <a href="{{ url_for('support.create_ticket') }}" class="list-group-item list-group-item-action">
+                            <i class="bi bi-ticket-perforated me-2 text-danger"></i> Create Ticket
+                        </a>
+                        <div class="dropdown-divider"></div>
+                        {% endif %}
+
+                        <!-- Integrations -->
+                        <a href="{{ url_for('integrations.index') }}" class="list-group-item list-group-item-action">
+                            <i class="bi bi-plug me-2 text-secondary"></i> Setup Integration
+                        </a>
                     </div>
                 </div>
             </div>
