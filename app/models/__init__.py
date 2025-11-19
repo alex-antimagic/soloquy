@@ -4,7 +4,6 @@ from app.models.tenant import Tenant, TenantMembership
 from app.models.department import Department
 from app.models.agent import Agent
 from app.models.agent_version import AgentVersion
-from app.models.marketplace_agent import MarketplaceAgent, AgentReview, AgentInstall
 from app.models.channel import Channel
 from app.models.message import Message
 from app.models.task import Task
