@@ -116,6 +116,7 @@ class TestingConfig(Config):
     TESTING = True
     SQLALCHEMY_DATABASE_URI = 'postgresql://localhost/soloquy_test'
     WTF_CSRF_ENABLED = False
+    RATELIMIT_ENABLED = False  # Disable rate limiting in tests
 
 
 config = {

@@ -15,15 +15,17 @@ class TestAuthentication:
             'first_name': 'New',
             'last_name': 'User',
             'password': 'SecurePass123!@#',
-            'confirm_password': 'SecurePass123!@#'
-        }, follow_redirects=True)
+            'password2': 'SecurePass123!@#'
+        }, follow_redirects=False)
 
-        assert response.status_code == 200
+        # Registration should redirect
+        assert response.status_code == 302
 
-        # Verify user was created
+        # Verify user was created (even if email not confirmed)
         user = User.query.filter_by(email='newuser@example.com').first()
         assert user is not None
-        assert user.full_name == 'New User'
+        assert user.first_name == 'New'
+        assert user.last_name == 'User'
         assert user.check_password('SecurePass123!@#')
 
     def test_weak_password_rejected(self, client, db_session):
@@ -33,7 +35,7 @@ class TestAuthentication:
             'first_name': 'Weak',
             'last_name': 'User',
             'password': '12345',  # Too weak
-            'confirm_password': '12345'
+            'password2': '12345'
         })
 
         # Should show validation error
