@@ -405,6 +405,8 @@ body {
     background-color: var(--soloquy-bg);
     border-bottom: 1px solid var(--soloquy-border);
     padding: 0.75rem 1.5rem;
+    height: 49px;
+    box-sizing: border-box;
 }
 
 .main-header h1 {
@@ -1043,9 +1045,10 @@ main:has(.chat-container) {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1rem;
+    padding: 0.75rem 1rem;
     border-bottom: 1px solid var(--soloquy-border);
-    min-height: 60px; /* Match main-header height */
+    height: 49px; /* Match main-header height exactly */
+    box-sizing: border-box;
 }
 
 .conversations-header h6 {
