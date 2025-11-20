@@ -131,7 +131,9 @@ def create_app(config_name='default'):
                 ],
                 'connect-src': [
                     "'self'",
-                    "https://cdn.jsdelivr.net"  # Allow fetching source maps
+                    "wss:",  # WebSocket connections
+                    "https://cdn.jsdelivr.net",  # Allow fetching source maps
+                    "https://cdn.socket.io"  # Socket.IO source maps
                 ]
             },
             content_security_policy_nonce_in=[],  # Disable nonce since we're using 'unsafe-inline'
