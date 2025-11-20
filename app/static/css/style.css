@@ -1043,9 +1043,9 @@ main:has(.chat-container) {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0.75rem 1rem;
+    padding: 1rem;
     border-bottom: 1px solid var(--soloquy-border);
-    min-height: 53px; /* Match main-header height */
+    min-height: 60px; /* Match main-header height */
 }
 
 .conversations-header h6 {
@@ -1086,6 +1086,23 @@ main:has(.chat-container) {
 
 .conversations-section-title i {
     font-size: 0.625rem;
+}
+
+.dm-subsection-title {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--soloquy-text-muted);
+    padding: 0.5rem 1rem 0.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: 0.25rem;
+}
+
+.dm-subsection-title i {
+    font-size: 0.75rem;
 }
 
 .conversation-item {

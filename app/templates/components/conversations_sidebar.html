@@ -57,7 +57,10 @@
             </div>
             <div class="collapse show" id="dmSection">
                 {% if current_tenant %}
-                    <!-- Show all AI agents from all departments (filtered by access) -->
+                    <!-- AI Agents sub-section -->
+                    <div class="dm-subsection-title">
+                        <i class="bi bi-robot"></i> AI Agents
+                    </div>
                     {% for department in current_tenant.get_departments() %}
                         {% for agent in department.get_agents() %}
                             {% if agent.can_user_access(current_user) %}
@@ -81,7 +84,10 @@
                         {% endfor %}
                     {% endfor %}
 
-                    <!-- Show human users -->
+                    <!-- Team Members sub-section -->
+                    <div class="dm-subsection-title">
+                        <i class="bi bi-people"></i> Team Members
+                    </div>
                     {% for member in current_tenant.get_members()[:20] %}
                         {% if member.id != current_user.id %}
                             <a href="{{ url_for('chat.user_chat', user_id=member.id) }}"
