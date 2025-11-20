@@ -415,6 +415,24 @@ body {
     margin: 0;
 }
 
+.notification-badge {
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    background-color: #dc3545;
+    color: white;
+    font-size: 9px;
+    font-weight: 600;
+    min-width: 14px;
+    height: 14px;
+    border-radius: 7px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 3px;
+    line-height: 1;
+}
+
 /* Main Content */
 main {
     background-color: var(--soloquy-bg);
