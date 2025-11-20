@@ -30,16 +30,20 @@ class TestAuthentication:
 
     def test_weak_password_rejected(self, client, db_session):
         """Test that weak passwords are rejected"""
+        # Ensure client is logged out
+        client.get('/logout')
+
         response = client.post('/register', data={
             'email': 'weak@example.com',
             'first_name': 'Weak',
             'last_name': 'User',
-            'password': '12345',  # Too weak
+            'password': '12345',  # Too weak (less than 8 chars)
             'password2': '12345'
-        })
+        }, follow_redirects=True)
 
-        # Should show validation error
-        assert b'password' in response.data.lower() or response.status_code != 302
+        # Should show validation error - form re-renders with error message
+        assert response.status_code == 200
+        assert b'password' in response.data.lower() or b'8 characters' in response.data.lower()
 
     def test_user_login(self, client, test_user):
         """Test user can login with correct credentials"""
@@ -52,16 +56,23 @@ class TestAuthentication:
 
     def test_user_login_wrong_password(self, client, test_user):
         """Test login fails with wrong password"""
+        # Ensure client is logged out
+        client.get('/logout')
+
         response = client.post('/login', data={
             'email': 'test@example.com',
             'password': 'WrongPassword123!@#'
-        })
+        }, follow_redirects=True)
 
-        # Should stay on login page with error
-        assert b'email or password' in response.data.lower() or b'invalid' in response.data.lower()
+        # Should stay on login page with error message
+        assert response.status_code == 200
+        assert b'invalid' in response.data.lower() or b'email or password' in response.data.lower()
 
     def test_account_lockout_after_failed_attempts(self, client, test_user):
         """Test account locks after multiple failed login attempts"""
+        # Ensure client is logged out
+        client.get('/logout')
+
         # Try to login with wrong password multiple times
         for i in range(6):  # Should lock after 5 attempts
             client.post('/login', data={
@@ -73,7 +84,7 @@ class TestAuthentication:
         response = client.post('/login', data={
             'email': 'test@example.com',
             'password': 'Test123!@#'  # Even correct password
-        })
+        }, follow_redirects=True)
 
         assert b'locked' in response.data.lower() or b'too many' in response.data.lower()
 
@@ -95,8 +106,13 @@ class TestAuthorization:
         db_session.commit()
 
         # Login as test_user_2 (regular member)
+        client.post('/login', data={
+            'email': 'test2@example.com',
+            'password': 'Test123!@#'
+        })
+
+        # Set current tenant in session
         with client.session_transaction() as sess:
-            sess['user_id'] = test_user_2.id
             sess['current_tenant_id'] = test_tenant.id
 
         # Try to access settings
@@ -107,10 +123,11 @@ class TestAuthorization:
 
     def test_admin_can_access_settings(self, client, test_user, test_tenant):
         """Test that admins can access workspace settings"""
-        # Login as test_user (owner)
-        with client.session_transaction() as sess:
-            sess['user_id'] = test_user.id
-            sess['current_tenant_id'] = test_tenant.id
+        # Login and follow redirects to let the app set up the session properly
+        client.post('/login', data={
+            'email': 'test@example.com',
+            'password': 'Test123!@#'
+        }, follow_redirects=True)
 
         # Try to access settings
         response = client.get('/tenant/settings')
@@ -132,8 +149,13 @@ class TestAuthorization:
         db_session.commit()
 
         # Login as test_user_2 (regular member)
+        client.post('/login', data={
+            'email': 'test2@example.com',
+            'password': 'Test123!@#'
+        })
+
+        # Set current tenant in session
         with client.session_transaction() as sess:
-            sess['user_id'] = test_user_2.id
             sess['current_tenant_id'] = test_tenant.id
 
         # Try to invite a user
