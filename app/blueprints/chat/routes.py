@@ -302,9 +302,13 @@ def send_message():
 
     # If message is to an agent, generate AI response
     agent_response = None
+    print(f"[SEND_MESSAGE] agent_id: {agent_id}, recipient_id: {recipient_id}, department_id: {department_id}")
     if agent_id:
+        print(f"[SEND_MESSAGE] Querying for agent with ID: {agent_id}")
         agent = Agent.query.get(agent_id)
+        print(f"[SEND_MESSAGE] Agent found: {agent}")
         if agent:
+            print(f"[SEND_MESSAGE] Starting AI response generation for agent: {agent.name}")
             try:
                 # Get conversation history between THIS user and THIS agent
                 # This maintains separate conversation threads per user
@@ -532,9 +536,12 @@ Return ONLY the task numbers (1, 2, 3, etc.) that the agent mentioned or address
                         'icon_class': f.icon_class
                     } for f in generated_files] if generated_files else []
                 }
+                print(f"[SEND_MESSAGE] Agent response created successfully. ID: {agent_message.id}, Files: {len(generated_files)}")
 
             except Exception as e:
-                print(f"Error generating AI response: {e}")
+                print(f"[SEND_MESSAGE] ERROR generating AI response: {e}")
+                import traceback
+                traceback.print_exc()
                 # Continue without agent response
 
     response_data = {
@@ -544,9 +551,14 @@ Return ONLY the task numbers (1, 2, 3, etc.) that the agent mentioned or address
         'created_at': message.created_at.isoformat()
     }
 
+    print(f"[SEND_MESSAGE] agent_response exists: {agent_response is not None}")
     if agent_response:
         response_data['agent_response'] = agent_response
+        print(f"[SEND_MESSAGE] Added agent_response to response_data")
+    else:
+        print(f"[SEND_MESSAGE] No agent_response to add")
 
+    print(f"[SEND_MESSAGE] Returning response_data: {list(response_data.keys())}")
     return jsonify(response_data)
 
 
