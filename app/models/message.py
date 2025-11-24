@@ -99,29 +99,40 @@ class Message(db.Model):
 
         # Try to match mentions with agents and users
         if channel:
-            # Get ALL agents in the tenant (not just channel-associated ones)
-            # This allows @mentions to work in any channel regardless of setup
-            from app.models.department import Department
-            all_tenant_agents = Agent.query.join(Department).filter(
-                Department.tenant_id == channel.tenant_id
-            ).all()
+            try:
+                # Get ALL agents in the tenant (not just channel-associated ones)
+                # This allows @mentions to work in any channel regardless of setup
+                from app.models.department import Department
+                all_tenant_agents = Agent.query.join(Department).filter(
+                    Department.tenant_id == channel.tenant_id
+                ).all()
 
-            for mention_name in mentions:
-                # Try to find matching agent among all tenant agents
-                for agent in all_tenant_agents:
-                    if mention_name.lower() in agent.name.lower():
-                        if agent not in result['agents']:
-                            result['agents'].append(agent)
-                            break
+                print(f"[DEBUG] Channel {channel.id} tenant {channel.tenant_id}: Found {len(all_tenant_agents)} agents")
+                print(f"[DEBUG] Mentions found: {mentions}")
 
-                # If not found in agents, try to find matching user
-                if mention_name.lower() not in [a.name.lower() for a in result['agents']]:
-                    user = User.query.filter(
-                        User.full_name.ilike(f'%{mention_name}%')
-                    ).first()
+                for mention_name in mentions:
+                    # Try to find matching agent among all tenant agents
+                    for agent in all_tenant_agents:
+                        if mention_name.lower() in agent.name.lower():
+                            print(f"[DEBUG] Matched @{mention_name} to agent {agent.name} (ID: {agent.id})")
+                            if agent not in result['agents']:
+                                result['agents'].append(agent)
+                                break
 
-                    if user and user not in result['users']:
-                        result['users'].append(user)
+                    # If not found in agents, try to find matching user
+                    if mention_name.lower() not in [a.name.lower() for a in result['agents']]:
+                        user = User.query.filter(
+                            User.full_name.ilike(f'%{mention_name}%')
+                        ).first()
+
+                        if user and user not in result['users']:
+                            result['users'].append(user)
+
+                print(f"[DEBUG] parse_mentions result: {len(result['agents'])} agents, {len(result['users'])} users")
+            except Exception as e:
+                print(f"[ERROR] parse_mentions failed: {e}")
+                import traceback
+                traceback.print_exc()
 
         return result
 
