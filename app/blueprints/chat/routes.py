@@ -821,9 +821,13 @@ def send_channel_message(slug):
         if agent not in responding_agents:
             responding_agents.append(agent)
 
+    print(f"[DEBUG] mentioned_agents: {[a.name for a in mentioned_agents]}")
+    print(f"[DEBUG] responding_agents: {[a.name for a in responding_agents]}")
+
     # Generate responses from agents
     agent_responses = []
     for agent in responding_agents:
+        print(f"[DEBUG] Generating response for agent: {agent.name} (ID: {agent.id})")
         try:
             # Get channel conversation history
             channel_messages = Message.query.filter_by(
@@ -1002,7 +1006,9 @@ def send_channel_message(slug):
             agent_responses.append(response_data)
 
         except Exception as e:
-            print(f"Error generating agent response: {e}")
+            print(f"[ERROR] Error generating agent response for {agent.name}: {e}")
+            import traceback
+            traceback.print_exc()
             continue
 
     return jsonify({
