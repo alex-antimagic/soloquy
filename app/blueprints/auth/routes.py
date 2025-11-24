@@ -239,7 +239,7 @@ def reset_password(token):
             flash('Invalid or expired password reset link. Please request a new one.', 'danger')
             return redirect(url_for('auth.forgot_password'))
 
-    return render_template('auth/reset_password.html', form=form, title='Reset Password')
+    return render_template('auth/reset_password.html', form=form, title='Reset Password', token=token)
 
 
 @auth_bp.route('/logout', methods=['GET', 'POST'])
