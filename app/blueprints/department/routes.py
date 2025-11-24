@@ -213,6 +213,12 @@ def edit_agent(agent_id):
     agent = get_agent_secure(agent_id)  # Secure fetch with tenant validation
     department = agent.department
 
+    # Check ownership: only the creator or workspace owner can edit
+    user_role = current_user.get_role_in_tenant(g.current_tenant.id)
+    if agent.created_by_id != current_user.id and user_role != 'owner':
+        flash('You can only edit agents you created. Contact the workspace owner for assistance.', 'danger')
+        return redirect(url_for('department.view_department', department_id=department.id))
+
     form = AgentForm(obj=agent)
 
     # Get QuickBooks integration status for the template
