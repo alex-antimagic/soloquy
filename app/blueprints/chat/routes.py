@@ -688,6 +688,54 @@ def channel_chat(slug):
                           context_department=channel.department)
 
 
+@chat_bp.route('/channel/<slug>/mentions', methods=['GET'])
+@login_required
+@require_tenant_access
+def get_channel_mentions(slug):
+    """Get available users and agents for @ mentions in a channel"""
+    channel = Channel.query.filter_by(
+        tenant_id=g.current_tenant.id,
+        slug=slug
+    ).first_or_404()
+
+    # Get all agents in tenant
+    from app.models.user import User
+    agents = Agent.query.join(Department).filter(
+        Department.tenant_id == g.current_tenant.id
+    ).all()
+
+    # Get all users in tenant
+    users = User.query.join(User.tenant_memberships).filter_by(
+        tenant_id=g.current_tenant.id
+    ).all()
+
+    # Build response
+    suggestions = []
+
+    # Add agents
+    for agent in agents:
+        suggestions.append({
+            'type': 'agent',
+            'id': agent.id,
+            'name': agent.name,
+            'display': f"@{agent.name}",
+            'avatar': agent.avatar_url or f"https://ui-avatars.com/api/?name={agent.name}&background=0d6efd"
+        })
+
+    # Add users
+    for user in users:
+        if user.id != current_user.id:  # Don't include current user
+            suggestions.append({
+                'type': 'user',
+                'id': user.id,
+                'name': user.full_name,
+                'display': f"@{user.full_name.replace(' ', '')}",
+                'avatar': user.avatar_url or f"https://ui-avatars.com/api/?name={user.full_name}"
+            })
+
+    return jsonify({'suggestions': suggestions})
+
+
 @chat_bp.route('/channels/create', methods=['POST'])
 @login_required
 def create_channel():
@@ -820,13 +868,9 @@ def send_channel_message(slug):
         if agent not in responding_agents:
             responding_agents.append(agent)
 
-    print(f"[DEBUG] mentioned_agents: {[a.name for a in mentioned_agents]}")
-    print(f"[DEBUG] responding_agents: {[a.name for a in responding_agents]}")
-
     # Generate responses from agents
     agent_responses = []
     for agent in responding_agents:
-        print(f"[DEBUG] Generating response for agent: {agent.name} (ID: {agent.id})")
         try:
             # Get channel conversation history
             channel_messages = Message.query.filter_by(
@@ -1004,9 +1048,7 @@ def send_channel_message(slug):
             agent_responses.append(response_data)
 
         except Exception as e:
-            print(f"[ERROR] Error generating agent response for {agent.name}: {e}")
-            import traceback
-            traceback.print_exc()
+            print(f"Error generating agent response for {agent.name}: {e}")
             continue
 
     return jsonify({

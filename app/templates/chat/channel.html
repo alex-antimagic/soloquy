@@ -233,8 +233,13 @@
 
     messageInput.addEventListener('input', autoResizeTextarea);
 
-    // Handle Enter key: Enter submits, Shift+Enter adds new line
+    // Handle Enter key: Enter submits, Shift+Enter adds new line (unless autocomplete is open)
     messageInput.addEventListener('keydown', (e) => {
+        // If autocomplete is open, let it handle Enter
+        if (autocompleteVisible && (e.key === 'Enter' || e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Escape')) {
+            return;
+        }
+
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             messageForm.dispatchEvent(new Event('submit'));
@@ -270,6 +275,204 @@
             {% endfor %}
         {% endif %}
     };
+
+    // ========== @ MENTION AUTOCOMPLETE ==========
+    let mentionSuggestions = [];
+    let autocompleteVisible = false;
+    let selectedIndex = -1;
+    let mentionStartPos = -1;
+    let mentionQuery = '';
+
+    // Create autocomplete dropdown element
+    const autocompleteDropdown = document.createElement('div');
+    autocompleteDropdown.id = 'mention-autocomplete';
+    autocompleteDropdown.style.cssText = `
+        position: absolute;
+        display: none;
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        max-height: 300px;
+        overflow-y: auto;
+        z-index: 1000;
+        min-width: 280px;
+    `;
+    document.body.appendChild(autocompleteDropdown);
+
+    // Fetch mention suggestions
+    fetch(`/chat/channel/${channelSlug}/mentions`)
+        .then(r => r.json())
+        .then(data => {
+            mentionSuggestions = data.suggestions;
+        })
+        .catch(err => console.error('Failed to load mention suggestions:', err));
+
+    // Position dropdown near cursor
+    function positionAutocomplete() {
+        const rect = messageInput.getBoundingClientRect();
+        autocompleteDropdown.style.left = `${rect.left}px`;
+        autocompleteDropdown.style.bottom = `${window.innerHeight - rect.top + 10}px`;
+    }
+
+    // Show autocomplete dropdown
+    function showAutocomplete(filtered) {
+        if (filtered.length === 0) {
+            hideAutocomplete();
+            return;
+        }
+
+        autocompleteDropdown.innerHTML = '';
+        filtered.forEach((suggestion, index) => {
+            const item = document.createElement('div');
+            item.style.cssText = `
+                display: flex;
+                align-items: center;
+                padding: 8px 12px;
+                cursor: pointer;
+                transition: background 0.15s;
+            `;
+            item.innerHTML = `
+                <img src="${suggestion.avatar}" alt="${suggestion.name}"
+                     style="width: 32px; height: 32px; border-radius: 50%; margin-right: 10px; ${suggestion.type === 'agent' ? 'border: 2px solid #0d6efd;' : ''}">
+                <div>
+                    <div style="font-weight: 500;">${suggestion.name}</div>
+                    <div style="font-size: 0.85em; color: #6c757d;">${suggestion.type === 'agent' ? 'AI Agent' : 'User'}</div>
+                </div>
+            `;
+
+            item.addEventListener('mouseenter', () => {
+                selectedIndex = index;
+                updateSelection();
+            });
+
+            item.addEventListener('click', () => {
+                insertMention(suggestion);
+            });
+
+            autocompleteDropdown.appendChild(item);
+        });
+
+        positionAutocomplete();
+        autocompleteDropdown.style.display = 'block';
+        autocompleteVisible = true;
+        selectedIndex = 0;
+        updateSelection();
+    }
+
+    // Hide autocomplete
+    function hideAutocomplete() {
+        autocompleteDropdown.style.display = 'none';
+        autocompleteVisible = false;
+        selectedIndex = -1;
+        mentionStartPos = -1;
+        mentionQuery = '';
+    }
+
+    // Update selected item styling
+    function updateSelection() {
+        const items = autocompleteDropdown.children;
+        Array.from(items).forEach((item, index) => {
+            if (index === selectedIndex) {
+                item.style.background = '#e7f3ff';
+            } else {
+                item.style.background = 'white';
+            }
+        });
+    }
+
+    // Insert mention into textarea
+    function insertMention(suggestion) {
+        const value = messageInput.value;
+        const mentionText = `@${suggestion.name.replace(/\s+/g, '')} `;
+        const before = value.substring(0, mentionStartPos);
+        const after = value.substring(messageInput.selectionStart);
+
+        messageInput.value = before + mentionText + after;
+        messageInput.selectionStart = messageInput.selectionEnd = mentionStartPos + mentionText.length;
+
+        hideAutocomplete();
+        messageInput.focus();
+        autoResizeTextarea();
+    }
+
+    // Handle input for @ mention autocomplete
+    messageInput.addEventListener('input', (e) => {
+        const value = messageInput.value;
+        const cursorPos = messageInput.selectionStart;
+
+        // Find last @ before cursor
+        let lastAtPos = -1;
+        for (let i = cursorPos - 1; i >= 0; i--) {
+            if (value[i] === '@') {
+                // Check if @ is at start or has whitespace before it
+                if (i === 0 || /\s/.test(value[i - 1])) {
+                    lastAtPos = i;
+                    break;
+                }
+            }
+            // Stop if we hit whitespace
+            if (/\s/.test(value[i])) {
+                break;
+            }
+        }
+
+        if (lastAtPos >= 0) {
+            mentionStartPos = lastAtPos;
+            mentionQuery = value.substring(lastAtPos + 1, cursorPos).toLowerCase();
+
+            // Filter suggestions
+            const filtered = mentionSuggestions.filter(s =>
+                s.name.toLowerCase().includes(mentionQuery)
+            );
+
+            if (filtered.length > 0) {
+                showAutocomplete(filtered);
+            } else {
+                hideAutocomplete();
+            }
+        } else {
+            hideAutocomplete();
+        }
+    });
+
+    // Handle keyboard navigation in autocomplete
+    messageInput.addEventListener('keydown', (e) => {
+        if (!autocompleteVisible) return;
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            selectedIndex = Math.min(selectedIndex + 1, autocompleteDropdown.children.length - 1);
+            updateSelection();
+            // Scroll selected item into view
+            autocompleteDropdown.children[selectedIndex]?.scrollIntoView({ block: 'nearest' });
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            selectedIndex = Math.max(selectedIndex - 1, 0);
+            updateSelection();
+            autocompleteDropdown.children[selectedIndex]?.scrollIntoView({ block: 'nearest' });
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (selectedIndex >= 0 && selectedIndex < autocompleteDropdown.children.length) {
+                const filtered = mentionSuggestions.filter(s =>
+                    s.name.toLowerCase().includes(mentionQuery)
+                );
+                insertMention(filtered[selectedIndex]);
+            }
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            hideAutocomplete();
+        }
+    });
+
+    // Hide autocomplete when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!autocompleteDropdown.contains(e.target) && e.target !== messageInput) {
+            hideAutocomplete();
+        }
+    });
+
+    // ========== END @ MENTION AUTOCOMPLETE ==========
 
     // Scroll to bottom of messages
     function scrollToBottom() {
