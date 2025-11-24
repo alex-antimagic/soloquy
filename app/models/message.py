@@ -99,21 +99,19 @@ class Message(db.Model):
 
         # Try to match mentions with agents and users
         if channel:
-            # Get agents in tenant (only public agents + sender's private agents)
+            # Get all agents in tenant and filter by sender's access
             # This allows @mentions to work in any channel regardless of setup
             from app.models.department import Department
-            from sqlalchemy import or_, and_
 
-            # Get sender to check for private agents
-            sender_id = self.sender_id
-
+            # Get all agents in the tenant
             all_tenant_agents = Agent.query.join(Department).filter(
-                Department.tenant_id == channel.tenant_id,
-                or_(
-                    Agent.is_private == False,  # Public agents
-                    and_(Agent.is_private == True, Agent.created_by_id == sender_id)  # Sender's private agents
-                )
+                Department.tenant_id == channel.tenant_id
             ).all()
+
+            # Filter by sender's access control (only agents sender can access)
+            sender = self.sender
+            if sender:
+                all_tenant_agents = [agent for agent in all_tenant_agents if agent.can_user_access(sender)]
 
             for mention_name in mentions:
                 # Try to find matching agent among all tenant agents
