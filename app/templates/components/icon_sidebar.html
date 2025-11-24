@@ -98,6 +98,16 @@
         </a>
         {% endif %}
 
+        <!-- Files -->
+        {% if 'files' in enabled_applets %}
+        <a href="{{ url_for('files.index') }}"
+           class="icon-sidebar-item {% if 'files' in request.endpoint %}active{% endif %}"
+           data-view="files">
+            <i class="bi bi-file-earmark-text"></i>
+            <span class="icon-label">Files</span>
+        </a>
+        {% endif %}
+
         <!-- Integrations -->
         {% if 'integrations' in enabled_applets %}
         <a href="{{ url_for('integrations.index') }}"

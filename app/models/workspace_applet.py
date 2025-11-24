@@ -64,6 +64,11 @@ class WorkspaceApplet(db.Model):
             'name': 'Website Builder',
             'description': 'AI-powered website hosting with custom domains and SEO',
             'icon': 'globe'
+        },
+        'files': {
+            'name': 'Files',
+            'description': 'Agent-generated documents, reports, and exports',
+            'icon': 'file-earmark-text'
         }
     }
 

@@ -13,6 +13,7 @@ from app.models.ticket import Ticket
 from app.models.message import Message
 from app.models.department import Department
 from app.models.channel import Channel
+from app.models.generated_file import GeneratedFile
 from flask import url_for
 
 
@@ -42,6 +43,7 @@ class UnifiedSearchService:
             'deals': UnifiedSearchService.search_deals(user_id, tenant_id, query, limit),
             'tickets': UnifiedSearchService.search_tickets(user_id, tenant_id, query, limit),
             'messages': UnifiedSearchService.search_messages(user_id, tenant_id, query, limit),
+            'files': UnifiedSearchService.search_files(tenant_id, query, limit),
         }
 
         # Calculate total count
@@ -276,4 +278,28 @@ class UnifiedSearchService:
             return results
         except Exception as e:
             print(f"Error searching messages: {e}")
+            return []
+
+    @staticmethod
+    def search_files(tenant_id, query, limit=5):
+        """
+        Search generated files by filename (tenant-wide, team shared data)
+        """
+        try:
+            files = GeneratedFile.query.filter(
+                GeneratedFile.tenant_id == tenant_id,
+                GeneratedFile.filename.ilike(f'%{query}%')
+            ).order_by(GeneratedFile.created_at.desc()).limit(limit).all()
+
+            return [{
+                'id': file.id,
+                'filename': file.filename,
+                'file_type': file.file_type,
+                'file_size': file.file_size_display,
+                'created_at': file.created_at.strftime('%b %d, %Y'),
+                'agent_name': file.agent.name if file.agent else None,
+                'url': url_for('files.index', highlight=file.id)
+            } for file in files]
+        except Exception as e:
+            print(f"Error searching files: {e}")
             return []
