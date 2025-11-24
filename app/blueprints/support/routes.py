@@ -8,6 +8,7 @@ from app.models.contact import Contact
 from app.models.company import Company
 from app.models.user import User
 from app.models.department import Department
+from app.models.tenant import Tenant
 from app.services import ticket_service
 from app.services.cloudinary_service import upload_image
 from app.services.ai_service import get_ai_service
@@ -295,9 +296,18 @@ def create_ticket():
         return jsonify({'error': 'Subject and description are required'}), 400
 
     try:
+        # For bug reports, use Soloquy workspace (ID: 67) instead of current tenant
+        # This ensures all platform bug reports go to the Soloquy support team
+        category = data.get('category')
+        if category == 'Bug Report':
+            soloquy_tenant = Tenant.query.filter_by(name='Soloquy').first()
+            tenant_id = soloquy_tenant.id if soloquy_tenant else g.current_tenant.id
+        else:
+            tenant_id = g.current_tenant.id
+
         # Create ticket using service
         ticket = ticket_service.create_ticket(
-            tenant_id=g.current_tenant.id,
+            tenant_id=tenant_id,
             subject=subject,
             description=description,
             priority=data.get('priority', 'medium'),
