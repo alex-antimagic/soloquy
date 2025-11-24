@@ -1,7 +1,7 @@
 """Add file generation features
 
-Revision ID: add_file_gen_2024
-Revises: f6083581ab59
+Revision ID: b2c4d5e6f7g8
+Revises: a18fe3d69501d
 Create Date: 2024-11-24
 
 """
@@ -10,8 +10,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'add_file_gen_2024'
-down_revision = 'f6083581ab59'
+revision = 'b2c4d5e6f7g8'
+down_revision = 'a18fe3d69501d'
 branch_labels = None
 depends_on = None
 
