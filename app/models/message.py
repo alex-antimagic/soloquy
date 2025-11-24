@@ -99,18 +99,22 @@ class Message(db.Model):
 
         # Try to match mentions with agents and users
         if channel:
-            # Get channel's associated agents (directly or through department)
-            channel_agents = channel.get_associated_agents() if hasattr(channel, 'get_associated_agents') else []
+            # Get ALL agents in the tenant (not just channel-associated ones)
+            # This allows @mentions to work in any channel regardless of setup
+            from app.models.department import Department
+            all_tenant_agents = Agent.query.join(Department).filter(
+                Department.tenant_id == channel.tenant_id
+            ).all()
 
             for mention_name in mentions:
-                # First, try to find matching agent among channel's agents
-                for agent in channel_agents:
+                # Try to find matching agent among all tenant agents
+                for agent in all_tenant_agents:
                     if mention_name.lower() in agent.name.lower():
                         if agent not in result['agents']:
                             result['agents'].append(agent)
                             break
 
-                # If not found in channel agents, try to find matching user
+                # If not found in agents, try to find matching user
                 if mention_name.lower() not in [a.name.lower() for a in result['agents']]:
                     user = User.query.filter(
                         User.full_name.ilike(f'%{mention_name}%')
