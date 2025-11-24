@@ -635,6 +635,7 @@
 
             if (response.ok) {
                 const data = await response.json();
+                console.log('[DEBUG] Received response:', data);
 
                 // Simulate typing delay for realism
                 await new Promise(resolve => setTimeout(resolve, 800));
@@ -644,7 +645,14 @@
 
                 // Add agent response if present (includes generated_files)
                 if (data.agent_response) {
-                    addMessageToUI(data.agent_response, true);
+                    console.log('[DEBUG] Agent response:', data.agent_response);
+                    try {
+                        addMessageToUI(data.agent_response, true);
+                        console.log('[DEBUG] Successfully added agent message to UI');
+                    } catch (error) {
+                        console.error('[ERROR] Failed to add agent message to UI:', error);
+                        alert('Error displaying agent response. Check console for details.');
+                    }
                 }
             } else {
                 removeTypingIndicator();
