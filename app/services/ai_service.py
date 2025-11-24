@@ -968,12 +968,17 @@ Return ONLY valid JSON in this format:
         from app.models.generated_file import GeneratedFile
         from app import db
 
+        print(f"[FILE_GEN] Executing tool: {tool_name}")
+        print(f"[FILE_GEN] Input keys: {list(tool_input.keys())}")
+
         try:
             # Get tenant ID from user
             if not user or not user.get_current_tenant():
+                print(f"[FILE_GEN] ERROR: No workspace context available")
                 return {"error": "No workspace context available"}
 
             tenant = user.get_current_tenant()
+            print(f"[FILE_GEN] Tenant: {tenant.name} (ID: {tenant.id})")
             file_gen_service = FileGenerationService()
 
             if tool_name == "generate_pdf_report":
@@ -1023,12 +1028,17 @@ Return ONLY valid JSON in this format:
                 data = tool_input.get('data', [])
                 filename = tool_input.get('filename')
 
+                print(f"[FILE_GEN] Generating CSV with {len(headers)} headers and {len(data)} rows")
+                print(f"[FILE_GEN] Filename: {filename}")
+
                 result = file_gen_service.generate_csv(
                     headers=headers,
                     data=data,
                     tenant_id=tenant.id,
                     filename=filename
                 )
+
+                print(f"[FILE_GEN] CSV generation result: success={result.get('success')}")
 
                 if result.get('success'):
                     # Save to database
@@ -1101,10 +1111,12 @@ Return ONLY valid JSON in this format:
                 return {"error": f"Unknown file generation tool: {tool_name}"}
 
         except Exception as e:
-            current_app.logger.error(f"Error executing file generation tool {tool_name}: {e}")
+            error_msg = f"Error executing file generation tool {tool_name}: {str(e)}"
+            print(f"[FILE_GEN] ERROR: {error_msg}")
+            current_app.logger.error(error_msg)
             import traceback
             traceback.print_exc()
-            return {"error": f"Failed to execute {tool_name}: {str(e)}"}
+            return {"error": f"Failed to generate file: {str(e)}. Please check the file format and try again."}
 
     def analyze_bug_screenshot(
         self,

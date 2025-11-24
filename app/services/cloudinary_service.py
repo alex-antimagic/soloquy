@@ -63,13 +63,14 @@ def upload_image(file_content, folder: str = "bug_reports") -> Optional[Dict[str
         raise
 
 
-def upload_file(file_content, folder: str = "chat_files") -> Optional[Dict[str, str]]:
+def upload_file(file_content, folder: str = "chat_files", filename: Optional[str] = None) -> Optional[Dict[str, str]]:
     """
     Upload any file type to Cloudinary (PDFs, CSVs, documents, etc.)
 
     Args:
         file_content: File object or file path to upload
         folder: Cloudinary folder to store the file (default: "chat_files")
+        filename: Optional filename to use (with extension)
 
     Returns:
         Dictionary with 'url', 'secure_url', 'public_id', 'format', and 'bytes' if successful
@@ -81,11 +82,24 @@ def upload_file(file_content, folder: str = "chat_files") -> Optional[Dict[str, 
         # Initialize Cloudinary if not already done
         init_cloudinary()
 
+        # Build upload options
+        upload_options = {
+            'folder': folder,
+            'resource_type': 'raw'  # Allows any file type
+        }
+
+        # Add public_id with filename if provided (without extension)
+        if filename:
+            # Remove extension from filename for public_id
+            public_id_name = filename.rsplit('.', 1)[0] if '.' in filename else filename
+            upload_options['public_id'] = public_id_name
+            upload_options['use_filename'] = True
+            upload_options['unique_filename'] = False
+
         # Upload the file to Cloudinary as a raw resource
         result = cloudinary.uploader.upload(
             file_content,
-            folder=folder,
-            resource_type="raw"  # Allows any file type
+            **upload_options
         )
 
         return {
@@ -99,6 +113,8 @@ def upload_file(file_content, folder: str = "chat_files") -> Optional[Dict[str, 
 
     except Exception as e:
         current_app.logger.error(f"Failed to upload file to Cloudinary: {str(e)}")
+        import traceback
+        traceback.print_exc()
         raise
 
 

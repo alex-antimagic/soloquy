@@ -164,7 +164,7 @@ class FileGenerationService:
 
             # Upload to Cloudinary
             folder = f"tenant_{tenant_id}/generated"
-            cloudinary_result = upload_file(buffer, folder=folder)
+            cloudinary_result = upload_file(buffer, folder=folder, filename=filename)
 
             # Return result with metadata
             return {
@@ -227,7 +227,7 @@ class FileGenerationService:
 
             # Upload to Cloudinary
             folder = f"tenant_{tenant_id}/generated"
-            cloudinary_result = upload_file(csv_bytes, folder=folder)
+            cloudinary_result = upload_file(csv_bytes, folder=folder, filename=filename)
 
             # Return result with metadata
             return {
@@ -351,7 +351,7 @@ class FileGenerationService:
 
             # Upload to Cloudinary
             folder = f"tenant_{tenant_id}/generated"
-            cloudinary_result = upload_file(excel_bytes, folder=folder)
+            cloudinary_result = upload_file(excel_bytes, folder=folder, filename=filename)
 
             # Return result with metadata
             return {
