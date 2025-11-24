@@ -305,6 +305,50 @@
             taskCardsHtml += '</div>';
         }
 
+        // Build task suggestion cards
+        let taskSuggestionsHtml = '';
+        if (isAgent && message.task_suggestions && message.task_suggestions.length > 0) {
+            taskSuggestionsHtml = '<div class="mt-2">';
+            message.task_suggestions.forEach((task, index) => {
+                const priorityClass = task.priority === 'urgent' ? 'danger' : task.priority === 'high' ? 'warning' : task.priority === 'medium' ? 'primary' : 'secondary';
+                const priorityIcon = task.priority === 'urgent' ? 'bi-exclamation-triangle-fill' : task.priority === 'high' ? 'bi-arrow-up-circle' : 'bi-dash-circle';
+                const dueDateHtml = task.due_date ? `<span class="text-muted small ms-2"><i class="bi bi-calendar"></i> ${new Date(task.due_date).toLocaleDateString()}</span>` : '';
+
+                taskSuggestionsHtml += `
+                    <div class="card border-start border-${priorityClass} border-3 mb-2" style="background-color: rgba(var(--bs-primary-rgb), 0.05);">
+                        <div class="card-body py-2 px-3">
+                            <div class="d-flex justify-content-between align-items-start mb-1">
+                                <div class="flex-grow-1">
+                                    <small class="text-muted d-block mb-1">
+                                        <i class="bi bi-lightbulb"></i> Suggested Task
+                                    </small>
+                                    <strong>${escapeHtml(task.title)}</strong>
+                                    <span class="badge bg-${priorityClass} ms-2">
+                                        <i class="bi ${priorityIcon}"></i> ${task.priority}
+                                    </span>
+                                    ${dueDateHtml}
+                                </div>
+                            </div>
+                            ${task.description ? `<p class="text-muted small mb-2">${escapeHtml(task.description)}</p>` : ''}
+                            <div class="d-flex gap-2 align-items-center">
+                                <select class="form-select form-select-sm flex-grow-1 task-assign-select">
+                                    <option value="user:{{ current_user.id }}">Assign to Me</option>
+                                    <option value="agent:{{ agent.id }}" selected>Assign to {{ agent.name }}</option>
+                                </select>
+                                <button class="btn btn-sm btn-success" onclick="createTaskFromSuggestion(${index}, this)">
+                                    <i class="bi bi-plus-circle"></i> Create
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            taskSuggestionsHtml += '</div>';
+
+            // Store suggestions in a data attribute for later use
+            messageDiv.setAttribute('data-task-suggestions', JSON.stringify(message.task_suggestions));
+        }
+
         // Build file attachments if agent generated any files
         let filesHtml = '';
         if (isAgent && message.generated_files && message.generated_files.length > 0) {
@@ -339,6 +383,7 @@
                 </div>
                 <div class="message-body">${formatMessageContent(message.content)}</div>
                 ${taskCardsHtml}
+                ${taskSuggestionsHtml}
                 ${filesHtml}
             </div>
         `;
@@ -642,6 +687,95 @@
     // Quick action: View task
     function viewTask(taskId) {
         window.location.href = `/tasks/${taskId}`;
+    }
+
+    // Create task from AI-suggested task
+    async function createTaskFromSuggestion(suggestionIndex, buttonElement) {
+        try {
+            // Find the message div containing this button
+            const messageDiv = buttonElement.closest('.message');
+            const suggestions = JSON.parse(messageDiv.getAttribute('data-task-suggestions'));
+            const suggestion = suggestions[suggestionIndex];
+
+            if (!suggestion) {
+                alert('Task suggestion not found');
+                return;
+            }
+
+            // Get the assignment selection
+            const cardDiv = buttonElement.closest('.card-body');
+            const assignSelect = cardDiv.querySelector('.task-assign-select');
+            const assignTo = assignSelect ? assignSelect.value : null;
+
+            // Parse assignment (user:123 or agent:456)
+            let assignedToId = null;
+            let assignedToAgentId = null;
+            if (assignTo) {
+                const [type, id] = assignTo.split(':');
+                if (type === 'user') {
+                    assignedToId = parseInt(id);
+                } else if (type === 'agent') {
+                    assignedToAgentId = parseInt(id);
+                }
+            }
+
+            // Disable the button and show loading state
+            const originalButtonContent = buttonElement.innerHTML;
+            buttonElement.disabled = true;
+            buttonElement.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Creating...';
+
+            const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+            const taskData = {
+                title: suggestion.title,
+                description: suggestion.description || '',
+                priority: suggestion.priority || 'medium',
+                due_date: suggestion.due_date ? suggestion.due_date.split('T')[0] : null
+            };
+
+            // Add assignment if selected
+            if (assignedToId) {
+                taskData.assigned_to_id = assignedToId;
+            }
+            if (assignedToAgentId) {
+                taskData.assigned_to_agent_id = assignedToAgentId;
+            }
+
+            const response = await fetch('/tasks/create', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify(taskData)
+            });
+
+            if (response.ok) {
+                const task = await response.json();
+                // Replace button with success message
+                buttonElement.outerHTML = '<span class="badge bg-success"><i class="bi bi-check-circle"></i> Task Created</span>';
+
+                // Show toast notification
+                const toast = document.createElement('div');
+                toast.className = 'alert alert-success alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3';
+                toast.style.zIndex = '9999';
+                toast.innerHTML = `
+                    <i class="bi bi-check-circle-fill"></i> Task "${suggestion.title}" created successfully!
+                    <a href="/tasks/${task.id}" class="alert-link ms-2">View Task</a>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
+                document.body.appendChild(toast);
+                setTimeout(() => toast.remove(), 5000);
+            } else {
+                buttonElement.disabled = false;
+                buttonElement.innerHTML = originalButtonContent;
+                alert('Failed to create task. Please try again.');
+            }
+        } catch (error) {
+            console.error('Error creating task from suggestion:', error);
+            buttonElement.disabled = false;
+            buttonElement.innerHTML = originalButtonContent;
+            alert('Failed to create task. Please try again.');
+        }
     }
 </script>
 {% endblock %}
