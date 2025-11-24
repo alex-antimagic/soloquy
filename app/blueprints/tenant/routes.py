@@ -760,6 +760,8 @@ def create_agent():
             db.session.add(personal_channel)
 
         # Create the agent
+        # Personal agents are private by default (only accessible by creator)
+        import json
         agent = Agent(
             department_id=personal_dept.id,
             created_by_id=current_user.id,
@@ -773,7 +775,10 @@ def create_agent():
             max_tokens=int(request.form.get('max_tokens', 4096)),
             enable_gmail=request.form.get('enable_gmail') == 'on',
             enable_outlook=request.form.get('enable_outlook') == 'on',
-            enable_google_drive=request.form.get('enable_google_drive') == 'on'
+            enable_google_drive=request.form.get('enable_google_drive') == 'on',
+            # Private by default - only creator can access
+            access_control='users',
+            allowed_user_ids=json.dumps([current_user.id])
         )
         db.session.add(agent)
         db.session.commit()
