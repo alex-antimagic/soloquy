@@ -305,6 +305,31 @@
             taskCardsHtml += '</div>';
         }
 
+        // Build file attachments if agent generated any files
+        let filesHtml = '';
+        if (isAgent && message.generated_files && message.generated_files.length > 0) {
+            filesHtml = '<div class="mt-2">';
+            message.generated_files.forEach(file => {
+                filesHtml += `
+                    <div class="card mb-2" style="background-color: var(--bs-secondary-bg);">
+                        <div class="card-body py-2 px-3">
+                            <div class="d-flex align-items-center">
+                                <i class="${file.icon_class} fs-4 me-2"></i>
+                                <div class="flex-grow-1">
+                                    <strong>${escapeHtml(file.filename)}</strong>
+                                    <small class="text-muted d-block">${file.file_type.toUpperCase()} • ${file.file_size_display}</small>
+                                </div>
+                                <a href="${file.cloudinary_url}" target="_blank" class="btn btn-sm btn-primary" download>
+                                    <i class="bi bi-download"></i> Download
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            filesHtml += '</div>';
+        }
+
         messageDiv.innerHTML = `
             <div class="message-avatar">${avatar}${statusHtml}</div>
             <div class="message-content">
@@ -314,6 +339,7 @@
                 </div>
                 <div class="message-body">${formatMessageContent(message.content)}</div>
                 ${taskCardsHtml}
+                ${filesHtml}
             </div>
         `;
 

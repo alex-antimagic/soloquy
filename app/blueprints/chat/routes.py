@@ -447,6 +447,23 @@ def send_message():
                 db.session.add(agent_message)
                 db.session.commit()
 
+                # Link any recently generated files to this message
+                from app.models.generated_file import GeneratedFile
+                from datetime import timedelta
+                recent_cutoff = datetime.utcnow() - timedelta(seconds=30)
+                generated_files = GeneratedFile.query.filter(
+                    GeneratedFile.agent_id == agent.id,
+                    GeneratedFile.user_id == current_user.id,
+                    GeneratedFile.message_id == None,
+                    GeneratedFile.created_at >= recent_cutoff
+                ).all()
+
+                for file in generated_files:
+                    file.message_id = agent_message.id
+
+                if generated_files:
+                    db.session.commit()
+
                 # Don't broadcast via Socket.IO - agent response is returned in HTTP response
                 # to avoid duplicate messages in UI
 
@@ -504,7 +521,16 @@ Return ONLY the task numbers (1, 2, 3, etc.) that the agent mentioned or address
                     'sender': agent.name,
                     'created_at': agent_message.created_at.isoformat(),
                     'mentioned_tasks': mentioned_tasks,
-                    'task_suggestions': task_suggestions  # Add task suggestions to response
+                    'task_suggestions': task_suggestions,  # Add task suggestions to response
+                    'generated_files': [{
+                        'id': f.id,
+                        'filename': f.filename,
+                        'file_type': f.file_type,
+                        'file_size': f.file_size,
+                        'file_size_display': f.file_size_display,
+                        'cloudinary_url': f.cloudinary_url,
+                        'icon_class': f.icon_class
+                    } for f in generated_files] if generated_files else []
                 }
 
             except Exception as e:
