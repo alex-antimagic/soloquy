@@ -427,11 +427,21 @@ def send_message():
                     tenant_id=g.current_tenant.id
                 ).filter(Task.status != 'completed').all()
 
-                # Build system prompt with tenant, user, and task context
+                # Get recently generated files (last 5 minutes)
+                from app.models.generated_file import GeneratedFile
+                recent_cutoff = datetime.utcnow() - timedelta(minutes=5)
+                recent_files = GeneratedFile.query.filter(
+                    GeneratedFile.agent_id == agent.id,
+                    GeneratedFile.user_id == current_user.id,
+                    GeneratedFile.created_at >= recent_cutoff
+                ).order_by(GeneratedFile.created_at.desc()).limit(10).all()
+
+                # Build system prompt with tenant, user, task, and file context
                 system_prompt = agent.build_system_prompt_with_context(
                     tenant=g.current_tenant,
                     user=current_user,
-                    tasks=agent_tasks
+                    tasks=agent_tasks,
+                    generated_files=recent_files
                 )
 
                 # Get AI response (with MCP context if enabled)
@@ -873,11 +883,21 @@ def send_channel_message(slug):
                         'content': msg.content
                     })
 
+            # Get recently generated files (last 5 minutes)
+            from app.models.generated_file import GeneratedFile
+            recent_cutoff = datetime.utcnow() - timedelta(minutes=5)
+            recent_files = GeneratedFile.query.filter(
+                GeneratedFile.agent_id == agent.id,
+                GeneratedFile.user_id == current_user.id,
+                GeneratedFile.created_at >= recent_cutoff
+            ).order_by(GeneratedFile.created_at.desc()).limit(10).all()
+
             # Build system prompt with channel context
             system_prompt = agent.build_system_prompt_with_context(
                 tenant=g.current_tenant,
                 user=current_user,
-                tasks=[]
+                tasks=[],
+                generated_files=recent_files
             )
             system_prompt += f"\n\nYou are participating in the #{channel.name} channel."
             if channel.description:

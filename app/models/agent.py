@@ -187,7 +187,7 @@ class Agent(db.Model):
 
         return query.order_by(Message.created_at.asc()).limit(limit).all()
 
-    def build_system_prompt_with_context(self, tenant=None, user=None, tasks=None):
+    def build_system_prompt_with_context(self, tenant=None, user=None, tasks=None, generated_files=None):
         """
         Build the complete system prompt including tenant and user context.
 
@@ -196,11 +196,13 @@ class Agent(db.Model):
         - Who they're talking to
         - Their department and role
         - Their assigned tasks
+        - Recently generated files
 
         Args:
             tenant: The Tenant object for workspace context
             user: The User object for personalization
             tasks: List of Task objects assigned to this agent
+            generated_files: List of recently generated files
 
         Returns:
             Complete system prompt string
@@ -383,6 +385,19 @@ class Agent(db.Model):
         if tasks:
             context_parts.append("- Avoid duplicating your existing assigned tasks unless it's a different specific action")
         context_parts.append("")
+
+        # Recently Generated Files Context
+        if generated_files and len(generated_files) > 0:
+            context_parts.append("\n=== RECENTLY GENERATED FILES ===")
+            context_parts.append("You have recently generated the following files in this conversation:")
+            for file in generated_files:
+                context_parts.append(f"- {file.filename} ({file.file_type.upper()}, {file.file_size_display})")
+                context_parts.append(f"  URL: {file.cloudinary_url}")
+                if file.file_purpose:
+                    context_parts.append(f"  Purpose: {file.file_purpose}")
+            context_parts.append("\nYou can reference these files, use their data, or build upon them.")
+            context_parts.append("If asked to work with a file you just created, use the URL above to access it.")
+            context_parts.append("")
 
         # Add custom system prompt
         if self.system_prompt:
