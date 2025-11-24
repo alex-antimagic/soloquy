@@ -68,7 +68,7 @@ class WorkspaceApplet(db.Model):
         'files': {
             'name': 'Files',
             'description': 'Agent-generated documents, reports, and exports',
-            'icon': 'file-earmark-text'
+            'icon': 'folder'
         }
     }
 
