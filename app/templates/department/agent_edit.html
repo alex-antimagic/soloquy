@@ -239,6 +239,32 @@
                             </div>
                         </div>
 
+                        <hr class="my-3">
+
+                        <!-- Website Builder -->
+                        <div class="form-check mb-2">
+                            {{ form.enable_website_builder(class="form-check-input") }}
+                            <label class="form-check-label" for="{{ form.enable_website_builder.id }}">
+                                <strong>Website Builder</strong>
+                                <span class="badge bg-success ms-2">Create & Edit Sites</span>
+                            </label>
+                            <div class="small text-muted ms-4">
+                                Allow this agent to create and modify website pages, content, and structure
+                            </div>
+                        </div>
+
+                        <!-- File Generation -->
+                        <div class="form-check mb-2">
+                            {{ form.enable_file_generation(class="form-check-input") }}
+                            <label class="form-check-label" for="{{ form.enable_file_generation.id }}">
+                                <strong>File Generation</strong>
+                                <span class="badge bg-primary ms-2">PDF, CSV, Excel</span>
+                            </label>
+                            <div class="small text-muted ms-4">
+                                Allow this agent to generate PDF reports, CSV exports, and Excel spreadsheets
+                            </div>
+                        </div>
+
                         <div class="alert alert-info mt-3 mb-0">
                             <i class="bi bi-info-circle me-2"></i>
                             <small>

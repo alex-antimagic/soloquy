@@ -77,6 +77,8 @@ class AgentForm(FlaskForm):
     enable_gmail = BooleanField('Enable Gmail Access', default=False)
     enable_outlook = BooleanField('Enable Outlook Access', default=False)
     enable_google_drive = BooleanField('Enable Google Drive Access', default=False)
+    enable_website_builder = BooleanField('Enable Website Builder', default=False)
+    enable_file_generation = BooleanField('Enable File Generation', default=False)
 
     # Access Control (who can chat with this agent)
     access_control = SelectField('Access Control', choices=[
