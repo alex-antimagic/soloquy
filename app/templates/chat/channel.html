@@ -187,11 +187,13 @@
                         <button type="button" class="btn btn-outline-secondary" id="image-button" title="Attach file (images, PDFs, documents, etc.)">
                             <i class="bi bi-paperclip"></i>
                         </button>
-                        <input type="text"
+                        <textarea
                                class="form-control"
                                id="message-input"
                                placeholder="Message #{{ channel.name }}..."
-                               autocomplete="off">
+                               autocomplete="off"
+                               rows="1"
+                               style="resize: none; overflow-y: hidden; max-height: 200px;"></textarea>
                         <button type="submit" class="btn btn-primary">
                             <i class="bi bi-send"></i> Send
                         </button>
@@ -222,6 +224,22 @@
     const messageInput = document.getElementById('message-input');
     const messagesContainer = document.getElementById('messages-container');
     const channelSlug = '{{ channel.slug }}';
+
+    // Auto-resize textarea as user types
+    function autoResizeTextarea() {
+        messageInput.style.height = 'auto';
+        messageInput.style.height = Math.min(messageInput.scrollHeight, 200) + 'px';
+    }
+
+    messageInput.addEventListener('input', autoResizeTextarea);
+
+    // Handle Enter key: Enter submits, Shift+Enter adds new line
+    messageInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            messageForm.dispatchEvent(new Event('submit'));
+        }
+    });
 
     // Notification sound
     const notificationSound = new Audio('{{ url_for("static", filename="pop.mp3") }}');
@@ -821,6 +839,7 @@
 
         // Clear input immediately
         messageInput.value = '';
+        autoResizeTextarea(); // Reset textarea height
 
         // Clear image preview
         if (uploadedImageData) {

@@ -134,11 +134,13 @@
                         <button type="button" class="btn btn-outline-secondary" id="image-button" title="Attach file (images, PDFs, documents, etc.)">
                             <i class="bi bi-paperclip"></i>
                         </button>
-                        <input type="text"
+                        <textarea
                                class="form-control"
                                id="message-input"
                                placeholder="Message {{ recipient_name }}..."
-                               autocomplete="off">
+                               autocomplete="off"
+                               rows="1"
+                               style="resize: none; overflow-y: hidden; max-height: 200px;"></textarea>
                         <button type="submit" class="btn btn-primary" id="send-button">
                             <i class="bi bi-send"></i> Send
                         </button>
@@ -171,6 +173,22 @@
     const messageForm = document.getElementById('message-form');
     const messageInput = document.getElementById('message-input');
     const messagesContainer = document.getElementById('messages-container');
+
+    // Auto-resize textarea as user types
+    function autoResizeTextarea() {
+        messageInput.style.height = 'auto';
+        messageInput.style.height = Math.min(messageInput.scrollHeight, 200) + 'px';
+    }
+
+    messageInput.addEventListener('input', autoResizeTextarea);
+
+    // Handle Enter key: Enter submits, Shift+Enter adds new line
+    messageInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            messageForm.dispatchEvent(new Event('submit'));
+        }
+    });
 
     // Conversation context
     const isAgent = {{ 'true' if is_agent else 'false' }};
@@ -758,6 +776,7 @@
         addMessageToUI(userMessage, true);
 
         messageInput.value = '';
+        autoResizeTextarea(); // Reset textarea height
 
         // Clear image preview after showing message
         if (uploadedImageData) {

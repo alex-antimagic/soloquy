@@ -32,8 +32,10 @@ phonenumbers==8.13.27  # Phone number parsing, formatting, and validation
 # Email Services
 sendgrid==6.11.0  # SendGrid email delivery service
 
-# File Storage
+# File Storage & Generation
 cloudinary==1.41.0
+reportlab==4.0.7  # PDF generation
+openpyxl==3.1.2  # Excel file generation
 
 # Security
 Flask-Limiter==3.5.0

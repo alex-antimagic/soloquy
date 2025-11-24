@@ -43,6 +43,7 @@ class AgentVersion(db.Model):
     enable_outlook = db.Column(db.Boolean, default=False, nullable=False)
     enable_google_drive = db.Column(db.Boolean, default=False, nullable=False)
     enable_website_builder = db.Column(db.Boolean, default=False, nullable=False)
+    enable_file_generation = db.Column(db.Boolean, default=False, nullable=False)
 
     # Timestamp
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
@@ -88,7 +89,8 @@ class AgentVersion(db.Model):
                     'gmail': self.enable_gmail,
                     'outlook': self.enable_outlook,
                     'google_drive': self.enable_google_drive,
-                    'website_builder': self.enable_website_builder
+                    'website_builder': self.enable_website_builder,
+                    'file_generation': self.enable_file_generation
                 }
             }
         }
@@ -185,7 +187,8 @@ class AgentVersion(db.Model):
             enable_gmail=agent.enable_gmail,
             enable_outlook=agent.enable_outlook,
             enable_google_drive=agent.enable_google_drive,
-            enable_website_builder=agent.enable_website_builder
+            enable_website_builder=agent.enable_website_builder,
+            enable_file_generation=agent.enable_file_generation
         )
 
         return version
@@ -282,7 +285,8 @@ class AgentVersion(db.Model):
             ('enable_gmail', 'Gmail Access'),
             ('enable_outlook', 'Outlook Access'),
             ('enable_google_drive', 'Google Drive Access'),
-            ('enable_website_builder', 'Website Builder Access')
+            ('enable_website_builder', 'Website Builder Access'),
+            ('enable_file_generation', 'File Generation')
         ]
 
         for field, display_name in integrations:

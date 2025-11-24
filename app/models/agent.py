@@ -32,6 +32,7 @@ class Agent(db.Model):
     enable_outlook = db.Column(db.Boolean, default=False, nullable=False)  # Allow access to Outlook (MCP)
     enable_google_drive = db.Column(db.Boolean, default=False, nullable=False)  # Allow access to Google Drive (MCP)
     enable_website_builder = db.Column(db.Boolean, default=False, nullable=False)  # Allow AI to create/edit website content
+    enable_file_generation = db.Column(db.Boolean, default=False, nullable=False)  # Allow AI to generate files (PDF, CSV, Excel)
 
     # User access control (who can chat with this agent)
     access_control = db.Column(db.String(20), default='all', nullable=False)  # 'all', 'role', 'department', 'users'
@@ -500,6 +501,7 @@ class Agent(db.Model):
         self.enable_outlook = target_version.enable_outlook
         self.enable_google_drive = target_version.enable_google_drive
         self.enable_website_builder = target_version.enable_website_builder
+        self.enable_file_generation = target_version.enable_file_generation
         self.access_control = target_version.access_control
         self.allowed_roles = target_version.allowed_roles
         self.allowed_department_ids = target_version.allowed_department_ids
@@ -578,6 +580,7 @@ class Agent(db.Model):
                 'enable_outlook': self.enable_outlook,
                 'enable_google_drive': self.enable_google_drive,
                 'enable_website_builder': self.enable_website_builder,
+                'enable_file_generation': self.enable_file_generation,
                 'access_control': self.access_control,
                 'allowed_roles': self.allowed_roles,
                 'allowed_department_ids': self.allowed_department_ids,
@@ -689,6 +692,7 @@ class Agent(db.Model):
             enable_outlook=agent_data.get('enable_outlook', False),
             enable_google_drive=agent_data.get('enable_google_drive', False),
             enable_website_builder=agent_data.get('enable_website_builder', False),
+            enable_file_generation=agent_data.get('enable_file_generation', False),
             access_control=agent_data.get('access_control', 'all'),
             allowed_roles=agent_data.get('allowed_roles'),
             allowed_department_ids=agent_data.get('allowed_department_ids'),

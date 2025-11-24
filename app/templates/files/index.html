@@ -1,0 +1,310 @@
+{% extends "layouts/base.html" %}
+
+{% block extra_css %}
+<style>
+    .metric-icon {
+        width: 60px;
+        height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50% !important;
+    }
+    .filter-pills {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        margin-bottom: 1rem;
+    }
+    .filter-pill {
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        background: rgba(255, 255, 255, 0.05);
+        cursor: pointer;
+        transition: all 0.2s;
+        text-decoration: none;
+        color: #e0e0e0;
+    }
+    .filter-pill:hover {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: rgba(255, 255, 255, 0.3);
+        color: #ffffff;
+    }
+    .filter-pill.active {
+        background: rgba(59, 130, 246, 0.3);
+        border-color: rgba(59, 130, 246, 0.5);
+        color: #ffffff;
+    }
+    .file-icon {
+        font-size: 1.5rem;
+        margin-right: 0.5rem;
+    }
+    .file-row {
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    .file-row:hover {
+        background-color: rgba(255, 255, 255, 0.05);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">Files</h2>
+            <p class="text-muted mb-0">Agent-generated documents and exports</p>
+        </div>
+    </div>
+
+    <!-- Metrics Dashboard -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <p class="text-muted small mb-1">Total Files</p>
+                            <h3 class="mb-0">{{ pagination.total }}</h3>
+                        </div>
+                        <div class="metric-icon bg-primary bg-opacity-10">
+                            <i class="bi bi-folder fs-4 text-primary"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <p class="text-muted small mb-1">PDF Documents</p>
+                            <h3 class="mb-0">{{ type_counts.get('pdf', 0) }}</h3>
+                        </div>
+                        <div class="metric-icon bg-danger bg-opacity-10">
+                            <i class="bi bi-file-pdf fs-4 text-danger"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <p class="text-muted small mb-1">Spreadsheets</p>
+                            <h3 class="mb-0">{{ type_counts.get('csv', 0) + type_counts.get('xlsx', 0) }}</h3>
+                        </div>
+                        <div class="metric-icon bg-success bg-opacity-10">
+                            <i class="bi bi-file-spreadsheet fs-4 text-success"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <p class="text-muted small mb-1">Other Files</p>
+                            <h3 class="mb-0">{{ type_counts.get('txt', 0) + type_counts.get('json', 0) + type_counts.get('other', 0) }}</h3>
+                        </div>
+                        <div class="metric-icon bg-info bg-opacity-10">
+                            <i class="bi bi-file-earmark fs-4 text-info"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h6 class="mb-3">Filter by Type</h6>
+            <div class="filter-pills">
+                <a href="{{ url_for('files.index') }}" class="filter-pill {% if not current_file_type %}active{% endif %}">
+                    <i class="bi bi-funnel"></i> All Files
+                </a>
+                <a href="{{ url_for('files.index', type='pdf') }}" class="filter-pill {% if current_file_type == 'pdf' %}active{% endif %}">
+                    <i class="bi bi-file-pdf"></i> PDF ({{ type_counts.get('pdf', 0) }})
+                </a>
+                <a href="{{ url_for('files.index', type='csv') }}" class="filter-pill {% if current_file_type == 'csv' %}active{% endif %}">
+                    <i class="bi bi-file-spreadsheet"></i> CSV ({{ type_counts.get('csv', 0) }})
+                </a>
+                <a href="{{ url_for('files.index', type='xlsx') }}" class="filter-pill {% if current_file_type == 'xlsx' %}active{% endif %}">
+                    <i class="bi bi-file-spreadsheet"></i> Excel ({{ type_counts.get('xlsx', 0) }})
+                </a>
+            </div>
+
+            {% if agent_files %}
+            <h6 class="mb-3 mt-4">Filter by Agent</h6>
+            <div class="filter-pills">
+                <a href="{{ url_for('files.index') }}" class="filter-pill {% if not current_agent_id %}active{% endif %}">
+                    <i class="bi bi-funnel"></i> All Agents
+                </a>
+                {% for agent_id, agent_name, file_count in agent_files %}
+                <a href="{{ url_for('files.index', agent=agent_id) }}" class="filter-pill {% if current_agent_id == agent_id %}active{% endif %}">
+                    <i class="bi bi-robot"></i> {{ agent_name }} ({{ file_count }})
+                </a>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Files List -->
+    {% if files %}
+    <div class="card">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>File</th>
+                        <th>Type</th>
+                        <th>Size</th>
+                        <th>Agent</th>
+                        <th>Created</th>
+                        <th width="100">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for file in files %}
+                    <tr class="file-row">
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <i class="{{ file.icon_class }} file-icon"></i>
+                                <div>
+                                    <div class="fw-semibold">{{ file.filename }}</div>
+                                    {% if file.file_purpose %}
+                                    <div class="text-muted small">{{ file.file_purpose }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge bg-secondary">{{ file.file_type.upper() }}</span>
+                        </td>
+                        <td>
+                            <span class="text-muted">{{ file.file_size_display }}</span>
+                        </td>
+                        <td>
+                            {% if file.agent %}
+                            <i class="bi bi-robot"></i> {{ file.agent.name }}
+                            {% else %}
+                            <span class="text-muted fst-italic">System</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="text-muted">{{ file.created_at.strftime('%b %d, %Y %I:%M %p') }}</span>
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{{ url_for('files.view', file_id=file.id) }}"
+                                   class="btn btn-outline-primary"
+                                   title="Download"
+                                   target="_blank">
+                                    <i class="bi bi-download"></i>
+                                </a>
+                                <button onclick="deleteFile({{ file.id }}, '{{ file.filename }}', event)"
+                                        class="btn btn-outline-danger"
+                                        title="Delete">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if pagination.pages > 1 %}
+    <nav aria-label="File pagination" class="mt-4">
+        <ul class="pagination justify-content-center">
+            <!-- Previous -->
+            <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+                <a class="page-link" href="{% if pagination.has_prev %}{{ url_for('files.index', page=pagination.prev_num, type=current_file_type, agent=current_agent_id) }}{% else %}#{% endif %}">
+                    Previous
+                </a>
+            </li>
+
+            <!-- Page numbers -->
+            {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+                {% if page_num %}
+                    <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
+                        <a class="page-link" href="{{ url_for('files.index', page=page_num, type=current_file_type, agent=current_agent_id) }}">
+                            {{ page_num }}
+                        </a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                {% endif %}
+            {% endfor %}
+
+            <!-- Next -->
+            <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+                <a class="page-link" href="{% if pagination.has_next %}{{ url_for('files.index', page=pagination.next_num, type=current_file_type, agent=current_agent_id) }}{% else %}#{% endif %}">
+                    Next
+                </a>
+            </li>
+        </ul>
+    </nav>
+    {% endif %}
+
+    {% else %}
+    <!-- Empty State -->
+    <div class="card">
+        <div class="card-body text-center text-muted py-5">
+            <i class="bi bi-folder2-open fs-1 d-block mb-3" style="font-size: 4rem;"></i>
+            <h5>No files yet</h5>
+            <p class="mb-0">Files generated by your AI agents will appear here</p>
+            <p class="small mt-2">Ask an agent with file generation enabled to create a PDF report, CSV export, or spreadsheet</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function deleteFile(fileId, fileName, event) {
+    event.stopPropagation();
+
+    if (!confirm(`Delete "${fileName}"? This cannot be undone.`)) {
+        return;
+    }
+
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+    fetch(`/files/delete/${fileId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Reload page to refresh file list
+            window.location.reload();
+        } else if (data.error) {
+            alert(`Error: ${data.error}`);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to delete file. Please try again.');
+    });
+}
+</script>
+{% endblock %}

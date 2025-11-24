@@ -144,7 +144,7 @@ def create_app(config_name='default'):
 
     # Import all models for Flask-Migrate
     with app.app_context():
-        from app.models import user, tenant, department, agent, message
+        from app.models import user, tenant, department, agent, message, invitation, generated_file
 
     # Configure Flask-Login
     login_manager.login_view = 'auth.login'
@@ -156,6 +156,7 @@ def create_app(config_name='default'):
     from app.blueprints.tenant import tenant_bp
     from app.blueprints.department import department_bp
     from app.blueprints.chat import chat_bp
+    from app.blueprints.files import files_bp
     from app.blueprints.tasks import tasks_bp
     from app.blueprints.projects import projects_bp
     from app.blueprints.crm import crm_bp
@@ -169,6 +170,7 @@ def create_app(config_name='default'):
     app.register_blueprint(tenant_bp, url_prefix='/tenant')
     app.register_blueprint(department_bp, url_prefix='/department')
     app.register_blueprint(chat_bp, url_prefix='/chat')
+    app.register_blueprint(files_bp, url_prefix='/files')
     app.register_blueprint(tasks_bp, url_prefix='/tasks')
     app.register_blueprint(projects_bp, url_prefix='/projects')
     app.register_blueprint(crm_bp, url_prefix='/crm')

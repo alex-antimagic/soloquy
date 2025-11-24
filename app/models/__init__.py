@@ -7,6 +7,7 @@ from app.models.agent import Agent
 from app.models.agent_version import AgentVersion
 from app.models.channel import Channel
 from app.models.message import Message
+from app.models.generated_file import GeneratedFile
 from app.models.task import Task
 from app.models.project import Project, ProjectMember
 from app.models.status_column import StatusColumn

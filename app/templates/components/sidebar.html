@@ -53,6 +53,16 @@
         </div>
         {% endif %}
 
+        <!-- Files -->
+        {% if current_tenant %}
+        <div class="sidebar-section">
+            <a href="{{ url_for('files.index') }}" class="sidebar-item {% if 'files' in request.endpoint %}active{% endif %}">
+                <i class="bi bi-folder"></i>
+                <span>Files</span>
+            </a>
+        </div>
+        {% endif %}
+
         <!-- Applets -->
         <div class="sidebar-section">
             <div class="sidebar-section-title">

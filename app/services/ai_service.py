@@ -306,6 +306,122 @@ class AIService:
             }
         ]
 
+    def _get_file_generation_tools(self) -> List[Dict]:
+        """
+        Get file generation tool definitions for AI agents
+
+        Returns:
+            List of file generation tool definitions
+        """
+        return [
+            {
+                "name": "generate_pdf_report",
+                "description": "Generate a PDF report with formatted content including tables, headings, and paragraphs",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "title": {
+                            "type": "string",
+                            "description": "Report title"
+                        },
+                        "content_blocks": {
+                            "type": "array",
+                            "description": "List of content blocks (headings, paragraphs, tables, spacers)",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "type": {
+                                        "type": "string",
+                                        "enum": ["heading", "paragraph", "table", "spacer"],
+                                        "description": "Type of content block"
+                                    },
+                                    "content": {
+                                        "description": "Content for the block. For tables, use {headers: [...], data: [[...]]}. For text/headings, use string."
+                                    },
+                                    "level": {
+                                        "type": "number",
+                                        "description": "Heading level (1-3, only for heading type)"
+                                    },
+                                    "height": {
+                                        "type": "number",
+                                        "description": "Height in inches (only for spacer type)"
+                                    }
+                                }
+                            }
+                        },
+                        "filename": {
+                            "type": "string",
+                            "description": "Optional custom filename (auto-generated if not provided)"
+                        }
+                    },
+                    "required": ["title", "content_blocks"]
+                }
+            },
+            {
+                "name": "export_to_csv",
+                "description": "Export tabular data to a CSV file",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "headers": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "Column headers"
+                        },
+                        "data": {
+                            "type": "array",
+                            "description": "Array of rows, where each row is an array of values",
+                            "items": {
+                                "type": "array"
+                            }
+                        },
+                        "filename": {
+                            "type": "string",
+                            "description": "Optional custom filename (auto-generated if not provided)"
+                        }
+                    },
+                    "required": ["headers", "data"]
+                }
+            },
+            {
+                "name": "create_spreadsheet",
+                "description": "Create an Excel spreadsheet (.xlsx) with one or more sheets",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "sheets": {
+                            "type": "array",
+                            "description": "Array of sheet definitions",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "description": "Sheet name"
+                                    },
+                                    "headers": {
+                                        "type": "array",
+                                        "items": {"type": "string"},
+                                        "description": "Column headers"
+                                    },
+                                    "data": {
+                                        "type": "array",
+                                        "description": "Array of rows",
+                                        "items": {"type": "array"}
+                                    }
+                                }
+                            }
+                        },
+                        "filename": {
+                            "type": "string",
+                            "description": "Optional custom filename (auto-generated if not provided)"
+                        }
+                    },
+                    "required": ["sheets"]
+                }
+            }
+        ]
+
     def chat(
         self,
         messages: List[Dict[str, str]],
@@ -360,6 +476,12 @@ class AIService:
                     print(f"[WEBSITE] Got {len(website_tools)} Website tools")
                     tools.extend(website_tools)
 
+                if agent.enable_file_generation:
+                    print(f"[FILE_GEN] Getting File Generation tools for agent {agent.id}")
+                    file_gen_tools = self._get_file_generation_tools()
+                    print(f"[FILE_GEN] Got {len(file_gen_tools)} File Generation tools")
+                    tools.extend(file_gen_tools)
+
                 if tools:
                     api_params['tools'] = tools
                     current_app.logger.info(f"Agent {agent.name} has {len(tools)} tools available")
@@ -398,6 +520,13 @@ class AIService:
                             )
                         elif tool_use.name.startswith('website_'):
                             result = self._execute_website_tool(
+                                tool_name=tool_use.name,
+                                tool_input=tool_use.input,
+                                agent=agent,
+                                user=user
+                            )
+                        elif tool_use.name in ['generate_pdf_report', 'export_to_csv', 'create_spreadsheet']:
+                            result = self._execute_file_generation_tool(
                                 tool_name=tool_use.name,
                                 tool_input=tool_use.input,
                                 agent=agent,
@@ -818,6 +947,161 @@ Return ONLY valid JSON in this format:
 
         except Exception as e:
             current_app.logger.error(f"Error executing website tool {tool_name}: {e}")
+            import traceback
+            traceback.print_exc()
+            return {"error": f"Failed to execute {tool_name}: {str(e)}"}
+
+    def _execute_file_generation_tool(self, tool_name: str, tool_input: Dict, agent, user) -> Any:
+        """
+        Execute file generation tool
+
+        Args:
+            tool_name: Name of the tool (generate_pdf_report, export_to_csv, create_spreadsheet)
+            tool_input: Tool input parameters
+            agent: Agent model
+            user: User model
+
+        Returns:
+            Result dictionary with file URL and metadata or error
+        """
+        from app.services.file_generation_service import FileGenerationService
+        from app.models.generated_file import GeneratedFile
+        from app import db
+
+        try:
+            # Get tenant ID from user
+            if not user or not user.get_current_tenant():
+                return {"error": "No workspace context available"}
+
+            tenant = user.get_current_tenant()
+            file_gen_service = FileGenerationService()
+
+            if tool_name == "generate_pdf_report":
+                # Generate PDF report
+                title = tool_input.get('title')
+                content_blocks = tool_input.get('content_blocks', [])
+                filename = tool_input.get('filename')
+
+                result = file_gen_service.generate_pdf(
+                    title=title,
+                    content_blocks=content_blocks,
+                    tenant_id=tenant.id,
+                    filename=filename
+                )
+
+                if result.get('success'):
+                    # Save to database
+                    generated_file = GeneratedFile(
+                        tenant_id=tenant.id,
+                        agent_id=agent.id if agent else None,
+                        user_id=user.id,
+                        filename=result['filename'],
+                        file_type=result['file_type'],
+                        mime_type=result['mime_type'],
+                        file_size=result['file_size'],
+                        file_purpose='report',
+                        cloudinary_url=result['cloudinary_url'],
+                        cloudinary_public_id=result['public_id']
+                    )
+                    db.session.add(generated_file)
+                    db.session.commit()
+
+                    return {
+                        "success": True,
+                        "message": f"PDF report '{result['filename']}' generated successfully",
+                        "file_url": result['cloudinary_url'],
+                        "file_id": generated_file.id,
+                        "filename": result['filename'],
+                        "file_size": result['file_size']
+                    }
+                else:
+                    return {"error": result.get('error', 'Failed to generate PDF')}
+
+            elif tool_name == "export_to_csv":
+                # Export to CSV
+                headers = tool_input.get('headers', [])
+                data = tool_input.get('data', [])
+                filename = tool_input.get('filename')
+
+                result = file_gen_service.generate_csv(
+                    headers=headers,
+                    data=data,
+                    tenant_id=tenant.id,
+                    filename=filename
+                )
+
+                if result.get('success'):
+                    # Save to database
+                    generated_file = GeneratedFile(
+                        tenant_id=tenant.id,
+                        agent_id=agent.id if agent else None,
+                        user_id=user.id,
+                        filename=result['filename'],
+                        file_type=result['file_type'],
+                        mime_type=result['mime_type'],
+                        file_size=result['file_size'],
+                        file_purpose='export',
+                        cloudinary_url=result['cloudinary_url'],
+                        cloudinary_public_id=result['public_id']
+                    )
+                    db.session.add(generated_file)
+                    db.session.commit()
+
+                    return {
+                        "success": True,
+                        "message": f"CSV file '{result['filename']}' exported successfully",
+                        "file_url": result['cloudinary_url'],
+                        "file_id": generated_file.id,
+                        "filename": result['filename'],
+                        "file_size": result['file_size']
+                    }
+                else:
+                    return {"error": result.get('error', 'Failed to export CSV')}
+
+            elif tool_name == "create_spreadsheet":
+                # Create Excel spreadsheet
+                sheets = tool_input.get('sheets', [])
+                filename = tool_input.get('filename')
+
+                result = file_gen_service.generate_excel(
+                    sheets=sheets,
+                    tenant_id=tenant.id,
+                    filename=filename
+                )
+
+                if result.get('success'):
+                    # Save to database
+                    generated_file = GeneratedFile(
+                        tenant_id=tenant.id,
+                        agent_id=agent.id if agent else None,
+                        user_id=user.id,
+                        filename=result['filename'],
+                        file_type=result['file_type'],
+                        mime_type=result['mime_type'],
+                        file_size=result['file_size'],
+                        file_purpose='export',
+                        cloudinary_url=result['cloudinary_url'],
+                        cloudinary_public_id=result['public_id']
+                    )
+                    db.session.add(generated_file)
+                    db.session.commit()
+
+                    return {
+                        "success": True,
+                        "message": f"Excel file '{result['filename']}' created successfully",
+                        "file_url": result['cloudinary_url'],
+                        "file_id": generated_file.id,
+                        "filename": result['filename'],
+                        "file_size": result['file_size']
+                    }
+                else:
+                    return {"error": result.get('error', 'Failed to create spreadsheet')}
+
+            else:
+                return {"error": f"Unknown file generation tool: {tool_name}"}
+
+        except Exception as e:
+            current_app.logger.error(f"Error executing file generation tool {tool_name}: {e}")
             import traceback
             traceback.print_exc()
             return {"error": f"Failed to execute {tool_name}: {str(e)}"}

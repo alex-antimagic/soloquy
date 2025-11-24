@@ -29,14 +29,7 @@ def _db(app):
     """Create test database"""
     db.create_all()
     yield db
-    db.drop_all()
-    db.session.close()
-
-
-@pytest.fixture(scope='function')
-def db_session(_db):
-    """Provide the database session for tests"""
-    return _db.session
+    db.session.remove()
 
 
 @pytest.fixture(scope='function', autouse=True)
@@ -47,10 +40,18 @@ def cleanup_db(_db):
     # Rollback any open transactions
     _db.session.remove()
 
-    # Delete all data from tables
-    for table in reversed(_db.metadata.sorted_tables):
-        _db.session.execute(table.delete())
-    _db.session.commit()
+    # Use TRUNCATE with CASCADE for proper cleanup
+    from sqlalchemy import text
+    table_names = [table.name for table in reversed(_db.metadata.sorted_tables)]
+    if table_names:
+        _db.session.execute(text(f"TRUNCATE TABLE {', '.join(table_names)} RESTART IDENTITY CASCADE"))
+        _db.session.commit()
+
+
+@pytest.fixture(scope='function')
+def db_session(_db):
+    """Provide the database session for tests"""
+    return _db.session
 
 
 @pytest.fixture

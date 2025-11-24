@@ -123,11 +123,18 @@ class TestAuthorization:
 
     def test_admin_can_access_settings(self, client, test_user, test_tenant):
         """Test that admins can access workspace settings"""
+        # Clear any previous session state
+        client.get('/logout')
+
         # Login and follow redirects to let the app set up the session properly
         client.post('/login', data={
             'email': 'test@example.com',
             'password': 'Test123!@#'
         }, follow_redirects=True)
+
+        # Set the current tenant in session (required for tenant-scoped routes)
+        with client.session_transaction() as sess:
+            sess['current_tenant_id'] = test_tenant.id
 
         # Try to access settings
         response = client.get('/tenant/settings')

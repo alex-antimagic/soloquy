@@ -117,6 +117,8 @@ class TestingConfig(Config):
     SQLALCHEMY_DATABASE_URI = 'postgresql://localhost/soloquy_test'
     WTF_CSRF_ENABLED = False
     RATELIMIT_ENABLED = False  # Disable rate limiting in tests
+    SOCKETIO_ASYNC_MODE = 'threading'  # Use threading mode for tests
+    SOCKETIO_MESSAGE_QUEUE = None  # Disable Redis message queue for tests
 
 
 config = {
