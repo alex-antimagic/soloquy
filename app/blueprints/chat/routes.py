@@ -889,6 +889,23 @@ def send_channel_message(slug):
             db.session.add(agent_message)
             db.session.commit()
 
+            # Link any recently generated files to this message
+            from app.models.generated_file import GeneratedFile
+            from datetime import timedelta
+            recent_cutoff = datetime.utcnow() - timedelta(seconds=30)
+            generated_files = GeneratedFile.query.filter(
+                GeneratedFile.agent_id == agent.id,
+                GeneratedFile.user_id == current_user.id,
+                GeneratedFile.message_id == None,
+                GeneratedFile.created_at >= recent_cutoff
+            ).all()
+
+            for file in generated_files:
+                file.message_id = agent_message.id
+
+            if generated_files:
+                db.session.commit()
+
             # Parse task suggestions from agent message
             task_suggestions = agent_message.parse_task_suggestions()
             clean_content = agent_message.get_content_without_task_suggestions() if task_suggestions else agent_message.content
@@ -908,6 +925,18 @@ def send_channel_message(slug):
             if task_suggestions:
                 message_data['task_suggestions'] = task_suggestions
 
+            # Include generated files if any
+            if generated_files:
+                message_data['generated_files'] = [{
+                    'id': f.id,
+                    'filename': f.filename,
+                    'file_type': f.file_type,
+                    'file_size': f.file_size,
+                    'file_size_display': f.file_size_display,
+                    'cloudinary_url': f.cloudinary_url,
+                    'icon_class': f.icon_class
+                } for f in generated_files]
+
             socketio.emit('new_message', message_data, room=conversation_id)
 
             response_data = {
@@ -920,6 +949,16 @@ def send_channel_message(slug):
             }
             if task_suggestions:
                 response_data['task_suggestions'] = task_suggestions
+            if generated_files:
+                response_data['generated_files'] = [{
+                    'id': f.id,
+                    'filename': f.filename,
+                    'file_type': f.file_type,
+                    'file_size': f.file_size,
+                    'file_size_display': f.file_size_display,
+                    'cloudinary_url': f.cloudinary_url,
+                    'icon_class': f.icon_class
+                } for f in generated_files]
 
             agent_responses.append(response_data)
 

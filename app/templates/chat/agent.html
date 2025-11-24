@@ -597,8 +597,10 @@
                 // Remove typing indicator
                 removeTypingIndicator();
 
-                // NOTE: Don't add agent response here - SSE will handle it
-                // The agent response comes via SSE broadcast to avoid duplicate messages
+                // Add agent response if present (includes generated_files)
+                if (data.agent_response) {
+                    addMessageToUI(data.agent_response, true);
+                }
             } else {
                 removeTypingIndicator();
                 throw new Error('Failed to send message');
