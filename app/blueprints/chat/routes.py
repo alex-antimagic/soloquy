@@ -698,10 +698,15 @@ def get_channel_mentions(slug):
         slug=slug
     ).first_or_404()
 
-    # Get all agents in tenant
+    # Get agents in tenant (only public agents + current user's private agents)
     from app.models.user import User
+    from sqlalchemy import or_, and_
     agents = Agent.query.join(Department).filter(
-        Department.tenant_id == g.current_tenant.id
+        Department.tenant_id == g.current_tenant.id,
+        or_(
+            Agent.is_private == False,  # Public agents
+            and_(Agent.is_private == True, Agent.created_by_id == current_user.id)  # User's private agents
+        )
     ).all()
 
     # Get all users in tenant
