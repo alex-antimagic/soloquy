@@ -32,7 +32,7 @@ class Agent(db.Model):
     enable_outlook = db.Column(db.Boolean, default=False, nullable=False)  # Allow access to Outlook (MCP)
     enable_google_drive = db.Column(db.Boolean, default=False, nullable=False)  # Allow access to Google Drive (MCP)
     enable_website_builder = db.Column(db.Boolean, default=False, nullable=False)  # Allow AI to create/edit website content
-    enable_file_generation = db.Column(db.Boolean, default=False, nullable=False)  # Allow AI to generate files (PDF, CSV, Excel)
+    enable_file_generation = db.Column(db.Boolean, default=True, nullable=False)  # Allow AI to generate files (PDF, CSV, Excel)
 
     # User access control (who can chat with this agent)
     access_control = db.Column(db.String(20), default='all', nullable=False)  # 'all', 'role', 'department', 'users'
