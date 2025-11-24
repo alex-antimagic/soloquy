@@ -467,7 +467,6 @@ def send_message():
 
                 # Link any recently generated files to this message
                 from app.models.generated_file import GeneratedFile
-                from datetime import timedelta
                 recent_cutoff = datetime.utcnow() - timedelta(seconds=30)
                 generated_files = GeneratedFile.query.filter(
                     GeneratedFile.agent_id == agent.id,
@@ -934,7 +933,6 @@ def send_channel_message(slug):
 
             # Link any recently generated files to this message
             from app.models.generated_file import GeneratedFile
-            from datetime import timedelta
             recent_cutoff = datetime.utcnow() - timedelta(seconds=30)
             generated_files = GeneratedFile.query.filter(
                 GeneratedFile.agent_id == agent.id,
