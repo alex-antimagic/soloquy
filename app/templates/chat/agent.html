@@ -619,6 +619,7 @@
         addTypingIndicator(agentName);
 
         try {
+            console.log('[DEBUG] Sending message...');
             const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
             const response = await fetch('/chat/send', {
                 method: 'POST',
@@ -633,35 +634,46 @@
                 })
             });
 
+            console.log('[DEBUG] Response status:', response.status, response.ok);
+
             if (response.ok) {
+                console.log('[DEBUG] Response is OK, parsing JSON...');
                 const data = await response.json();
-                console.log('[DEBUG] Received response:', data);
+                console.log('[DEBUG] Received response data:', JSON.stringify(data, null, 2));
 
                 // Simulate typing delay for realism
                 await new Promise(resolve => setTimeout(resolve, 800));
 
                 // Remove typing indicator
+                console.log('[DEBUG] Removing typing indicator...');
                 removeTypingIndicator();
 
                 // Add agent response if present (includes generated_files)
                 if (data.agent_response) {
-                    console.log('[DEBUG] Agent response:', data.agent_response);
+                    console.log('[DEBUG] Agent response exists:', JSON.stringify(data.agent_response, null, 2));
                     try {
                         addMessageToUI(data.agent_response, true);
                         console.log('[DEBUG] Successfully added agent message to UI');
                     } catch (error) {
                         console.error('[ERROR] Failed to add agent message to UI:', error);
-                        alert('Error displaying agent response. Check console for details.');
+                        console.error('[ERROR] Stack trace:', error.stack);
+                        alert('Error displaying agent response: ' + error.message);
                     }
+                } else {
+                    console.warn('[WARN] No agent_response in data!');
                 }
             } else {
+                console.error('[ERROR] Response not OK:', response.status, response.statusText);
+                const errorText = await response.text();
+                console.error('[ERROR] Response body:', errorText);
                 removeTypingIndicator();
-                throw new Error('Failed to send message');
+                throw new Error('Failed to send message: ' + response.status);
             }
         } catch (error) {
             removeTypingIndicator();
-            console.error('Error sending message:', error);
-            alert('Failed to send message. Please try again.');
+            console.error('[ERROR] Error sending message:', error);
+            console.error('[ERROR] Stack trace:', error.stack);
+            alert('Failed to send message: ' + error.message);
         }
 
         // Keep input focused
