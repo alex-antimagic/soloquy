@@ -445,12 +445,15 @@ def send_message():
                 )
 
                 # Get AI response (with MCP context if enabled)
+                # Use higher max_tokens for agents with file generation to avoid truncation
+                max_tokens = 2048 if agent.enable_file_generation else 1024
                 ai_service = get_ai_service()
                 agent_response_text = ai_service.chat(
                     messages=api_messages,
                     system_prompt=system_prompt,
                     agent=agent,
-                    user=current_user
+                    user=current_user,
+                    max_tokens=max_tokens
                 )
 
                 # Save agent's response
@@ -904,12 +907,15 @@ def send_channel_message(slug):
                 system_prompt += f"\nChannel description: {channel.description}"
 
             # Get AI response (with MCP context if enabled)
+            # Use higher max_tokens for agents with file generation to avoid truncation
+            max_tokens = 2048 if agent.enable_file_generation else 1024
             ai_service = get_ai_service()
             agent_response_text = ai_service.chat(
                 messages=api_messages,
                 system_prompt=system_prompt,
                 agent=agent,
-                user=current_user
+                user=current_user,
+                max_tokens=max_tokens
             )
 
             # Save agent's response
