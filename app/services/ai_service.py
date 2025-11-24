@@ -972,12 +972,12 @@ Return ONLY valid JSON in this format:
         print(f"[FILE_GEN] Input keys: {list(tool_input.keys())}")
 
         try:
-            # Get tenant ID from user
-            if not user or not user.get_current_tenant():
+            # Get tenant from agent's department
+            if not agent or not agent.department:
                 print(f"[FILE_GEN] ERROR: No workspace context available")
                 return {"error": "No workspace context available"}
 
-            tenant = user.get_current_tenant()
+            tenant = agent.department.tenant
             print(f"[FILE_GEN] Tenant: {tenant.name} (ID: {tenant.id})")
             file_gen_service = FileGenerationService()
 
