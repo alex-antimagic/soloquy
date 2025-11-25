@@ -216,7 +216,8 @@
     conversationId = `agent_${recipientId}_user_${currentUserId}`;
     conversationType = 'agent';
     {% else %}
-    const userIds = [currentUserId, recipientId].sort();
+    // Use numeric sort to match Python's sorted() behavior
+    const userIds = [currentUserId, recipientId].sort((a, b) => a - b);
     conversationId = `user_${userIds[0]}_${userIds[1]}`;
     conversationType = 'user';
     {% endif %}
