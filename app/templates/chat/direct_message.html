@@ -545,31 +545,30 @@
         let filesHtml = '';
         {% endif %}
 
-        // Add Convert to Task button below agent messages
-        const convertTaskBtn = !isFromMe && message.content ? `
-            <div class="mt-2">
-                <button class="btn btn-link btn-sm text-muted p-0 convert-to-task-btn"
-                        onclick="convertMessageToTask(${message.id}, this)"
-                        style="text-decoration: none; font-size: 0.875rem;">
-                    <i class="bi bi-plus-circle me-1"></i> Create task
-                </button>
-            </div>
-        ` : '';
-
         messageDiv.innerHTML = `
             <div class="message-avatar">${avatar}${statusHtml}</div>
-            <div class="message-bubble">
-                <div class="message-header">
-                    <span class="message-author">${escapeHtml(message.sender)}</span>
-                    <span class="message-time">${time}</span>
+            <div>
+                <div class="message-bubble">
+                    <div class="message-header">
+                        <span class="message-author">${escapeHtml(message.sender)}</span>
+                        <span class="message-time">${time}</span>
+                    </div>
+                    <div class="message-content">
+                        ${message.content && message.content !== '(image)' ? `<div class="message-body">${formatMessageContent(message.content)}</div>` : ''}
+                        ${imageHtml}
+                        ${taskCardsHtml}
+                        ${filesHtml}
+                    </div>
                 </div>
-                <div class="message-content">
-                    ${message.content && message.content !== '(image)' ? `<div class="message-body">${formatMessageContent(message.content)}</div>` : ''}
-                    ${imageHtml}
-                    ${taskCardsHtml}
-                    ${filesHtml}
-                    ${convertTaskBtn}
-                </div>
+                ${!isFromMe && message.content ? `
+                    <div class="mt-2">
+                        <span class="badge rounded-pill bg-light text-dark border convert-to-task-pill"
+                              onclick="convertMessageToTask(${message.id}, this)"
+                              style="cursor: pointer; padding: 0.4rem 0.75rem; font-weight: 500; font-size: 0.875rem;">
+                            <i class="bi bi-plus-circle me-1"></i> Create task
+                        </span>
+                    </div>
+                ` : ''}
             </div>
         `;
 
