@@ -1382,20 +1382,58 @@ def convert_message_to_task(message_id):
         # Get request data
         data = request.get_json() or {}
 
-        # Generate task title from first line or first 100 chars of message
-        content = message.content.strip()
-        title = content.split('\n')[0][:100] if content else 'Task from agent message'
-        if len(title) < 10:
-            # If first line is too short, use first sentence
-            import re
-            sentences = re.split(r'[.!?]+', content)
-            title = sentences[0][:100] if sentences else title
-
-        # Use full message content as description
-        description = content if len(content) > len(title) else None
-
         # Get agent
         agent = message.agent
+
+        # Use AI to generate proper task title and description
+        content = message.content.strip()
+        try:
+            from app.services.ai_service import get_ai_service
+            ai_service = get_ai_service()
+
+            # Use Haiku for fast, cheap extraction
+            extraction_result = ai_service.chat(
+                messages=[{
+                    'role': 'user',
+                    'content': f"""Extract a task from this agent message. Generate:
+1. A short, descriptive task title (max 80 chars) that captures the main action/deliverable
+2. A comprehensive description with all relevant context, instructions, and details
+
+Agent message:
+{content}
+
+Respond in JSON format:
+{{"title": "short descriptive title", "description": "comprehensive description with all context"}}"""
+                }],
+                model='claude-haiku-3-5-20241022',
+                temperature=0.2,
+                max_tokens=500
+            )
+
+            # Parse JSON response
+            import json
+            import re
+
+            # Extract JSON from response (handle markdown code blocks)
+            json_match = re.search(r'\{[\s\S]*\}', extraction_result)
+            if json_match:
+                extracted = json.loads(json_match.group())
+                title = extracted.get('title', content.split('\n')[0][:100])[:100]
+                description = extracted.get('description', content)
+            else:
+                # Fallback to simple extraction
+                title = content.split('\n')[0][:100]
+                description = content
+
+        except Exception as ai_error:
+            print(f"[CONVERT_TO_TASK] AI extraction error: {ai_error}")
+            # Fallback to simple extraction
+            title = content.split('\n')[0][:100] if content else 'Task from agent message'
+            if len(title) < 10:
+                import re
+                sentences = re.split(r'[.!?]+', content)
+                title = sentences[0][:100] if sentences else title
+            description = content if len(content) > len(title) else None
 
         # Create task
         task = Task(
