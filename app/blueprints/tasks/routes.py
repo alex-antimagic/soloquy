@@ -100,7 +100,48 @@ def create():
     db.session.add(task)
     db.session.commit()
 
-    return jsonify(task.to_dict()), 201
+    # Check if task is assigned to an agent and detect if it's long-running
+    long_running_result = None
+    if task.assigned_to_agent_id:
+        try:
+            from app.services.long_running_task_service import get_long_running_task_service
+
+            agent = task.assigned_to_agent
+            if agent:
+                task_service = get_long_running_task_service()
+
+                # Build message text from task details
+                message_text = f"{task.title}. {task.description or ''}"
+
+                # Detect and handle long-running task
+                long_running_result = task_service.detect_and_handle(
+                    task=task,
+                    agent=agent,
+                    user=current_user,
+                    message_text=message_text
+                )
+
+                print(f"[TASK CREATE] Long-running detection result: {long_running_result}")
+
+        except Exception as e:
+            print(f"[TASK CREATE] Error detecting long-running task: {e}")
+            import traceback
+            traceback.print_exc()
+
+    # Build response
+    response_data = task.to_dict()
+
+    # Add long-running info if applicable
+    if long_running_result and long_running_result.get('is_long_running'):
+        response_data['long_running'] = {
+            'is_long_running': True,
+            'action_taken': long_running_result.get('action_taken'),
+            'message': long_running_result.get('message'),
+            'requires_approval': long_running_result.get('plan', {}).get('requires_approval', False),
+            'estimated_duration_minutes': long_running_result.get('plan', {}).get('estimated_duration_minutes')
+        }
+
+    return jsonify(response_data), 201
 
 
 @tasks_bp.route('/<int:task_id>/complete', methods=['POST'])
@@ -294,3 +335,218 @@ def manage_tags(task_id):
         return jsonify({'error': 'Invalid action'}), 400
 
     return jsonify(task.to_dict())
+
+
+# Long-running task endpoints
+
+@tasks_bp.route('/<int:task_id>/approve', methods=['POST'])
+@login_required
+def approve_task(task_id):
+    """Approve a long-running task"""
+    task = Task.query.get_or_404(task_id)
+
+    # Verify user has access to this task's tenant
+    if task.tenant_id != g.current_tenant.id:
+        return jsonify({'error': 'Access denied'}), 403
+
+    # Verify task requires approval
+    if not task.requires_approval:
+        return jsonify({'error': 'Task does not require approval'}), 400
+
+    if task.approval_status == 'approved':
+        return jsonify({'error': 'Task already approved'}), 400
+
+    try:
+        from app.services.long_running_task_service import get_long_running_task_service
+
+        task_service = get_long_running_task_service()
+        result = task_service.approve_task(task_id, current_user.id)
+
+        if result.get('success'):
+            return jsonify({
+                'success': True,
+                'message': result.get('message'),
+                'job_id': result.get('job_id'),
+                'task': task.to_dict()
+            })
+        else:
+            return jsonify({'error': result.get('error')}), 400
+
+    except Exception as e:
+        print(f"[TASK APPROVE] Error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@tasks_bp.route('/<int:task_id>/reject', methods=['POST'])
+@login_required
+def reject_task(task_id):
+    """Reject a long-running task"""
+    task = Task.query.get_or_404(task_id)
+
+    # Verify user has access to this task's tenant
+    if task.tenant_id != g.current_tenant.id:
+        return jsonify({'error': 'Access denied'}), 403
+
+    # Verify task requires approval
+    if not task.requires_approval:
+        return jsonify({'error': 'Task does not require approval'}), 400
+
+    data = request.get_json() or {}
+    reason = data.get('reason')
+
+    try:
+        from app.services.long_running_task_service import get_long_running_task_service
+
+        task_service = get_long_running_task_service()
+        result = task_service.reject_task(task_id, current_user.id, reason)
+
+        if result.get('success'):
+            return jsonify({
+                'success': True,
+                'message': result.get('message'),
+                'task': task.to_dict()
+            })
+        else:
+            return jsonify({'error': result.get('error')}), 400
+
+    except Exception as e:
+        print(f"[TASK REJECT] Error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@tasks_bp.route('/<int:task_id>/progress', methods=['GET'])
+@login_required
+def get_task_progress(task_id):
+    """Get progress of a long-running task"""
+    task = Task.query.get_or_404(task_id)
+
+    # Verify user has access to this task's tenant
+    if task.tenant_id != g.current_tenant.id:
+        return jsonify({'error': 'Access denied'}), 403
+
+    # Build progress response
+    progress_data = {
+        'task_id': task.id,
+        'is_long_running': task.is_long_running or False,
+        'status': task.status,
+        'progress_percentage': task.progress_percentage or 0,
+        'current_step': task.current_step,
+        'estimated_completion': task.estimated_completion.isoformat() if task.estimated_completion else None,
+        'last_progress_update': task.last_progress_update.isoformat() if task.last_progress_update else None,
+        'requires_approval': task.requires_approval or False,
+        'approval_status': task.approval_status,
+        'execution_result': task.execution_result,
+        'execution_error': task.execution_error,
+        'retry_count': task.retry_count or 0
+    }
+
+    # Include execution plan if available
+    if task.execution_plan:
+        try:
+            import json
+            progress_data['execution_plan'] = json.loads(task.execution_plan)
+        except:
+            pass
+
+    # Include RQ job status if available
+    if task.rq_job_id:
+        try:
+            from redis import Redis
+            from rq.job import Job
+            from flask import current_app
+
+            redis_url = current_app.config.get('REDIS_URL', 'redis://localhost:6379/0')
+            redis_conn = Redis.from_url(redis_url)
+            job = Job.fetch(task.rq_job_id, connection=redis_conn)
+
+            progress_data['job_status'] = {
+                'id': job.id,
+                'status': job.get_status(),
+                'created_at': job.created_at.isoformat() if job.created_at else None,
+                'started_at': job.started_at.isoformat() if job.started_at else None,
+                'ended_at': job.ended_at.isoformat() if job.ended_at else None
+            }
+        except Exception as e:
+            print(f"[TASK PROGRESS] Error fetching job status: {e}")
+
+    return jsonify(progress_data)
+
+
+@tasks_bp.route('/<int:task_id>/comments', methods=['GET', 'POST'])
+@login_required
+def task_comments(task_id):
+    """Get or create task comments"""
+    task = Task.query.get_or_404(task_id)
+
+    # Verify user has access to this task's tenant
+    if task.tenant_id != g.current_tenant.id:
+        return jsonify({'error': 'Access denied'}), 403
+
+    if request.method == 'GET':
+        # Return all comments for this task
+        from app.models.task_comment import TaskComment
+
+        comments = TaskComment.query.filter_by(
+            task_id=task.id
+        ).order_by(TaskComment.created_at.asc()).all()
+
+        return jsonify({
+            'task_id': task.id,
+            'comments': [comment.to_dict() for comment in comments],
+            'count': len(comments)
+        })
+
+    elif request.method == 'POST':
+        # Create a new comment
+        from app.models.task_comment import TaskComment
+
+        data = request.get_json()
+        comment_text = data.get('comment_text') or data.get('text')
+
+        if not comment_text:
+            return jsonify({'error': 'Comment text is required'}), 400
+
+        comment_type = data.get('comment_type', 'note')
+
+        comment = TaskComment.create_comment(
+            task_id=task.id,
+            comment_text=comment_text,
+            user_id=current_user.id,
+            comment_type=comment_type,
+            is_system=False,
+            tenant_id=task.tenant_id
+        )
+
+        return jsonify({
+            'success': True,
+            'comment': comment.to_dict()
+        }), 201
+
+
+@tasks_bp.route('/<int:task_id>/execution-plan', methods=['GET'])
+@login_required
+def get_execution_plan(task_id):
+    """Get the execution plan for a long-running task"""
+    task = Task.query.get_or_404(task_id)
+
+    # Verify user has access to this task's tenant
+    if task.tenant_id != g.current_tenant.id:
+        return jsonify({'error': 'Access denied'}), 403
+
+    if not task.execution_plan:
+        return jsonify({'error': 'No execution plan found'}), 404
+
+    try:
+        import json
+        plan = json.loads(task.execution_plan)
+
+        return jsonify({
+            'task_id': task.id,
+            'plan': plan,
+            'execution_model': task.execution_model,
+            'estimated_completion': task.estimated_completion.isoformat() if task.estimated_completion else None
+        })
+
+    except Exception as e:
+        print(f"[EXECUTION PLAN] Error: {e}")
+        return jsonify({'error': 'Failed to load execution plan'}), 500

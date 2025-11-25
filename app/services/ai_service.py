@@ -1390,6 +1390,245 @@ Priority guidelines:
             print(f"Error analyzing screenshot with Claude API: {e}")
             raise
 
+    def detect_long_running_task(self, task_description: str, task_context: Optional[Dict] = None) -> Dict[str, Any]:
+        """
+        Quickly detect if a task will take more than 20 seconds to complete.
+        Uses Haiku for fast, cost-effective detection.
+
+        Args:
+            task_description: The task description to analyze
+            task_context: Optional context (assigned_to, due_date, etc.)
+
+        Returns:
+            Dictionary with:
+                - is_long_running: bool
+                - estimated_duration_seconds: int
+                - reasoning: str
+                - complexity_score: int (1-10)
+        """
+        context_str = ""
+        if task_context:
+            context_parts = []
+            if task_context.get('assigned_to'):
+                context_parts.append(f"Assigned to: {task_context['assigned_to']}")
+            if task_context.get('due_date'):
+                context_parts.append(f"Due date: {task_context['due_date']}")
+            if task_context.get('project'):
+                context_parts.append(f"Project: {task_context['project']}")
+            context_str = "\n".join(context_parts)
+
+        system_prompt = """You are a task complexity analyzer. Your job is to quickly determine if a task will take more than 20 seconds for an AI agent to complete.
+
+Consider these factors:
+- Multi-step processes (research, analysis, code generation, testing)
+- External API calls or data retrieval
+- Complex calculations or transformations
+- File generation (reports, documents, spreadsheets)
+- Multiple related tasks that must be done together
+
+Respond ONLY with valid JSON in this format:
+{
+  "is_long_running": true/false,
+  "estimated_duration_seconds": <number>,
+  "reasoning": "Brief explanation of your assessment",
+  "complexity_score": <1-10>
+}
+
+Examples:
+- "Send an email": ~5 seconds (simple API call)
+- "Generate quarterly sales report": ~45 seconds (data aggregation + document generation)
+- "Research competitors and create comparison matrix": ~120 seconds (web research + analysis + spreadsheet)
+- "Update task status": ~3 seconds (simple database update)"""
+
+        prompt = f"""Analyze this task and determine if it will take more than 20 seconds:
+
+Task: {task_description}
+
+{context_str}
+
+Provide your assessment in the requested JSON format."""
+
+        try:
+            response = self.client.messages.create(
+                model=self.DEFAULT_MODEL,  # Use Haiku for fast detection
+                max_tokens=500,
+                temperature=0.2,  # Low temperature for consistent analysis
+                system=system_prompt,
+                messages=[{"role": "user", "content": prompt}]
+            )
+
+            # Extract and parse JSON response
+            response_text = response.content[0].text.strip()
+
+            # Handle markdown code blocks
+            if "```json" in response_text:
+                json_start = response_text.find("```json") + 7
+                json_end = response_text.find("```", json_start)
+                response_text = response_text[json_start:json_end].strip()
+            elif "```" in response_text:
+                json_start = response_text.find("```") + 3
+                json_end = response_text.find("```", json_start)
+                response_text = response_text[json_start:json_end].strip()
+
+            result = json.loads(response_text)
+
+            # Validate required fields
+            required_fields = ['is_long_running', 'estimated_duration_seconds', 'reasoning', 'complexity_score']
+            if not all(field in result for field in required_fields):
+                raise ValueError("AI response missing required fields")
+
+            return result
+
+        except Exception as e:
+            print(f"Error detecting long-running task: {e}")
+            # Conservative fallback - assume it might be long-running
+            return {
+                'is_long_running': False,
+                'estimated_duration_seconds': 15,
+                'reasoning': 'Error during detection, defaulting to short task',
+                'complexity_score': 5
+            }
+
+    def generate_execution_plan(
+        self,
+        task_description: str,
+        task_id: int,
+        agent_name: str,
+        tenant_context: Optional[Dict] = None
+    ) -> Dict[str, Any]:
+        """
+        Generate a detailed execution plan for a long-running task.
+        Uses Sonnet for high-quality planning.
+
+        Args:
+            task_description: The task to plan
+            task_id: ID of the task being planned
+            agent_name: Name of the agent that will execute
+            tenant_context: Optional tenant/workspace context
+
+        Returns:
+            Dictionary with:
+                - steps: List[Dict] with step details
+                - estimated_duration_minutes: int
+                - requires_approval: bool
+                - approval_reasoning: str
+                - risks: List[str]
+                - success_criteria: List[str]
+        """
+        context_str = "No additional context provided."
+        if tenant_context:
+            context_parts = []
+            if tenant_context.get('tenant_name'):
+                context_parts.append(f"Workspace: {tenant_context['tenant_name']}")
+            if tenant_context.get('industry'):
+                context_parts.append(f"Industry: {tenant_context['industry']}")
+            if tenant_context.get('user_name'):
+                context_parts.append(f"Requested by: {tenant_context['user_name']}")
+            context_str = "\n".join(context_parts)
+
+        system_prompt = f"""You are {agent_name}, an AI agent creating a detailed execution plan for a long-running task.
+
+{context_str}
+
+Your job is to:
+1. Break down the task into clear, sequential steps
+2. Estimate how long the entire task will take
+3. Determine if user approval is needed before execution
+4. Identify potential risks or issues
+5. Define clear success criteria
+
+Require approval for tasks that:
+- Modify critical business data (financial records, customer data)
+- Send external communications (emails, API calls to 3rd parties)
+- Make irreversible changes (deletions, production deployments)
+- Involve sensitive information or compliance concerns
+- Have high business impact or cost implications
+
+Do NOT require approval for:
+- Read-only analysis and reporting
+- Internal document generation
+- Data aggregation and visualization
+- Research and information gathering
+- Development/testing tasks in non-production
+
+Respond ONLY with valid JSON in this format:
+{{
+  "steps": [
+    {{
+      "step_number": 1,
+      "title": "Brief step title",
+      "description": "What will be done in this step",
+      "estimated_duration_seconds": <number>,
+      "dependencies": []
+    }}
+  ],
+  "estimated_duration_minutes": <total minutes>,
+  "requires_approval": true/false,
+  "approval_reasoning": "Why approval is/isn't needed",
+  "risks": ["risk 1", "risk 2"],
+  "success_criteria": ["criterion 1", "criterion 2"]
+}}"""
+
+        prompt = f"""Create a detailed execution plan for this task:
+
+Task ID: {task_id}
+Task Description: {task_description}
+
+Provide your plan in the requested JSON format."""
+
+        try:
+            response = self.client.messages.create(
+                model="claude-sonnet-4-5-20250929",  # Use Sonnet for planning
+                max_tokens=2000,
+                temperature=0.3,
+                system=system_prompt,
+                messages=[{"role": "user", "content": prompt}]
+            )
+
+            # Extract and parse JSON response
+            response_text = response.content[0].text.strip()
+
+            # Handle markdown code blocks
+            if "```json" in response_text:
+                json_start = response_text.find("```json") + 7
+                json_end = response_text.find("```", json_start)
+                response_text = response_text[json_start:json_end].strip()
+            elif "```" in response_text:
+                json_start = response_text.find("```") + 3
+                json_end = response_text.find("```", json_start)
+                response_text = response_text[json_start:json_end].strip()
+
+            result = json.loads(response_text)
+
+            # Validate required fields
+            required_fields = ['steps', 'estimated_duration_minutes', 'requires_approval', 'approval_reasoning', 'risks', 'success_criteria']
+            if not all(field in result for field in required_fields):
+                raise ValueError("AI response missing required fields")
+
+            return result
+
+        except Exception as e:
+            print(f"Error generating execution plan: {e}")
+            import traceback
+            traceback.print_exc()
+            # Return a basic fallback plan
+            return {
+                'steps': [
+                    {
+                        'step_number': 1,
+                        'title': 'Execute task',
+                        'description': task_description,
+                        'estimated_duration_seconds': 60,
+                        'dependencies': []
+                    }
+                ],
+                'estimated_duration_minutes': 1,
+                'requires_approval': True,  # Conservative default
+                'approval_reasoning': 'Error during planning, requiring approval for safety',
+                'risks': ['Unable to generate detailed plan'],
+                'success_criteria': ['Task completed without errors']
+            }
+
     def stream_chat(
         self,
         messages: List[Dict[str, str]],

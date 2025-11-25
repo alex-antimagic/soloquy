@@ -30,6 +30,30 @@ class Task(db.Model):
     created_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     department_id = db.Column(db.Integer, db.ForeignKey('departments.id'))  # Optional team context
 
+    # Long-running task execution
+    is_long_running = db.Column(db.Boolean, default=False)
+    execution_plan = db.Column(db.Text)  # JSON: {steps:[], estimated_duration:int, requires_approval:bool}
+    execution_model = db.Column(db.String(50))  # 'claude-sonnet-4-5-...' when switched
+    rq_job_id = db.Column(db.String(100), index=True)  # RQ background job ID
+    queue_name = db.Column(db.String(50))  # 'high', 'default', 'low'
+
+    # Progress tracking
+    progress_percentage = db.Column(db.Integer, default=0)
+    current_step = db.Column(db.String(500))
+    estimated_completion = db.Column(db.DateTime)
+    last_progress_update = db.Column(db.DateTime)
+
+    # Approval workflow
+    requires_approval = db.Column(db.Boolean, default=False)
+    approval_status = db.Column(db.String(20))  # 'pending', 'approved', 'rejected'
+    approved_at = db.Column(db.DateTime)
+    approved_by_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+
+    # Results and errors
+    execution_result = db.Column(db.Text)  # JSON: results, files generated, etc.
+    execution_error = db.Column(db.Text)
+    retry_count = db.Column(db.Integer, default=0)
+
     # Timestamps
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

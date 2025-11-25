@@ -452,6 +452,8 @@ def send_message():
                 agent_response_text = ai_service.chat(
                     messages=api_messages,
                     system_prompt=system_prompt,
+                    model=agent.model,              # Use agent's configured model
+                    temperature=agent.temperature,   # Use agent's temperature
                     agent=agent,
                     user=current_user,
                     max_tokens=max_tokens
@@ -964,6 +966,8 @@ def send_channel_message(slug):
             agent_response_text = ai_service.chat(
                 messages=api_messages,
                 system_prompt=system_prompt,
+                model=agent.model,              # Use agent's configured model
+                temperature=agent.temperature,   # Use agent's temperature
                 agent=agent,
                 user=current_user,
                 max_tokens=max_tokens
