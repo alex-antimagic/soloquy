@@ -531,17 +531,12 @@ Return ONLY the task numbers (1, 2, 3, etc.) that the agent mentioned or address
                         print(f"Error detecting task mentions: {e}")
                         # Continue without task detection
 
-                # Parse task suggestions from agent message
-                task_suggestions = agent_message.parse_task_suggestions()
-                clean_content = agent_message.get_content_without_task_suggestions() if task_suggestions else agent_message.content
-
                 agent_response = {
                     'id': agent_message.id,
-                    'content': clean_content,  # Show clean content without task suggestion blocks
+                    'content': agent_message.content,
                     'sender': agent.name,
                     'created_at': agent_message.created_at.isoformat(),
                     'mentioned_tasks': mentioned_tasks,
-                    'task_suggestions': task_suggestions,  # Add task suggestions to response
                     'generated_files': [{
                         'id': f.id,
                         'filename': f.filename,
@@ -999,24 +994,16 @@ def send_channel_message(slug):
             if generated_files:
                 db.session.commit()
 
-            # Parse task suggestions from agent message
-            task_suggestions = agent_message.parse_task_suggestions()
-            clean_content = agent_message.get_content_without_task_suggestions() if task_suggestions else agent_message.content
-
             # Broadcast agent response via Socket.IO
             message_data = {
                 'id': agent_message.id,
-                'content': clean_content,  # Show clean content without task suggestion blocks
+                'content': agent_message.content,
                 'agent_id': agent.id,
                 'agent_name': agent.name,
                 'message_type': 'text',
                 'created_at': agent_message.created_at.isoformat(),
                 'was_mentioned': agent in mentioned_agents
             }
-
-            # Include task suggestions if any
-            if task_suggestions:
-                message_data['task_suggestions'] = task_suggestions
 
             # Include generated files if any
             if generated_files:
@@ -1036,12 +1023,10 @@ def send_channel_message(slug):
                 'id': agent_message.id,
                 'agent_id': agent.id,
                 'agent_name': agent.name,
-                'content': clean_content,  # Use clean content
+                'content': agent_message.content,
                 'created_at': agent_message.created_at.isoformat(),
                 'was_mentioned': agent in mentioned_agents
             }
-            if task_suggestions:
-                response_data['task_suggestions'] = task_suggestions
             if generated_files:
                 response_data['generated_files'] = [{
                     'id': f.id,
@@ -1374,4 +1359,86 @@ def mark_messages_read():
 
     except Exception as e:
         print(f"Error marking messages as read: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@chat_bp.route('/message/<int:message_id>/convert-to-task', methods=['POST'])
+@login_required
+@require_tenant_access
+def convert_message_to_task(message_id):
+    """Convert an agent message to a task"""
+    try:
+        # Get the message
+        message = Message.query.get_or_404(message_id)
+
+        # Verify user has access to this message
+        if message.department.tenant_id != g.current_tenant.id:
+            return jsonify({'error': 'Access denied'}), 403
+
+        # Only allow converting agent messages
+        if not message.agent_id:
+            return jsonify({'error': 'Only agent messages can be converted to tasks'}), 400
+
+        # Get request data
+        data = request.get_json() or {}
+
+        # Generate task title from first line or first 100 chars of message
+        content = message.content.strip()
+        title = content.split('\n')[0][:100] if content else 'Task from agent message'
+        if len(title) < 10:
+            # If first line is too short, use first sentence
+            import re
+            sentences = re.split(r'[.!?]+', content)
+            title = sentences[0][:100] if sentences else title
+
+        # Use full message content as description
+        description = content if len(content) > len(title) else None
+
+        # Get agent
+        agent = message.agent
+
+        # Create task
+        task = Task(
+            title=title,
+            description=description,
+            priority=data.get('priority', 'medium'),
+            status='pending',
+            tenant_id=g.current_tenant.id,
+            created_by_id=current_user.id,
+            department_id=message.department_id,
+            assigned_to_agent_id=agent.id if data.get('assign_to_agent', True) else None
+        )
+
+        db.session.add(task)
+        db.session.commit()
+
+        # Run long-running task detection if assigned to agent
+        long_running_result = None
+        if task.assigned_to_agent_id:
+            try:
+                from app.services.long_running_task_service import get_long_running_task_service
+                task_service = get_long_running_task_service()
+                message_text = f"{task.title}. {task.description or ''}"
+                long_running_result = task_service.detect_and_handle(
+                    task=task,
+                    agent=agent,
+                    user=current_user,
+                    message_text=message_text
+                )
+            except Exception as e:
+                print(f"[CONVERT_TO_TASK] Long-running detection error: {e}")
+
+        return jsonify({
+            'success': True,
+            'task_id': task.id,
+            'task_title': task.title,
+            'is_long_running': long_running_result.get('is_long_running') if long_running_result else False,
+            'requires_approval': long_running_result.get('plan', {}).get('requires_approval') if long_running_result else False
+        }), 201
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error converting message to task: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500

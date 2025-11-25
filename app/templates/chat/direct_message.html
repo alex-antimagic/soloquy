@@ -478,7 +478,6 @@
 
         // Build task cards if agent mentioned any tasks
         let taskCardsHtml = '';
-        let taskSuggestionsHtml = '';
         {% if is_agent %}
         if (!isFromMe && message.mentioned_tasks && message.mentioned_tasks.length > 0) {
             taskCardsHtml = '<div class="mt-2">';
@@ -517,51 +516,6 @@
             taskCardsHtml += '</div>';
         }
 
-        // Build task suggestion cards
-        if (!isFromMe && message.task_suggestions && message.task_suggestions.length > 0) {
-            taskSuggestionsHtml = '<div class="mt-2">';
-            message.task_suggestions.forEach((task, index) => {
-                const priorityClass = task.priority === 'urgent' ? 'danger' : task.priority === 'high' ? 'warning' : task.priority === 'medium' ? 'primary' : 'secondary';
-                const priorityIcon = task.priority === 'urgent' ? 'bi-exclamation-triangle-fill' : task.priority === 'high' ? 'bi-arrow-up-circle' : 'bi-dash-circle';
-                const dueDateHtml = task.due_date ? `<span class="text-muted small ms-2"><i class="bi bi-calendar"></i> ${new Date(task.due_date).toLocaleDateString()}</span>` : '';
-
-                taskSuggestionsHtml += `
-                    <div class="card border-start border-${priorityClass} border-3 mb-2" style="background-color: rgba(var(--bs-primary-rgb), 0.05);">
-                        <div class="card-body py-2 px-3">
-                            <div class="d-flex justify-content-between align-items-start mb-1">
-                                <div class="flex-grow-1">
-                                    <small class="text-muted d-block mb-1">
-                                        <i class="bi bi-lightbulb"></i> Suggested Task
-                                    </small>
-                                    <strong>${escapeHtml(task.title)}</strong>
-                                    <span class="badge bg-${priorityClass} ms-2">
-                                        <i class="bi ${priorityIcon}"></i> ${task.priority}
-                                    </span>
-                                    ${dueDateHtml}
-                                </div>
-                            </div>
-                            ${task.description ? `<p class="text-muted small mb-2">${escapeHtml(task.description)}</p>` : ''}
-                            <div class="d-flex gap-2 align-items-center">
-                                <select class="form-select form-select-sm flex-grow-1 task-assign-select">
-                                    <option value="user:${currentUserId}">Assign to Me</option>
-                                    {% if is_agent %}
-                                    <option value="agent:${recipientId}" selected>Assign to ${recipientName}</option>
-                                    {% endif %}
-                                </select>
-                                <button class="btn btn-sm btn-success" onclick="createTaskFromSuggestion(${index}, this)">
-                                    <i class="bi bi-plus-circle"></i> Create
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            });
-            taskSuggestionsHtml += '</div>';
-
-            // Store suggestions in a data attribute for later use
-            messageDiv.setAttribute('data-task-suggestions', JSON.stringify(message.task_suggestions));
-        }
-
         // Build file attachments if agent generated any files
         let filesHtml = '';
         if (!isFromMe && message.generated_files && message.generated_files.length > 0) {
@@ -591,18 +545,28 @@
         let filesHtml = '';
         {% endif %}
 
+        // Add Convert to Task button for agent messages
+        const convertButton = !isFromMe && message.content ? `
+            <button class="btn btn-link btn-sm text-muted convert-to-task-btn"
+                    onclick="convertMessageToTask(${message.id})"
+                    title="Convert to Task"
+                    style="padding: 0 0.5rem; font-size: 0.875rem;">
+                <i class="bi bi-plus-square"></i>
+            </button>
+        ` : '';
+
         messageDiv.innerHTML = `
             <div class="message-avatar">${avatar}${statusHtml}</div>
             <div class="message-bubble">
                 <div class="message-header">
                     <span class="message-author">${escapeHtml(message.sender)}</span>
                     <span class="message-time">${time}</span>
+                    ${convertButton}
                 </div>
                 <div class="message-content">
                     ${message.content && message.content !== '(image)' ? `<div class="message-body">${formatMessageContent(message.content)}</div>` : ''}
                     ${imageHtml}
                     ${taskCardsHtml}
-                    ${taskSuggestionsHtml}
                     ${filesHtml}
                 </div>
             </div>
@@ -992,93 +956,54 @@
         }
     }
 
-    async function createTaskFromSuggestion(suggestionIndex, buttonElement) {
+    async function convertMessageToTask(messageId) {
         try {
-            // Find the message div containing this button
-            const messageDiv = buttonElement.closest('.message');
-            const suggestions = JSON.parse(messageDiv.getAttribute('data-task-suggestions'));
-            const suggestion = suggestions[suggestionIndex];
-
-            if (!suggestion) {
-                alert('Task suggestion not found');
-                return;
-            }
-
-            // Get the assignment selection
-            const cardDiv = buttonElement.closest('.card-body');
-            const assignSelect = cardDiv.querySelector('.task-assign-select');
-            const assignTo = assignSelect ? assignSelect.value : null;
-
-            // Parse assignment (user:123 or agent:456)
-            let assignedToId = null;
-            let assignedToAgentId = null;
-            if (assignTo) {
-                const [type, id] = assignTo.split(':');
-                if (type === 'user') {
-                    assignedToId = parseInt(id);
-                } else if (type === 'agent') {
-                    assignedToAgentId = parseInt(id);
-                }
-            }
-
-            // Disable the button and show loading state
-            const originalButtonContent = buttonElement.innerHTML;
-            buttonElement.disabled = true;
-            buttonElement.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Creating...';
-
             const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-            const taskData = {
-                title: suggestion.title,
-                description: suggestion.description || '',
-                priority: suggestion.priority || 'medium',
-                due_date: suggestion.due_date ? suggestion.due_date.split('T')[0] : null
-            };
 
-            // Add assignment if selected
-            if (assignedToId) {
-                taskData.assigned_to_id = assignedToId;
-            }
-            if (assignedToAgentId) {
-                taskData.assigned_to_agent_id = assignedToAgentId;
-            }
-
-            const response = await fetch('/tasks/create', {
+            const response = await fetch(`/chat/message/${messageId}/convert-to-task`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': csrfToken
                 },
-                body: JSON.stringify(taskData)
+                body: JSON.stringify({
+                    assign_to_agent: true
+                })
             });
 
             if (response.ok) {
-                const task = await response.json();
-                // Replace button with success message
-                buttonElement.outerHTML = '<span class="badge bg-success"><i class="bi bi-check-circle"></i> Task Created</span>';
+                const result = await response.json();
 
-                // Optionally show a toast notification
+                // Show success toast with link to task
                 const toast = document.createElement('div');
                 toast.className = 'alert alert-success alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3';
                 toast.style.zIndex = '9999';
+
+                let message = `<i class="bi bi-check-circle-fill"></i> Task "${result.task_title}" created successfully!`;
+                if (result.is_long_running) {
+                    message += ' <span class="badge bg-info ms-2">Long-running task detected</span>';
+                }
+                if (result.requires_approval) {
+                    message += ' <span class="badge bg-warning ms-2">Approval required</span>';
+                }
+
                 toast.innerHTML = `
-                    <i class="bi bi-check-circle-fill"></i> Task "${suggestion.title}" created successfully!
-                    <a href="/tasks/${task.id}" class="alert-link ms-2">View Task</a>
+                    ${message}
+                    <a href="/tasks/${result.task_id}" class="alert-link ms-2">View Task</a>
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 `;
                 document.body.appendChild(toast);
                 setTimeout(() => toast.remove(), 5000);
             } else {
-                buttonElement.disabled = false;
-                buttonElement.innerHTML = originalButtonContent;
-                alert('Failed to create task. Please try again.');
+                const error = await response.json();
+                alert(`Failed to create task: ${error.error || 'Unknown error'}`);
             }
         } catch (error) {
-            console.error('Error creating task from suggestion:', error);
-            buttonElement.disabled = false;
-            buttonElement.innerHTML = originalButtonContent;
+            console.error('Error converting message to task:', error);
             alert('Failed to create task. Please try again.');
         }
     }
+
     {% endif %}
 </script>
 {% endblock %}

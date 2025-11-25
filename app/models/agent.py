@@ -359,32 +359,6 @@ class Agent(db.Model):
             context_parts.append("- Always be helpful and proactive about your assigned tasks without being pushy.")
             context_parts.append("")
 
-        # Task suggestion capability (always available)
-        context_parts.append("\n=== TASK SUGGESTIONS ===")
-        context_parts.append("You can suggest tasks to help users stay organized and productive.")
-        context_parts.append("When you identify actionable items during conversation, suggest them as tasks using this format:")
-        context_parts.append('[TASK] Title: Brief task title')
-        context_parts.append('[TASK] Description: Detailed description (optional)')
-        context_parts.append('[TASK] Priority: low|medium|high|urgent (optional, defaults to medium)')
-        context_parts.append('[TASK] Due: YYYY-MM-DD (optional)')
-        context_parts.append('[TASK_END]')
-        context_parts.append("")
-        context_parts.append("Example:")
-        context_parts.append('[TASK] Title: Review Q4 financial reports')
-        context_parts.append('[TASK] Description: Analyze revenue trends and prepare summary for board meeting')
-        context_parts.append('[TASK] Priority: high')
-        context_parts.append('[TASK] Due: 2025-12-15')
-        context_parts.append('[TASK_END]')
-        context_parts.append("")
-        context_parts.append("Guidelines:")
-        context_parts.append("- Only suggest tasks when clearly appropriate (e.g., action items from discussion, follow-ups, deadlines mentioned)")
-        context_parts.append("- Keep task titles concise (under 100 characters)")
-        context_parts.append("- Be specific in descriptions")
-        context_parts.append("- Set realistic due dates based on context")
-        context_parts.append("- Don't suggest tasks for simple questions or casual conversation")
-        if tasks:
-            context_parts.append("- Avoid duplicating your existing assigned tasks unless it's a different specific action")
-        context_parts.append("")
 
         # Recently Generated Files Context
         if generated_files and len(generated_files) > 0:
