@@ -1450,28 +1450,14 @@ Respond in JSON format:
         db.session.add(task)
         db.session.commit()
 
-        # Run long-running task detection if assigned to agent
-        long_running_result = None
-        if task.assigned_to_agent_id:
-            try:
-                from app.services.long_running_task_service import get_long_running_task_service
-                task_service = get_long_running_task_service()
-                message_text = f"{task.title}. {task.description or ''}"
-                long_running_result = task_service.detect_and_handle(
-                    task=task,
-                    agent=agent,
-                    user=current_user,
-                    message_text=message_text
-                )
-            except Exception as e:
-                print(f"[CONVERT_TO_TASK] Long-running detection error: {e}")
+        # Don't run detection here - let the CRON task processor handle it
+        # This ensures all manually-created agent tasks go through the same workflow
 
         return jsonify({
             'success': True,
             'task_id': task.id,
             'task_title': task.title,
-            'is_long_running': long_running_result.get('is_long_running') if long_running_result else False,
-            'requires_approval': long_running_result.get('plan', {}).get('requires_approval') if long_running_result else False
+            'message': 'Task created successfully. It will be processed by the scheduler within 10 minutes.'
         }), 201
 
     except Exception as e:
