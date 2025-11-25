@@ -577,6 +577,11 @@
             });
             filesHtml += '</div>';
         }
+        {% else %}
+        // Non-agent chats - still need to define filesHtml variable
+        let filesHtml = '';
+        let taskCardsHtml = '';
+        let taskSuggestionsHtml = '';
         {% endif %}
 
         messageDiv.innerHTML = `
