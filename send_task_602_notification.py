@@ -43,7 +43,7 @@ with app.app_context():
     notification_text = f"✅ Task completed: **{task.title}**\n\n{summary}\n\n[View full details →](/tasks/{task.id})"
 
     message = Message(
-        sender_id=agent.id,
+        sender_id=None,  # Agents don't have sender_id
         recipient_id=user.id,
         department_id=task.department_id,
         content=notification_text,
