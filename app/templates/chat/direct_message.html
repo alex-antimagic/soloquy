@@ -110,6 +110,16 @@
                                     {% endif %}
                                 </div>
                             </div>
+                            {% if not is_from_me and message.agent_id and message.content %}
+                                <div class="message-avatar" style="visibility: hidden; width: 40px;"></div>
+                                <div class="mt-2">
+                                    <span class="badge rounded-pill bg-light text-dark border convert-to-task-pill"
+                                          onclick="convertMessageToTask({{ message.id }}, this)"
+                                          style="cursor: pointer; padding: 0.4rem 0.75rem; font-weight: 500; font-size: 0.875rem;">
+                                        <i class="bi bi-plus-circle me-1"></i> Create task
+                                    </span>
+                                </div>
+                            {% endif %}
                         </div>
                     {% endfor %}
                 {% else %}
