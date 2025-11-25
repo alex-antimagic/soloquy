@@ -83,7 +83,7 @@ class LongRunningTaskService:
 
             tenant_context = {
                 'tenant_name': agent.department.tenant.name,
-                'industry': agent.department.tenant.industry,
+                'industry': getattr(agent.department.tenant, 'industry', 'General'),
                 'user_name': user.full_name
             }
 
