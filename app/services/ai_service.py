@@ -419,6 +419,67 @@ class AIService:
                     },
                     "required": ["sheets"]
                 }
+            },
+            {
+                "name": "create_markdown_document",
+                "description": "Create a Markdown document (.md) with formatted text, headers, lists, code blocks, and tables",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "content": {
+                            "type": "string",
+                            "description": "Markdown content including headers (##), lists (- or 1.), bold (**text**), code blocks (```), tables, etc."
+                        },
+                        "title": {
+                            "type": "string",
+                            "description": "Optional document title (will be added as H1 at the top)"
+                        },
+                        "filename": {
+                            "type": "string",
+                            "description": "Optional custom filename (auto-generated if not provided)"
+                        }
+                    },
+                    "required": ["content"]
+                }
+            },
+            {
+                "name": "create_word_document",
+                "description": "Create a Word document (.docx) with formatted content including headings, paragraphs, bullet lists, numbered lists, and tables",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "title": {
+                            "type": "string",
+                            "description": "Document title"
+                        },
+                        "content_blocks": {
+                            "type": "array",
+                            "description": "List of content blocks",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "type": {
+                                        "type": "string",
+                                        "enum": ["heading", "paragraph", "bullet_list", "numbered_list", "table"],
+                                        "description": "Type of content block"
+                                    },
+                                    "content": {
+                                        "description": "Content for the block. For lists, use array of strings. For tables, use {headers: [...], data: [[...]]}. For text/headings, use string."
+                                    },
+                                    "level": {
+                                        "type": "number",
+                                        "description": "Heading level (1-3, only for heading type)"
+                                    }
+                                }
+                            }
+                        },
+                        "filename": {
+                            "type": "string",
+                            "description": "Optional custom filename (auto-generated if not provided)"
+                        }
+                    },
+                    "required": ["title", "content_blocks"]
+                }
             }
         ]
 
@@ -525,7 +586,7 @@ class AIService:
                                 agent=agent,
                                 user=user
                             )
-                        elif tool_use.name in ['generate_pdf_report', 'export_to_csv', 'create_spreadsheet']:
+                        elif tool_use.name in ['generate_pdf_report', 'export_to_csv', 'create_spreadsheet', 'create_markdown_document', 'create_word_document']:
                             result = self._execute_file_generation_tool(
                                 tool_name=tool_use.name,
                                 tool_input=tool_use.input,
@@ -956,7 +1017,7 @@ Return ONLY valid JSON in this format:
         Execute file generation tool
 
         Args:
-            tool_name: Name of the tool (generate_pdf_report, export_to_csv, create_spreadsheet)
+            tool_name: Name of the tool (generate_pdf_report, export_to_csv, create_spreadsheet, create_markdown_document, create_word_document)
             tool_input: Tool input parameters
             agent: Agent model
             user: User model
@@ -1106,6 +1167,88 @@ Return ONLY valid JSON in this format:
                     }
                 else:
                     return {"error": result.get('error', 'Failed to create spreadsheet')}
+
+            elif tool_name == "create_markdown_document":
+                # Create Markdown document
+                content = tool_input.get('content', '')
+                title = tool_input.get('title')
+                filename = tool_input.get('filename')
+
+                result = file_gen_service.generate_markdown(
+                    content=content,
+                    tenant_id=tenant.id,
+                    filename=filename,
+                    title=title
+                )
+
+                if result.get('success'):
+                    # Save to database
+                    generated_file = GeneratedFile(
+                        tenant_id=tenant.id,
+                        agent_id=agent.id if agent else None,
+                        user_id=user.id,
+                        filename=result['filename'],
+                        file_type=result['file_type'],
+                        mime_type=result['mime_type'],
+                        file_size=result['file_size'],
+                        file_purpose='document',
+                        cloudinary_url=result['cloudinary_url'],
+                        cloudinary_public_id=result['public_id']
+                    )
+                    db.session.add(generated_file)
+                    db.session.commit()
+
+                    return {
+                        "success": True,
+                        "message": f"Markdown document '{result['filename']}' created successfully",
+                        "file_url": result['cloudinary_url'],
+                        "file_id": generated_file.id,
+                        "filename": result['filename'],
+                        "file_size": result['file_size']
+                    }
+                else:
+                    return {"error": result.get('error', 'Failed to create Markdown document')}
+
+            elif tool_name == "create_word_document":
+                # Create Word document
+                title = tool_input.get('title', 'Document')
+                content_blocks = tool_input.get('content_blocks', [])
+                filename = tool_input.get('filename')
+
+                result = file_gen_service.generate_docx(
+                    title=title,
+                    content_blocks=content_blocks,
+                    tenant_id=tenant.id,
+                    filename=filename
+                )
+
+                if result.get('success'):
+                    # Save to database
+                    generated_file = GeneratedFile(
+                        tenant_id=tenant.id,
+                        agent_id=agent.id if agent else None,
+                        user_id=user.id,
+                        filename=result['filename'],
+                        file_type=result['file_type'],
+                        mime_type=result['mime_type'],
+                        file_size=result['file_size'],
+                        file_purpose='document',
+                        cloudinary_url=result['cloudinary_url'],
+                        cloudinary_public_id=result['public_id']
+                    )
+                    db.session.add(generated_file)
+                    db.session.commit()
+
+                    return {
+                        "success": True,
+                        "message": f"Word document '{result['filename']}' created successfully",
+                        "file_url": result['cloudinary_url'],
+                        "file_id": generated_file.id,
+                        "filename": result['filename'],
+                        "file_size": result['file_size']
+                    }
+                else:
+                    return {"error": result.get('error', 'Failed to create Word document')}
 
             else:
                 return {"error": f"Unknown file generation tool: {tool_name}"}
