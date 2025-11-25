@@ -547,29 +547,28 @@
 
         messageDiv.innerHTML = `
             <div class="message-avatar">${avatar}${statusHtml}</div>
-            <div>
-                <div class="message-bubble">
-                    <div class="message-header">
-                        <span class="message-author">${escapeHtml(message.sender)}</span>
-                        <span class="message-time">${time}</span>
-                    </div>
-                    <div class="message-content">
-                        ${message.content && message.content !== '(image)' ? `<div class="message-body">${formatMessageContent(message.content)}</div>` : ''}
-                        ${imageHtml}
-                        ${taskCardsHtml}
-                        ${filesHtml}
-                    </div>
+            <div class="message-bubble">
+                <div class="message-header">
+                    <span class="message-author">${escapeHtml(message.sender)}</span>
+                    <span class="message-time">${time}</span>
                 </div>
-                ${!isFromMe && message.content ? `
-                    <div class="mt-2">
-                        <span class="badge rounded-pill bg-light text-dark border convert-to-task-pill"
-                              onclick="convertMessageToTask(${message.id}, this)"
-                              style="cursor: pointer; padding: 0.4rem 0.75rem; font-weight: 500; font-size: 0.875rem;">
-                            <i class="bi bi-plus-circle me-1"></i> Create task
-                        </span>
-                    </div>
-                ` : ''}
+                <div class="message-content">
+                    ${message.content && message.content !== '(image)' ? `<div class="message-body">${formatMessageContent(message.content)}</div>` : ''}
+                    ${imageHtml}
+                    ${taskCardsHtml}
+                    ${filesHtml}
+                </div>
             </div>
+            ${!isFromMe && message.agent_id && message.content ? `
+                <div class="message-avatar" style="visibility: hidden; width: 40px;"></div>
+                <div class="mt-2">
+                    <span class="badge rounded-pill bg-light text-dark border convert-to-task-pill"
+                          onclick="convertMessageToTask(${message.id}, this)"
+                          style="cursor: pointer; padding: 0.4rem 0.75rem; font-weight: 500; font-size: 0.875rem;">
+                        <i class="bi bi-plus-circle me-1"></i> Create task
+                    </span>
+                </div>
+            ` : ''}
         `;
 
         messagesContainer.appendChild(messageDiv);
