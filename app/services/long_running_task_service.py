@@ -390,6 +390,54 @@ class LongRunningTaskService:
             except Exception as e:
                 print(f"[LONG_TASK] Error emitting completion event: {e}")
 
+            # Send chat notification to user
+            try:
+                from app.models.message import Message
+                agent = task.assigned_to_agent
+                user = task.created_by
+
+                if agent and user:
+                    # Get room ID for this user-agent conversation
+                    room_id = f"dm_{min(user.id, agent.id)}_{max(user.id, agent.id)}"
+
+                    # Create notification message
+                    summary = result.get('summary', 'Task completed successfully.')
+                    notification_text = f"✅ Task completed: **{task.title}**\n\n{summary}\n\n[View full details →](/tasks/{task.id})"
+
+                    message = Message(
+                        room_id=room_id,
+                        sender_id=agent.id,
+                        tenant_id=task.tenant_id,
+                        department_id=task.department_id,
+                        content=notification_text,
+                        agent_id=agent.id
+                    )
+                    db.session.add(message)
+                    db.session.commit()
+
+                    # Emit message via SocketIO
+                    socketio_manager.emit_to_tenant(
+                        task.tenant_id,
+                        'new_message',
+                        {
+                            'room_id': room_id,
+                            'message': {
+                                'id': message.id,
+                                'content': notification_text,
+                                'sender': agent.name,
+                                'sender_id': agent.id,
+                                'agent_id': agent.id,
+                                'created_at': message.created_at.isoformat(),
+                                'is_user': False
+                            }
+                        }
+                    )
+                    print(f"[LONG_TASK] Sent completion notification to user {user.id}")
+            except Exception as e:
+                print(f"[LONG_TASK] Error sending chat notification: {e}")
+                import traceback
+                traceback.print_exc()
+
             return {
                 'success': True,
                 'message': 'Task completed',
