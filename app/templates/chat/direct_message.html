@@ -199,6 +199,8 @@
     {% if is_agent %}
     const departmentId = {{ department_id }};
     const agentAvatarUrl = '{{ agent_avatar_url if agent_avatar_url else '' }}';
+    {% else %}
+    const recipientAvatarUrl = '{{ recipient_avatar_url if recipient_avatar_url else '' }}';
     {% endif %}
 
     // Notification sound
@@ -426,7 +428,13 @@
             statusHtml = '<span class="avatar-status online"></span>';
         }
         {% else %}
-        // For user-to-user DMs, use recipient avatar if available (would need to pass this from backend)
+        // Set avatar for user messages in user-to-user DMs
+        if (!isFromMe && recipientAvatarUrl) {
+            avatar = `<img src="${recipientAvatarUrl}" alt="${recipientName}">`;
+            statusHtml = '<span class="avatar-status online"></span>';
+        } else if (!isFromMe) {
+            statusHtml = '<span class="avatar-status online"></span>';
+        }
         {% endif %}
 
         const time = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });

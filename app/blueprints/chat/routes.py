@@ -47,6 +47,7 @@ def user_chat(user_id):
                            recipient_name=other_user.full_name,
                            recipient_subtitle='Direct Message',
                            recipient_is_online=other_user.is_online_now(),
+                           recipient_avatar_url=other_user.avatar_url,
                            messages=messages,
                            user_tasks=user_tasks,
                            context_tasks=None)
