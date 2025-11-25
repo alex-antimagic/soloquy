@@ -545,14 +545,15 @@
         let filesHtml = '';
         {% endif %}
 
-        // Add Convert to Task button for agent messages
-        const convertButton = !isFromMe && message.content ? `
-            <button class="btn btn-link btn-sm text-muted convert-to-task-btn"
-                    onclick="convertMessageToTask(${message.id})"
-                    title="Convert to Task"
-                    style="padding: 0 0.5rem; font-size: 0.875rem;">
-                <i class="bi bi-plus-square"></i>
-            </button>
+        // Add Convert to Task button below agent messages
+        const convertTaskBtn = !isFromMe && message.content ? `
+            <div class="mt-2">
+                <button class="btn btn-link btn-sm text-muted p-0 convert-to-task-btn"
+                        onclick="convertMessageToTask(${message.id}, this)"
+                        style="text-decoration: none; font-size: 0.875rem;">
+                    <i class="bi bi-plus-circle me-1"></i> Create task
+                </button>
+            </div>
         ` : '';
 
         messageDiv.innerHTML = `
@@ -561,13 +562,13 @@
                 <div class="message-header">
                     <span class="message-author">${escapeHtml(message.sender)}</span>
                     <span class="message-time">${time}</span>
-                    ${convertButton}
                 </div>
                 <div class="message-content">
                     ${message.content && message.content !== '(image)' ? `<div class="message-body">${formatMessageContent(message.content)}</div>` : ''}
                     ${imageHtml}
                     ${taskCardsHtml}
                     ${filesHtml}
+                    ${convertTaskBtn}
                 </div>
             </div>
         `;
@@ -956,7 +957,7 @@
         }
     }
 
-    async function convertMessageToTask(messageId) {
+    async function convertMessageToTask(messageId, buttonElement) {
         try {
             const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
@@ -973,6 +974,14 @@
 
             if (response.ok) {
                 const result = await response.json();
+
+                // Hide the Create task button
+                if (buttonElement) {
+                    buttonElement.style.display = 'none';
+                }
+
+                // Add task to sidebar dynamically
+                addTaskToSidebar(result);
 
                 // Show success toast with link to task
                 const toast = document.createElement('div');
@@ -1002,6 +1011,121 @@
             console.error('Error converting message to task:', error);
             alert('Failed to create task. Please try again.');
         }
+    }
+
+    function addTaskToSidebar(taskData) {
+        // Find the agent tasks section or create it if doesn't exist
+        const agentTasksSection = document.querySelector('#tasks-sidebar .tasks-section:nth-child(2)');
+        let tasksList;
+
+        if (agentTasksSection) {
+            tasksList = agentTasksSection.querySelector('.tasks-list');
+            // Remove "No tasks yet" message if present
+            const emptyMessage = tasksList.querySelector('.tasks-empty');
+            if (emptyMessage) {
+                emptyMessage.remove();
+            }
+        } else {
+            // Create agent tasks section if it doesn't exist
+            const myTasksSection = document.querySelector('#tasks-sidebar .tasks-section:first-child');
+            const newSection = document.createElement('div');
+            newSection.className = 'tasks-section';
+            newSection.innerHTML = `
+                <div class="tasks-section-header">
+                    <span class="tasks-section-title">Agent Tasks</span>
+                </div>
+                <div class="tasks-list"></div>
+            `;
+            myTasksSection.after(newSection);
+            tasksList = newSection.querySelector('.tasks-list');
+        }
+
+        // Create task item HTML
+        const taskItem = document.createElement('div');
+        taskItem.className = 'task-item';
+        taskItem.setAttribute('data-task-id', taskData.task_id);
+        taskItem.onclick = () => window.location.href = `/tasks/${taskData.task_id}`;
+        taskItem.style.cursor = 'pointer';
+
+        taskItem.innerHTML = `
+            <div class="task-checkbox" onclick="event.stopPropagation();">
+                <input type="checkbox"
+                       class="form-check-input task-complete-checkbox"
+                       data-task-id="${taskData.task_id}">
+            </div>
+            <div class="task-content">
+                <div class="task-title">${escapeHtml(taskData.task_title)}</div>
+                <div class="task-meta"></div>
+            </div>
+            <div class="task-actions">
+                <select class="form-select form-select-sm priority-select" data-task-id="${taskData.task_id}">
+                    <option value="low">Low</option>
+                    <option value="medium" selected>Medium</option>
+                    <option value="high">High</option>
+                    <option value="urgent">Urgent</option>
+                </select>
+            </div>
+        `;
+
+        // Prepend to tasks list (show newest first)
+        tasksList.insertBefore(taskItem, tasksList.firstChild);
+
+        // Attach event listeners to the new task
+        const checkbox = taskItem.querySelector('.task-complete-checkbox');
+        checkbox.addEventListener('change', async function() {
+            const taskId = this.getAttribute('data-task-id');
+            try {
+                const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+                const response = await fetch(`/tasks/${taskId}/complete`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.status === 'completed') {
+                        taskItem.classList.add('task-completed');
+                    } else {
+                        taskItem.classList.remove('task-completed');
+                    }
+                } else {
+                    this.checked = !this.checked;
+                    alert('Failed to update task. Please try again.');
+                }
+            } catch (error) {
+                console.error('Error updating task:', error);
+                this.checked = !this.checked;
+                alert('Failed to update task. Please try again.');
+            }
+        });
+
+        const prioritySelect = taskItem.querySelector('.priority-select');
+        prioritySelect.addEventListener('change', async function() {
+            const taskId = this.getAttribute('data-task-id');
+            const newPriority = this.value;
+
+            try {
+                const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+                const response = await fetch(`/tasks/${taskId}/priority`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify({ priority: newPriority })
+                });
+
+                if (!response.ok) {
+                    alert('Failed to update priority. Please try again.');
+                }
+            } catch (error) {
+                console.error('Error updating priority:', error);
+                alert('Failed to update priority. Please try again.');
+            }
+        });
     }
 
     {% endif %}
