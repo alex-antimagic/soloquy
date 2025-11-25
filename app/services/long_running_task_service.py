@@ -23,7 +23,12 @@ class LongRunningTaskService:
 
         # Initialize Redis and RQ
         redis_url = current_app.config.get('REDIS_URL', 'redis://localhost:6379/0')
-        self.redis_conn = Redis.from_url(redis_url)
+
+        # Configure SSL for Heroku Redis
+        if redis_url.startswith('rediss://'):
+            self.redis_conn = Redis.from_url(redis_url, ssl_cert_reqs=None)
+        else:
+            self.redis_conn = Redis.from_url(redis_url)
 
         # Define queues with different priorities
         self.high_queue = Queue('high', connection=self.redis_conn)
