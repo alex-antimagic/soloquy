@@ -104,7 +104,8 @@ Be thorough and detailed in your response."""
                     max_tokens=4096,
                     temperature=agent.temperature or 1.0,
                     agent=agent,
-                    user=user
+                    user=user,
+                    tools=agent.tools  # Enable tool use (file generation, etc.)
                 )
 
                 print(f"[WORKER] Step {step_num} response length: {len(response)} chars")
