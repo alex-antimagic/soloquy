@@ -96,7 +96,7 @@ Be thorough and detailed in your response."""
                     "content": step_prompt
                 })
 
-                # Call AI with Sonnet model and agent's tools
+                # Call AI with Sonnet model (tools auto-provided by ai_service)
                 response = ai_service.chat(
                     messages=all_messages,
                     system_prompt=system_prompt,
@@ -104,8 +104,7 @@ Be thorough and detailed in your response."""
                     max_tokens=4096,
                     temperature=agent.temperature or 1.0,
                     agent=agent,
-                    user=user,
-                    tools=agent.tools  # Enable tool use (file generation, etc.)
+                    user=user
                 )
 
                 print(f"[WORKER] Step {step_num} response length: {len(response)} chars")
