@@ -3,7 +3,7 @@ Integration Model
 Stores OAuth credentials and metadata for external integrations
 Supports both workspace-level (shared) and user-level (personal) integrations
 """
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
 from app import db
 from app.utils.encryption import encryption_service
@@ -43,6 +43,7 @@ class Integration(db.Model):
     # Timestamps
     connected_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     last_sync_at = db.Column(db.DateTime)
+    token_expires_at = db.Column(db.DateTime)  # When the access token expires
     is_active = db.Column(db.Boolean, nullable=False, default=True)
 
     # Relationships
@@ -139,23 +140,50 @@ class Integration(db.Model):
         """Check if this is a user-level (personal) integration"""
         return self.owner_type == 'user'
 
+    def needs_refresh(self, buffer_minutes=5):
+        """
+        Check if access token needs to be refreshed
+
+        Args:
+            buffer_minutes: Refresh if token expires within this many minutes (default 5)
+
+        Returns:
+            bool: True if token should be refreshed
+        """
+        if not self.token_expires_at:
+            # If we don't have expiry info, check last_sync_at as fallback
+            if self.last_sync_at:
+                # Assume 1 hour token lifetime, refresh after 55 minutes
+                elapsed = (datetime.utcnow() - self.last_sync_at).total_seconds()
+                return elapsed > 3300  # 55 minutes
+            # No timing info - assume needs refresh
+            return True
+
+        # Check if token expires soon
+        time_until_expiry = (self.token_expires_at - datetime.utcnow()).total_seconds()
+        buffer_seconds = buffer_minutes * 60
+        return time_until_expiry <= buffer_seconds
+
     def get_mcp_process_name(self):
         """Generate unique process name for MCP server"""
         if self.integration_mode != 'mcp':
             return None
         return f"{self.mcp_server_type}-{self.owner_type}-{self.owner_id}"
 
-    def update_tokens(self, access_token, refresh_token=None):
+    def update_tokens(self, access_token, refresh_token=None, expires_in=None):
         """
         Update OAuth tokens
 
         Args:
             access_token: New access token
             refresh_token: New refresh token (optional)
+            expires_in: Token lifetime in seconds (optional)
         """
         self.access_token = access_token
         if refresh_token:
             self.refresh_token = refresh_token
+        if expires_in:
+            self.token_expires_at = datetime.utcnow() + timedelta(seconds=expires_in)
         self.last_sync_at = datetime.utcnow()
 
     def deactivate(self):

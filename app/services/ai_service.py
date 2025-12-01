@@ -675,8 +675,19 @@ class AIService:
         if not integration or not integration.access_token:
             return {"error": "Outlook not connected. Please connect your Outlook account in Settings > Integrations."}
 
-        # Create Outlook service with access token
-        outlook = OutlookGraphService(integration.access_token)
+        # Check if token needs refresh
+        if integration.needs_refresh():
+            try:
+                print(f"[OUTLOOK] Token needs refresh for integration {integration.id}")
+                OutlookGraphService.refresh_access_token(integration)
+                print(f"[OUTLOOK] Token refreshed successfully")
+            except Exception as e:
+                error_msg = f"Failed to refresh Outlook token: {str(e)}"
+                print(f"[OUTLOOK] {error_msg}")
+                return {"error": error_msg}
+
+        # Create Outlook service with access token and integration for auto-refresh
+        outlook = OutlookGraphService(integration.access_token, integration=integration)
 
         try:
             # Route to appropriate method

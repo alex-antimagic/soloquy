@@ -5,25 +5,147 @@ Direct API calls without MCP complexity
 import requests
 from typing import Dict, List, Any, Optional
 from flask import current_app
+from datetime import datetime, timedelta
 
 
 class OutlookGraphService:
     """Service for Microsoft Outlook using Graph API directly"""
 
     BASE_URL = "https://graph.microsoft.com/v1.0"
+    TOKEN_URL = "https://login.microsoftonline.com/common/oauth2/v2.0/token"
 
-    def __init__(self, access_token: str):
+    def __init__(self, access_token: str, integration=None):
         """
         Initialize Outlook service with access token
 
         Args:
             access_token: OAuth access token for Microsoft Graph
+            integration: Optional Integration model instance for token refresh
         """
         self.access_token = access_token
+        self.integration = integration
         self.headers = {
             'Authorization': f'Bearer {access_token}',
             'Content-Type': 'application/json'
         }
+
+    @staticmethod
+    def refresh_access_token(integration):
+        """
+        Refresh Outlook access token using refresh token
+
+        Args:
+            integration: Integration model instance with OAuth credentials and refresh token
+
+        Returns:
+            dict: Dictionary with new access_token, refresh_token, and expires_in
+
+        Raises:
+            ValueError: If credentials or refresh token missing
+            Exception: If token refresh fails
+        """
+        from app import db
+
+        if not integration or not integration.client_id or not integration.client_secret:
+            raise ValueError("Outlook OAuth credentials not configured")
+
+        if not integration.refresh_token:
+            raise ValueError("No refresh token available - user must re-authenticate")
+
+        try:
+            data = {
+                'client_id': integration.client_id,
+                'client_secret': integration.client_secret,
+                'refresh_token': integration.refresh_token,
+                'grant_type': 'refresh_token',
+                'scope': ' '.join([
+                    'https://graph.microsoft.com/Mail.ReadWrite',
+                    'https://graph.microsoft.com/Mail.Send',
+                    'https://graph.microsoft.com/Calendars.ReadWrite',
+                    'offline_access'
+                ])
+            }
+
+            response = requests.post(OutlookGraphService.TOKEN_URL, data=data)
+            response.raise_for_status()
+
+            result = response.json()
+
+            # Update integration with new tokens
+            integration.update_tokens(
+                access_token=result['access_token'],
+                refresh_token=result.get('refresh_token', integration.refresh_token),
+                expires_in=result.get('expires_in', 3600)
+            )
+            db.session.commit()
+
+            current_app.logger.info(f"Successfully refreshed Outlook token for integration {integration.id}")
+
+            return {
+                'access_token': result['access_token'],
+                'refresh_token': result.get('refresh_token', integration.refresh_token),
+                'expires_in': result.get('expires_in', 3600)
+            }
+
+        except requests.exceptions.HTTPError as e:
+            error_msg = f"Failed to refresh Outlook token: {e}"
+            current_app.logger.error(error_msg)
+
+            # If refresh fails, mark integration as inactive
+            integration.is_active = False
+            db.session.commit()
+
+            raise Exception(error_msg)
+
+    def _make_request_with_retry(self, method: str, url: str, **kwargs):
+        """
+        Make HTTP request with automatic token refresh on 401
+
+        Args:
+            method: HTTP method (GET, POST, PUT, DELETE)
+            url: Full URL for the request
+            **kwargs: Additional arguments for requests (params, json, headers, etc.)
+
+        Returns:
+            Response object
+
+        Raises:
+            Exception: If request fails after retry
+        """
+        # Add headers if not provided
+        if 'headers' not in kwargs:
+            kwargs['headers'] = self.headers
+
+        try:
+            response = requests.request(method, url, **kwargs)
+            response.raise_for_status()
+            return response
+
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 401 and self.integration:
+                # Token expired - try to refresh
+                current_app.logger.info(f"Received 401, attempting token refresh for integration {self.integration.id}")
+
+                try:
+                    # Refresh token
+                    result = self.refresh_access_token(self.integration)
+
+                    # Update our headers with new token
+                    self.access_token = result['access_token']
+                    self.headers['Authorization'] = f'Bearer {self.access_token}'
+                    kwargs['headers'] = self.headers
+
+                    # Retry request with new token
+                    response = requests.request(method, url, **kwargs)
+                    response.raise_for_status()
+                    return response
+
+                except Exception as refresh_error:
+                    current_app.logger.error(f"Token refresh failed: {refresh_error}")
+                    raise Exception(f"Authentication failed and token refresh unsuccessful: {str(refresh_error)}")
+            else:
+                # Not a 401 or no integration for refresh - raise original error
+                raise
 
     def list_emails(self, max_results: int = 10, folder: str = 'inbox') -> List[Dict]:
         """
@@ -44,9 +166,7 @@ class OutlookGraphService:
                 '$orderby': 'receivedDateTime DESC'
             }
 
-            response = requests.get(url, headers=self.headers, params=params)
-            response.raise_for_status()
-
+            response = self._make_request_with_retry('GET', url, params=params)
             data = response.json()
             emails = data.get('value', [])
 
@@ -85,9 +205,7 @@ class OutlookGraphService:
                 '$select': 'id,subject,from,toRecipients,ccRecipients,receivedDateTime,body,bodyPreview,isRead,hasAttachments'
             }
 
-            response = requests.get(url, headers=self.headers, params=params)
-            response.raise_for_status()
-
+            response = self._make_request_with_retry('GET', url, params=params)
             email = response.json()
 
             # Format for Claude
@@ -130,9 +248,7 @@ class OutlookGraphService:
                 '$orderby': 'receivedDateTime DESC'
             }
 
-            response = requests.get(url, headers=self.headers, params=params)
-            response.raise_for_status()
-
+            response = self._make_request_with_retry('GET', url, params=params)
             data = response.json()
             emails = data.get('value', [])
 
@@ -191,9 +307,7 @@ class OutlookGraphService:
                     {'emailAddress': {'address': addr}} for addr in cc
                 ]
 
-            response = requests.post(url, headers=self.headers, json=message)
-            response.raise_for_status()
-
+            response = self._make_request_with_retry('POST', url, json=message)
             return {'success': True, 'message': 'Email sent successfully'}
 
         except requests.exceptions.RequestException as e:
@@ -212,8 +326,6 @@ class OutlookGraphService:
             List of calendar event dictionaries
         """
         try:
-            from datetime import datetime, timedelta
-
             # Calculate date range
             start_time = datetime.utcnow().isoformat() + 'Z'
             end_time = (datetime.utcnow() + timedelta(days=days_ahead)).isoformat() + 'Z'
@@ -227,9 +339,7 @@ class OutlookGraphService:
                 '$orderby': 'start/dateTime'
             }
 
-            response = requests.get(url, headers=self.headers, params=params)
-            response.raise_for_status()
-
+            response = self._make_request_with_retry('GET', url, params=params)
             data = response.json()
             events = data.get('value', [])
 
@@ -317,9 +427,7 @@ class OutlookGraphService:
                     'content': body
                 }
 
-            response = requests.post(url, headers=self.headers, json=event_data)
-            response.raise_for_status()
-
+            response = self._make_request_with_retry('POST', url, json=event_data)
             created_event = response.json()
 
             return {
@@ -363,9 +471,7 @@ class OutlookGraphService:
                 'availabilityViewInterval': 60  # 60-minute intervals
             }
 
-            response = requests.post(url, headers=self.headers, json=request_data)
-            response.raise_for_status()
-
+            response = self._make_request_with_retry('POST', url, json=request_data)
             data = response.json()
             schedules = data.get('value', [])
 

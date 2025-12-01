@@ -311,9 +311,12 @@ def outlook_callback(scope):
             flash(f"Error acquiring token: {error_desc}", 'danger')
             return redirect(url_for('integrations.outlook_configure', scope=scope_type))
 
-        # Store tokens
-        integration.access_token = result['access_token']
-        integration.refresh_token = result.get('refresh_token')
+        # Store tokens with expiry time
+        integration.update_tokens(
+            access_token=result['access_token'],
+            refresh_token=result.get('refresh_token'),
+            expires_in=result.get('expires_in', 3600)  # Default to 1 hour
+        )
         integration.is_active = True
 
         success = True
@@ -423,3 +426,94 @@ def outlook_status():
         },
         'server': {'status': 'active' if integration.is_active else 'inactive'}
     })
+
+
+@integrations_bp.route('/outlook/health')
+@login_required
+def outlook_health():
+    """
+    Health check for Outlook integration - verifies connectivity and token validity
+
+    Query params:
+    - scope: 'workspace' or 'user'
+
+    Returns:
+    JSON with health status and details
+    """
+    from app.services.outlook_service import OutlookGraphService
+
+    scope = request.args.get('scope', 'workspace')
+
+    # Get integration
+    owner_type = 'tenant' if scope == 'workspace' else 'user'
+    owner_id = g.current_tenant.id if scope == 'workspace' else current_user.id
+
+    integration = Integration.query.filter_by(
+        tenant_id=g.current_tenant.id,
+        integration_type='outlook',
+        owner_type=owner_type,
+        owner_id=owner_id
+    ).first()
+
+    if not integration:
+        return jsonify({
+            'healthy': False,
+            'error': 'Integration not found'
+        }), 404
+
+    if not integration.is_active:
+        return jsonify({
+            'healthy': False,
+            'error': 'Integration is not active'
+        }), 200
+
+    health_info = {
+        'healthy': True,
+        'integration_id': integration.id,
+        'display_name': integration.display_name,
+        'checks': {}
+    }
+
+    # Check 1: Token presence
+    if not integration.access_token:
+        health_info['healthy'] = False
+        health_info['checks']['token_present'] = False
+        health_info['error'] = 'No access token found'
+        return jsonify(health_info), 200
+
+    health_info['checks']['token_present'] = True
+
+    # Check 2: Token expiry
+    if integration.token_expires_at:
+        from datetime import datetime
+        time_until_expiry = (integration.token_expires_at - datetime.utcnow()).total_seconds()
+        health_info['checks']['token_expires_in_seconds'] = int(time_until_expiry)
+        health_info['checks']['token_needs_refresh'] = integration.needs_refresh()
+    else:
+        health_info['checks']['token_expires_in_seconds'] = None
+        health_info['checks']['token_needs_refresh'] = None
+
+    # Check 3: Refresh if needed
+    if integration.needs_refresh():
+        try:
+            OutlookGraphService.refresh_access_token(integration)
+            health_info['checks']['token_refreshed'] = True
+        except Exception as e:
+            health_info['healthy'] = False
+            health_info['checks']['token_refreshed'] = False
+            health_info['error'] = f'Token refresh failed: {str(e)}'
+            return jsonify(health_info), 200
+
+    # Check 4: Test API connectivity
+    try:
+        outlook = OutlookGraphService(integration.access_token, integration=integration)
+        # Try to list 1 email to verify connectivity
+        outlook.list_emails(max_results=1)
+        health_info['checks']['api_connectivity'] = True
+    except Exception as e:
+        health_info['healthy'] = False
+        health_info['checks']['api_connectivity'] = False
+        health_info['error'] = f'API connectivity test failed: {str(e)}'
+        return jsonify(health_info), 200
+
+    return jsonify(health_info), 200
