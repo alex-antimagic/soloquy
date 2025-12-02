@@ -263,7 +263,7 @@ class TestCRMWorkflows:
         }, follow_redirects=False)
 
         # Should be successful
-        assert response.status_code in [200, 302]
+        assert response.status_code in [200, 201, 302]
 
         # Verify deal was created
         deal = Deal.query.filter_by(name='Big Deal', tenant_id=test_tenant.id).first()
