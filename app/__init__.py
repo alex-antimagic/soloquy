@@ -253,6 +253,33 @@ def create_app(config_name='default'):
         if current_tenant_id:
             g.current_tenant = Tenant.query.get(current_tenant_id)
 
+    # Error handlers
+    @app.errorhandler(404)
+    def not_found_error(error):
+        """Handle 404 errors with a fun page"""
+        return render_template('errors/404.html'), 404
+
+    @app.errorhandler(403)
+    def forbidden_error(error):
+        """Handle 403 errors with a fun page"""
+        return render_template('errors/403.html'), 403
+
+    @app.errorhandler(500)
+    def internal_error(error):
+        """Handle 500 errors with a fun page"""
+        db.session.rollback()  # Rollback any failed database transactions
+        return render_template('errors/500.html'), 500
+
+    @app.errorhandler(429)
+    def ratelimit_error(error):
+        """Handle 429 rate limit errors with a fun page"""
+        return render_template('errors/429.html'), 429
+
+    @app.errorhandler(503)
+    def service_unavailable_error(error):
+        """Handle 503 errors with a fun page"""
+        return render_template('errors/503.html'), 503
+
     # Root route
     @app.route('/')
     def index():

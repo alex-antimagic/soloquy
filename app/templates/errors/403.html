@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}403 - Access Denied{% endblock %}
+
+{% block content %}
+<div class="container-fluid h-100 d-flex align-items-center justify-content-center" style="min-height: 80vh;">
+    <div class="text-center">
+        <div class="mb-4">
+            <h1 class="display-1 fw-bold text-danger" style="font-size: 8rem;">403</h1>
+            <div class="mb-3">
+                <span style="font-size: 4rem;">🚫🔒</span>
+            </div>
+        </div>
+
+        <h2 class="h3 mb-3">Access Denied</h2>
+        <p class="lead text-muted mb-4">
+            Whoa there, partner! You don't have permission to access this area.<br>
+            Our security AI is keeping this space locked down tight.
+        </p>
+
+        <div class="alert alert-warning d-inline-block mb-4" role="alert">
+            <i class="bi bi-shield-exclamation me-2"></i>
+            <strong>Restricted Zone:</strong> This resource requires special permissions.
+        </div>
+
+        <div class="d-flex gap-3 justify-content-center flex-wrap">
+            <a href="{{ url_for('main.index') }}" class="btn btn-primary btn-lg">
+                <i class="bi bi-house-door me-2"></i>Go Home
+            </a>
+            {% if current_user.is_authenticated and g.current_tenant %}
+                <a href="{{ url_for('tenant.settings') }}" class="btn btn-outline-primary btn-lg">
+                    <i class="bi bi-gear me-2"></i>Check Permissions
+                </a>
+            {% else %}
+                <a href="{{ url_for('auth.login') }}" class="btn btn-outline-primary btn-lg">
+                    <i class="bi bi-box-arrow-in-right me-2"></i>Sign In
+                </a>
+            {% endif %}
+        </div>
+
+        <div class="mt-5 text-muted small">
+            <p class="mb-2">
+                <i class="bi bi-info-circle me-1"></i>
+                Need access? Contact your workspace owner or admin.
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

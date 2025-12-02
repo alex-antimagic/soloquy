@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}429 - Slow Down There!{% endblock %}
+
+{% block content %}
+<div class="container-fluid h-100 d-flex align-items-center justify-content-center" style="min-height: 80vh;">
+    <div class="text-center">
+        <div class="mb-4">
+            <h1 class="display-1 fw-bold text-info" style="font-size: 8rem;">429</h1>
+            <div class="mb-3">
+                <span style="font-size: 4rem;">🐌💨</span>
+            </div>
+        </div>
+
+        <h2 class="h3 mb-3">Whoa, Speed Racer!</h2>
+        <p class="lead text-muted mb-4">
+            You're sending requests faster than our AI can think!<br>
+            Take a deep breath, maybe grab a coffee ☕
+        </p>
+
+        <div class="alert alert-warning d-inline-block mb-4" role="alert">
+            <i class="bi bi-hourglass-split me-2"></i>
+            <strong>Rate Limit Exceeded:</strong> Too many requests in a short time.
+        </div>
+
+        <div class="mb-4">
+            <p class="text-muted small">
+                This is a temporary speed bump to keep our servers happy.<br>
+                You'll be back in action in just a moment!
+            </p>
+        </div>
+
+        <div class="d-flex gap-3 justify-content-center flex-wrap">
+            <a href="{{ url_for('main.index') }}" class="btn btn-primary btn-lg">
+                <i class="bi bi-house-door me-2"></i>Go Home
+            </a>
+            <button onclick="setTimeout(() => window.location.reload(), 3000); this.disabled=true; this.innerHTML='<i class=\'bi bi-hourglass-split me-2\'></i>Waiting 3s...'" class="btn btn-outline-primary btn-lg">
+                <i class="bi bi-clock-history me-2"></i>Wait & Retry
+            </button>
+        </div>
+
+        <div class="mt-5 text-muted small">
+            <p class="mb-1">
+                <i class="bi bi-lightbulb me-1"></i>
+                <strong>Pro Tip:</strong> Try slowing down your requests or use our bulk operations instead!
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

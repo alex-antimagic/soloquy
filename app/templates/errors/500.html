@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}500 - Server Error{% endblock %}
+
+{% block content %}
+<div class="container-fluid h-100 d-flex align-items-center justify-content-center" style="min-height: 80vh;">
+    <div class="text-center">
+        <div class="mb-4">
+            <h1 class="display-1 fw-bold text-warning" style="font-size: 8rem;">500</h1>
+            <div class="mb-3">
+                <span style="font-size: 4rem;">🤖💥</span>
+            </div>
+        </div>
+
+        <h2 class="h3 mb-3">Oops! Our AI Had a Brain Freeze</h2>
+        <p class="lead text-muted mb-4">
+            Something went wrong on our end. Don't worry, it's not you—it's us!<br>
+            Our robots are working hard to fix this glitch in the matrix.
+        </p>
+
+        <div class="alert alert-info d-inline-block mb-4" role="alert">
+            <i class="bi bi-robot me-2"></i>
+            <strong>Error Logged:</strong> Our AI agents have been notified and are investigating.
+        </div>
+
+        <div class="d-flex gap-3 justify-content-center flex-wrap">
+            <a href="{{ url_for('main.index') }}" class="btn btn-primary btn-lg">
+                <i class="bi bi-arrow-clockwise me-2"></i>Try Again
+            </a>
+            <button onclick="window.location.reload()" class="btn btn-outline-primary btn-lg">
+                <i class="bi bi-arrow-repeat me-2"></i>Refresh Page
+            </button>
+        </div>
+
+        <div class="mt-5">
+            <details class="text-start d-inline-block">
+                <summary class="btn btn-link text-muted small" style="cursor: pointer;">
+                    <i class="bi bi-bug me-1"></i>Technical Details
+                </summary>
+                <div class="card mt-2 text-start" style="max-width: 600px;">
+                    <div class="card-body small font-monospace">
+                        <p class="mb-2"><strong>Error Type:</strong> Internal Server Error</p>
+                        <p class="mb-2"><strong>Status Code:</strong> 500</p>
+                        <p class="mb-0"><strong>What to do:</strong></p>
+                        <ul class="mb-0 mt-2">
+                            <li>Try refreshing the page</li>
+                            <li>Check back in a few minutes</li>
+                            <li>If the problem persists, contact support</li>
+                        </ul>
+                    </div>
+                </div>
+            </details>
+        </div>
+
+        <div class="mt-4 text-muted small">
+            <p>
+                <i class="bi bi-envelope me-1"></i>
+                Still having issues? <a href="mailto:support@soloquy.app">Contact Support</a>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

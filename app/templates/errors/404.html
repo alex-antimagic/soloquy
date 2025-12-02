@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}404 - Page Lost in Space{% endblock %}
+
+{% block content %}
+<div class="container-fluid h-100 d-flex align-items-center justify-content-center" style="min-height: 80vh;">
+    <div class="text-center">
+        <div class="mb-4">
+            <h1 class="display-1 fw-bold text-primary" style="font-size: 8rem;">404</h1>
+            <div class="mb-3">
+                <span style="font-size: 4rem;">🚀🌌</span>
+            </div>
+        </div>
+
+        <h2 class="h3 mb-3">Houston, We Have a Problem</h2>
+        <p class="lead text-muted mb-4">
+            This page has drifted off into deep space.<br>
+            Our AI agents are searching for it, but no luck yet!
+        </p>
+
+        <div class="d-flex gap-3 justify-content-center flex-wrap">
+            <a href="{{ url_for('main.index') }}" class="btn btn-primary btn-lg">
+                <i class="bi bi-house-door me-2"></i>Return to Home Base
+            </a>
+            {% if current_user.is_authenticated and g.current_tenant %}
+                <a href="{{ url_for('chat.index') }}" class="btn btn-outline-primary btn-lg">
+                    <i class="bi bi-chat-dots me-2"></i>Chat with AI
+                </a>
+            {% endif %}
+        </div>
+
+        <div class="mt-5 text-muted small">
+            <p class="mb-1">Lost? Try these popular destinations:</p>
+            <div class="d-flex gap-3 justify-content-center flex-wrap">
+                {% if current_user.is_authenticated and g.current_tenant %}
+                    <a href="{{ url_for('tasks.index') }}" class="text-decoration-none">Tasks</a>
+                    <span>•</span>
+                    <a href="{{ url_for('crm.companies') }}" class="text-decoration-none">Companies</a>
+                    <span>•</span>
+                    <a href="{{ url_for('tenant.agents') }}" class="text-decoration-none">AI Agents</a>
+                {% else %}
+                    <a href="{{ url_for('auth.login') }}" class="text-decoration-none">Login</a>
+                    <span>•</span>
+                    <a href="{{ url_for('auth.register') }}" class="text-decoration-none">Sign Up</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
