@@ -1142,7 +1142,7 @@ def add_channel_member(slug):
 
     # Verify user is in same tenant
     user = User.query.get(user_id)
-    if not user or user not in current_tenant.get_members():
+    if not user or user not in g.current_tenant.get_members():
         return jsonify({'error': 'User not found'}), 404
 
     # Add member

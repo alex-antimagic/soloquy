@@ -24,9 +24,7 @@ class TestChannelSecurity:
         db_session.commit()
 
         # Login as test_user
-        with client.session_transaction() as sess:
-            sess['user_id'] = test_user.id
-            sess['current_tenant_id'] = test_tenant.id
+        client.login(test_user, test_tenant.id)
 
         # Access public channel
         response = client.get(f'/chat/channel/{channel.slug}')
@@ -50,9 +48,7 @@ class TestChannelSecurity:
         db_session.commit()
 
         # Login as test_user
-        with client.session_transaction() as sess:
-            sess['user_id'] = test_user.id
-            sess['current_tenant_id'] = test_tenant.id
+        client.login(test_user, test_tenant.id)
 
         # Should be able to access
         response = client.get(f'/chat/channel/{channel.slug}')
@@ -85,9 +81,7 @@ class TestChannelSecurity:
         db_session.commit()
 
         # Login as test_user_2 (who is NOT a member of this channel)
-        with client.session_transaction() as sess:
-            sess['user_id'] = test_user_2.id
-            sess['current_tenant_id'] = test_tenant.id
+        client.login(test_user_2, test_tenant.id)
 
         # Try to access private channel
         response = client.get(f'/chat/channel/{channel.slug}')
