@@ -56,8 +56,20 @@ def db_session(_db):
 
 @pytest.fixture
 def client(app):
-    """Create a test client"""
-    return app.test_client()
+    """Create a test client with login helper"""
+    client = app.test_client()
+
+    # Add a helper method to log in users
+    def login(user, tenant_id=None):
+        """Log in a user for testing"""
+        with client.session_transaction() as sess:
+            sess['_user_id'] = str(user.id)  # Flask-Login uses _user_id
+            sess['_fresh'] = True
+            if tenant_id:
+                sess['current_tenant_id'] = tenant_id
+
+    client.login = login
+    return client
 
 
 @pytest.fixture

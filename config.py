@@ -123,7 +123,6 @@ class TestingConfig(Config):
     RATELIMIT_ENABLED = False  # Disable rate limiting in tests
     SOCKETIO_ASYNC_MODE = 'threading'  # Use threading mode for tests
     SOCKETIO_MESSAGE_QUEUE = None  # Disable Redis message queue for tests
-    LOGIN_DISABLED = True  # Disable Flask-Login authentication checks in tests
 
 
 config = {
