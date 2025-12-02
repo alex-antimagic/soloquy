@@ -92,11 +92,18 @@ class Channel(db.Model):
 
     def can_user_access(self, user):
         """Check if a user can access this channel"""
+        from app import db
+
         # Public channels: all tenant members can access
         if not self.is_private:
             return user in self.tenant.get_members()
         # Private channels: must be explicit member
-        return user in self.members
+        # Query fresh from DB to avoid stale session data
+        member_ids = db.session.query(channel_members.c.user_id).filter(
+            channel_members.c.channel_id == self.id
+        ).all()
+        member_ids = [mid[0] for mid in member_ids]
+        return user.id in member_ids
 
     def add_member(self, user):
         """Add a user to this channel (for private channels)"""

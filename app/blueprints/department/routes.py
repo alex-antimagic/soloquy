@@ -168,7 +168,7 @@ def edit(department_id):
         flash('Access denied.', 'danger')
         return redirect(url_for('department.index'))
 
-    form = DepartmentForm(obj=department)
+    form = DepartmentForm(obj=department, department_id=department.id)
     if form.validate_on_submit():
         department.name = form.name.data
         department.slug = form.slug.data.lower()

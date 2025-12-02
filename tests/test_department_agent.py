@@ -230,15 +230,16 @@ class TestDepartmentWorkflows:
         # Login as test_user (owner)
         client.login(test_user, test_tenant.id)
 
-        # Create department
-        response = client.post('/department/create', json={
+        # Create department using form data (not JSON)
+        response = client.post('/department/create', data={
             'name': 'Sales',
+            'slug': 'sales',
             'description': 'Sales department',
             'color': '#00FF00'
-        }, follow_redirects=False)
+        }, follow_redirects=True)
 
         # Should be successful
-        assert response.status_code in [200, 201, 302]
+        assert response.status_code == 200
 
         # Verify department was created
         dept = Department.query.filter_by(name='Sales', tenant_id=test_tenant.id).first()
@@ -251,14 +252,20 @@ class TestDepartmentWorkflows:
         # Login as test_user (owner)
         client.login(test_user, test_tenant.id)
 
-        # Update department
+        # Update department using form data and correct route
         response = client.post(
-            f'/department/{test_department.id}/update',
-            json={'name': 'Updated Name', 'description': 'Updated description'}
+            f'/department/{test_department.id}/edit',
+            data={
+                'name': 'Updated Name',
+                'slug': test_department.slug,  # Keep existing slug
+                'description': 'Updated description',
+                'color': test_department.color  # Keep existing color
+            },
+            follow_redirects=True
         )
 
         # Should be successful
-        assert response.status_code in [200, 201, 302]
+        assert response.status_code == 200
 
         # Verify update
         dept_check = Department.query.get(test_department.id)
@@ -274,31 +281,33 @@ class TestAgentWorkflows:
         # Login as test_user (owner)
         client.login(test_user, test_tenant.id)
 
-        # Create agent
-        response = client.post('/tenant/agents/create', json={
+        # Create agent using form data (not JSON) with valid model
+        response = client.post('/tenant/agents/create', data={
             'name': 'Sales Bot',
-            'department_id': test_department.id,
+            'description': 'A helpful sales assistant',
             'system_prompt': 'You are a helpful sales assistant',
-            'model': 'claude-sonnet-4-5-20250929'
-        }, follow_redirects=False)
+            'model': 'claude-haiku-4-5-20251001',
+            'temperature': '1.0',
+            'max_tokens': '4096'
+        }, follow_redirects=True)
 
         # Should be successful
-        assert response.status_code in [200, 201, 302]
+        assert response.status_code == 200
 
-        # Verify agent was created
+        # Verify agent was created (in Personal department, not test_department)
         agent = Agent.query.filter_by(name='Sales Bot').first()
         assert agent is not None
-        assert agent.department_id == test_department.id
         assert agent.created_by_id == test_user.id
 
     def test_update_agent_system_prompt(self, client, test_user, test_tenant, test_department, db_session):
         """Test updating an agent's system prompt"""
-        # Create agent
+        # Create agent with valid model from form choices
         agent = Agent(
             name='Test Agent',
             department_id=test_department.id,
             created_by_id=test_user.id,
-            system_prompt='Original prompt'
+            system_prompt='Original prompt',
+            model='claude-sonnet-4-5-20250929'
         )
         db_session.add(agent)
         db_session.commit()
@@ -306,18 +315,28 @@ class TestAgentWorkflows:
         # Login as test_user (owner)
         client.login(test_user, test_tenant.id)
 
-        # Update agent
+        # Update agent using correct route and form data
         response = client.post(
-            f'/tenant/agents/{agent.id}/update',
-            json={
+            f'/department/agent/{agent.id}/edit',
+            data={
                 'name': 'Test Agent',
+                'description': agent.description or '',
+                'avatar_url': agent.avatar_url or '',
                 'system_prompt': 'Updated prompt',
-                'department_id': test_department.id
-            }
+                'model': agent.model,
+                'temperature': str(agent.temperature),
+                'max_tokens': str(agent.max_tokens),
+                'is_active': 'y',
+                'access_control': agent.access_control or 'all',
+                'allowed_roles_str': '',
+                'allowed_department_ids_str': '',
+                'allowed_user_ids_str': ''
+            },
+            follow_redirects=True
         )
 
         # Should be successful
-        assert response.status_code in [200, 201, 302]
+        assert response.status_code == 200
 
         # Verify update
         agent_check = Agent.query.get(agent.id)
@@ -384,12 +403,13 @@ class TestAgentWorkflows:
 
     def test_agent_integration_permissions(self, client, test_user, test_tenant, test_department, db_session):
         """Test setting agent integration permissions"""
-        # Create agent
+        # Create agent with valid model from form choices
         agent = Agent(
             name='Integration Agent',
             department_id=test_department.id,
             created_by_id=test_user.id,
             system_prompt='Test',
+            model='claude-sonnet-4-5-20250929',
             enable_quickbooks=False
         )
         db_session.add(agent)
@@ -398,19 +418,29 @@ class TestAgentWorkflows:
         # Login as test_user (owner)
         client.login(test_user, test_tenant.id)
 
-        # Enable QuickBooks integration
+        # Enable QuickBooks integration using correct route and form data
         response = client.post(
-            f'/tenant/agents/{agent.id}/update',
-            json={
+            f'/department/agent/{agent.id}/edit',
+            data={
                 'name': 'Integration Agent',
-                'department_id': test_department.id,
+                'description': agent.description or '',
+                'avatar_url': agent.avatar_url or '',
                 'system_prompt': 'Test',
-                'enable_quickbooks': True  # JSON uses boolean
-            }
+                'model': agent.model,
+                'temperature': str(agent.temperature),
+                'max_tokens': str(agent.max_tokens),
+                'is_active': 'y',
+                'enable_quickbooks': 'y',  # Form checkbox uses 'y'
+                'access_control': agent.access_control or 'all',
+                'allowed_roles_str': '',
+                'allowed_department_ids_str': '',
+                'allowed_user_ids_str': ''
+            },
+            follow_redirects=True
         )
 
         # Should be successful
-        assert response.status_code in [200, 201, 302]
+        assert response.status_code == 200
 
         # Verify permission was set
         agent_check = Agent.query.get(agent.id)

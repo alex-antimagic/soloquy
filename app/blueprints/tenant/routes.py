@@ -754,8 +754,8 @@ def create_agent():
                 slug='personal',
                 department_id=personal_dept.id,
                 tenant_id=g.current_tenant.id,
-                is_department_channel=True,
-                is_private=False
+                is_private=False,
+                created_by_id=current_user.id
             )
             db.session.add(personal_channel)
 

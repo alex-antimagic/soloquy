@@ -20,6 +20,11 @@ class DepartmentForm(FlaskForm):
     icon = StringField('Icon', validators=[Length(max=50)])
     submit = SubmitField('Create Department')
 
+    def __init__(self, *args, department_id=None, **kwargs):
+        """Initialize form with optional department_id for edit validation"""
+        super(DepartmentForm, self).__init__(*args, **kwargs)
+        self.department_id = department_id
+
     def validate_slug(self, slug):
         """Check if slug is unique within the tenant"""
         if g.current_tenant:
@@ -27,7 +32,8 @@ class DepartmentForm(FlaskForm):
                 tenant_id=g.current_tenant.id,
                 slug=slug.data.lower()
             ).first()
-            if existing:
+            # Allow if editing the same department
+            if existing and (not self.department_id or existing.id != self.department_id):
                 raise ValidationError('A department with this slug already exists in your workspace.')
 
 

@@ -66,9 +66,10 @@ class TestChannelSecurity:
         db_session.commit()
 
         # Create a private channel with test_user as creator/member (but NOT test_user_2)
+        # Use unique slug to avoid any caching issues
         channel = Channel(
-            name='secret',
-            slug='secret',
+            name='secret-blocks-test',
+            slug='secret-blocks-test',
             tenant_id=test_tenant.id,
             is_private=True,
             created_by_id=test_user.id
@@ -99,9 +100,10 @@ class TestChannelSecurity:
         db_session.commit()
 
         # Create a private channel with only test_user as member
+        # Use unique slug to avoid caching issues
         channel = Channel(
-            name='secret',
-            slug='secret',
+            name='secret-send-test',
+            slug='secret-send-test',
             tenant_id=test_tenant.id,
             is_private=True,
             created_by_id=test_user.id
@@ -138,9 +140,10 @@ class TestChannelSecurity:
         db_session.commit()
 
         # Create a private channel with test_user as creator
+        # Use unique slug to avoid caching issues
         channel = Channel(
-            name='secret',
-            slug='secret',
+            name='secret-add-test',
+            slug='secret-add-test',
             tenant_id=test_tenant.id,
             is_private=True,
             created_by_id=test_user.id
@@ -274,9 +277,10 @@ class TestChannelSecurity:
         db_session.commit()
 
         # Create a private channel with only test_user as member
+        # Use unique slug to avoid caching issues
         channel = Channel(
-            name='secret',
-            slug='secret',
+            name='secret-mentions-test',
+            slug='secret-mentions-test',
             tenant_id=test_tenant.id,
             is_private=True,
             created_by_id=test_user.id
