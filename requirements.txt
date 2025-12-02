@@ -43,6 +43,9 @@ Flask-Limiter==3.5.0
 Flask-Talisman==1.1.0
 cryptography==41.0.7
 
+# Payment Processing
+stripe==11.2.0
+
 # Integrations
 intuit-oauth==1.2.6
 python-quickbooks==0.9.12

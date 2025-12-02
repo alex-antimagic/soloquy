@@ -162,6 +162,7 @@ def create_app(config_name='default'):
     from app.blueprints.crm import crm_bp
     from app.blueprints.support import support_bp
     from app.blueprints.integrations import integrations_bp
+    from app.blueprints.billing import billing_bp
     from app.blueprints.pages import pages
     from app.blueprints.website import website_bp, public_bp
     from app.blueprints.admin import admin_bp
@@ -176,6 +177,7 @@ def create_app(config_name='default'):
     app.register_blueprint(crm_bp, url_prefix='/crm')
     app.register_blueprint(support_bp, url_prefix='/support')
     app.register_blueprint(integrations_bp, url_prefix='/integrations')
+    app.register_blueprint(billing_bp, url_prefix='/billing')
     app.register_blueprint(website_bp)  # Admin routes at /website
     app.register_blueprint(public_bp)  # Public routes at /w/<slug>
     app.register_blueprint(admin_bp)  # System admin at /admin
@@ -222,6 +224,17 @@ def create_app(config_name='default'):
         return resize_avatar_url(avatar_url, pixel_size)
 
     app.jinja_env.filters['resize_avatar'] = resize_avatar_filter
+
+    # Register timestamp filter for Stripe dates
+    @app.template_filter('timestamp_to_date')
+    def timestamp_to_date_filter(timestamp):
+        """Convert Unix timestamp to readable date"""
+        from datetime import datetime
+        if timestamp:
+            return datetime.fromtimestamp(timestamp).strftime('%B %d, %Y')
+        return ''
+
+    app.jinja_env.filters['timestamp_to_date'] = timestamp_to_date_filter
 
     # Context processor for templates
     @app.context_processor

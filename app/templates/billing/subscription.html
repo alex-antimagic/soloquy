@@ -1,0 +1,184 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Subscription{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <h2 class="mb-4"><i class="bi bi-credit-card me-2"></i>Subscription Management</h2>
+
+            <!-- Current Plan Card -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Current Plan</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <h3 class="mb-1">{{ pricing_plans[current_user.plan].name }}</h3>
+                            <p class="text-muted mb-0">
+                                {% if current_user.plan == 'free' %}
+                                    No active subscription
+                                {% else %}
+                                    ${{ pricing_plans[current_user.plan].price }}/month
+                                {% endif %}
+                            </p>
+                        </div>
+                        {% if current_user.plan == 'free' %}
+                        <a href="{{ url_for('billing.pricing') }}" class="btn btn-primary">
+                            <i class="bi bi-arrow-up-circle me-2"></i>Upgrade to Pro
+                        </a>
+                        {% endif %}
+                    </div>
+
+                    <hr>
+
+                    <h6 class="mb-3">Plan Features:</h6>
+                    <ul class="list-unstyled">
+                        {% for feature in pricing_plans[current_user.plan].features %}
+                        <li class="mb-2">
+                            <i class="bi bi-check-circle-fill text-success me-2"></i>
+                            {{ feature }}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Subscription Details (if Pro) -->
+            {% if current_user.plan == 'pro' and subscription %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Subscription Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <p class="mb-1 text-muted small">Status</p>
+                            <p class="mb-0">
+                                {% if subscription.status == 'active' %}
+                                    <span class="badge bg-success">Active</span>
+                                {% elif subscription.status == 'trialing' %}
+                                    <span class="badge bg-info">Trial</span>
+                                {% elif subscription.status == 'past_due' %}
+                                    <span class="badge bg-warning">Past Due</span>
+                                {% elif subscription.status == 'canceled' %}
+                                    <span class="badge bg-danger">Canceled</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ subscription.status|title }}</span>
+                                {% endif %}
+
+                                {% if subscription.cancel_at_period_end %}
+                                    <span class="badge bg-warning ms-2">Cancels {{ subscription.current_period_end|timestamp_to_date }}</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="col-6">
+                            <p class="mb-1 text-muted small">Next Billing Date</p>
+                            <p class="mb-0">{{ subscription.current_period_end|timestamp_to_date }}</p>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-6">
+                            <p class="mb-1 text-muted small">Amount</p>
+                            <p class="mb-0">${{ (subscription.items.data[0].price.unit_amount / 100)|int }}/month</p>
+                        </div>
+                        <div class="col-6">
+                            <p class="mb-1 text-muted small">Started</p>
+                            <p class="mb-0">{{ subscription.created|timestamp_to_date }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Manage Subscription</h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">Update Payment Method</h6>
+                                <p class="mb-0 text-muted small">Update your credit card or billing information</p>
+                            </div>
+                            <form action="{{ url_for('billing.customer_portal') }}" method="POST" class="d-inline">
+                                <button type="submit" class="btn btn-outline-primary">
+                                    <i class="bi bi-credit-card me-1"></i>Manage
+                                </button>
+                            </form>
+                        </div>
+
+                        {% if not subscription.cancel_at_period_end %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">Cancel Subscription</h6>
+                                <p class="mb-0 text-muted small">You'll retain access until the end of your billing period</p>
+                            </div>
+                            <form action="{{ url_for('billing.cancel_subscription') }}" method="POST" class="d-inline"
+                                  onsubmit="return confirm('Are you sure you want to cancel your subscription? You will lose access to Pro features at the end of your billing period.');">
+                                <button type="submit" class="btn btn-outline-danger">
+                                    <i class="bi bi-x-circle me-1"></i>Cancel
+                                </button>
+                            </form>
+                        </div>
+                        {% else %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">Reactivate Subscription</h6>
+                                <p class="mb-0 text-muted small">Continue your Pro subscription</p>
+                            </div>
+                            <form action="{{ url_for('billing.reactivate_subscription') }}" method="POST" class="d-inline">
+                                <button type="submit" class="btn btn-success">
+                                    <i class="bi bi-arrow-repeat me-1"></i>Reactivate
+                                </button>
+                            </form>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Billing History (Link to Stripe Portal) -->
+            {% if current_user.stripe_customer_id %}
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Billing History</h5>
+                </div>
+                <div class="card-body">
+                    <p class="mb-3 text-muted">View all your invoices and receipts in the customer portal.</p>
+                    <form action="{{ url_for('billing.customer_portal') }}" method="POST">
+                        <button type="submit" class="btn btn-outline-primary">
+                            <i class="bi bi-receipt me-2"></i>View Billing History
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="mt-4 text-center">
+                <p class="text-muted">
+                    Need help? <a href="mailto:support@soloquy.app">Contact Support</a> |
+                    <a href="{{ url_for('billing.pricing') }}">View all plans</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+// Add a custom filter for timestamp conversion
+document.querySelectorAll('[data-timestamp]').forEach(el => {
+    const timestamp = parseInt(el.dataset.timestamp);
+    const date = new Date(timestamp * 1000);
+    el.textContent = date.toLocaleDateString();
+});
+</script>
+{% endblock %}
