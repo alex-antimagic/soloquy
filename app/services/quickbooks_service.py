@@ -226,7 +226,7 @@ class QuickBooksService:
             if status == 'open':
                 query = f"SELECT * FROM Invoice WHERE Balance > '0' ORDER BY TxnDate DESC MAXRESULTS {limit}"
             elif status == 'overdue':
-                today = datetime.now().strftime('%Y-%m-%d')
+                today = datetime.utcnow().strftime('%Y-%m-%d')
                 query = f"SELECT * FROM Invoice WHERE Balance > '0' AND DueDate < '{today}' ORDER BY DueDate MAXRESULTS {limit}"
             elif status == 'paid':
                 query = f"SELECT * FROM Invoice WHERE Balance = '0' ORDER BY TxnDate DESC MAXRESULTS {limit}"
@@ -266,9 +266,9 @@ class QuickBooksService:
         # For MVP, returning basic date range only
         # TODO: Implement full P&L report using QB Reports API
         if not start_date:
-            start_date = datetime.now().replace(day=1).strftime('%Y-%m-%d')
+            start_date = datetime.utcnow().replace(day=1).strftime('%Y-%m-%d')
         if not end_date:
-            end_date = datetime.now().strftime('%Y-%m-%d')
+            end_date = datetime.utcnow().strftime('%Y-%m-%d')
 
         return {
             'start_date': start_date,

@@ -414,6 +414,19 @@ class LongRunningTaskService:
                     db.session.add(message)
                     db.session.commit()
 
+                    # Format created_at in user's timezone
+                    from app.utils.timezone_utils import format_datetime_for_user
+                    formatted_time = message.created_at.isoformat()  # Default to ISO
+                    if hasattr(user, 'timezone_preference') and user.timezone_preference:
+                        try:
+                            formatted_time = format_datetime_for_user(
+                                message.created_at,
+                                user.timezone_preference,
+                                '%Y-%m-%dT%H:%M:%S'  # ISO format but in user's timezone
+                            )
+                        except:
+                            pass  # Fall back to UTC if conversion fails
+
                     # Emit message via SocketIO
                     socketio_manager.emit_to_tenant(
                         task.tenant_id,
@@ -426,7 +439,7 @@ class LongRunningTaskService:
                                 'sender': agent.name,
                                 'sender_id': agent.id,
                                 'agent_id': agent.id,
-                                'created_at': message.created_at.isoformat(),
+                                'created_at': formatted_time,
                                 'is_user': False
                             }
                         }
