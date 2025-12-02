@@ -74,6 +74,7 @@ def create():
     story_points = data.get('story_points')
     assigned_to_id = data.get('assigned_to_id')
     assigned_to_agent_id = data.get('assigned_to_agent_id')
+    parent_task_id = data.get('parent_task_id')
 
     if not title:
         return jsonify({'error': 'Title is required'}), 400
@@ -109,7 +110,8 @@ def create():
         project_id=to_int_or_none(project_id),
         section=section or None,
         tags=tags or None,
-        story_points=to_int_or_none(story_points)
+        story_points=to_int_or_none(story_points),
+        parent_task_id=to_int_or_none(parent_task_id)
     )
 
     db.session.add(task)

@@ -143,7 +143,7 @@ class TestCRMWorkflows:
             sess['current_tenant_id'] = test_tenant.id
 
         # Create company
-        response = client.post('/crm/companies/create', data={
+        response = client.post('/crm/companies/create', json={
             'name': 'Acme Corp',
             'website': 'https://acme.com',
             'industry': 'Technology'
@@ -166,7 +166,7 @@ class TestCRMWorkflows:
             sess['current_tenant_id'] = test_tenant.id
 
         # Create contact
-        response = client.post('/crm/contacts/create', data={
+        response = client.post('/crm/contacts/create', json={
             'first_name': 'Jane',
             'last_name': 'Smith',
             'email': 'jane@example.com',
@@ -208,7 +208,7 @@ class TestCRMWorkflows:
             sess['current_tenant_id'] = test_tenant.id
 
         # Link contact to company
-        response = client.post(f'/crm/contacts/{contact.id}/update', data={
+        response = client.post(f'/crm/contacts/{contact.id}/update', json={
             'first_name': 'John',
             'last_name': 'Doe',
             'email': 'john@test.com',
@@ -254,7 +254,7 @@ class TestCRMWorkflows:
             sess['current_tenant_id'] = test_tenant.id
 
         # Create deal
-        response = client.post('/crm/deals/create', data={
+        response = client.post('/crm/deals/create', json={
             'name': 'Big Deal',
             'company_id': company.id,
             'pipeline_id': pipeline.id,

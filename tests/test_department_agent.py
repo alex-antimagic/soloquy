@@ -54,7 +54,7 @@ class TestDepartmentTenantIsolation:
         # Try to update department from tenant_2
         response = client.post(
             f'/department/{dept_2.id}/update',
-            data={'name': 'Hacked Name'}
+            json={'name': 'Hacked Name'}
         )
 
         # Should be denied
@@ -224,7 +224,7 @@ class TestAgentTenantIsolation:
         # Try to update agent from tenant_2
         response = client.post(
             f'/tenant/agents/{agent_2.id}/update',
-            data={'name': 'Hacked Name', 'system_prompt': 'Hacked'}
+            json={'name': 'Hacked Name', 'system_prompt': 'Hacked'}
         )
 
         # Should be denied
@@ -247,7 +247,7 @@ class TestDepartmentWorkflows:
             sess['current_tenant_id'] = test_tenant.id
 
         # Create department
-        response = client.post('/department/create', data={
+        response = client.post('/department/create', json={
             'name': 'Sales',
             'description': 'Sales department',
             'color': '#00FF00'
@@ -272,7 +272,7 @@ class TestDepartmentWorkflows:
         # Update department
         response = client.post(
             f'/department/{test_department.id}/update',
-            data={'name': 'Updated Name', 'description': 'Updated description'}
+            json={'name': 'Updated Name', 'description': 'Updated description'}
         )
 
         # Should be successful
@@ -295,7 +295,7 @@ class TestAgentWorkflows:
             sess['current_tenant_id'] = test_tenant.id
 
         # Create agent
-        response = client.post('/tenant/agents/create', data={
+        response = client.post('/tenant/agents/create', json={
             'name': 'Sales Bot',
             'department_id': test_department.id,
             'system_prompt': 'You are a helpful sales assistant',
@@ -331,7 +331,7 @@ class TestAgentWorkflows:
         # Update agent
         response = client.post(
             f'/tenant/agents/{agent.id}/update',
-            data={
+            json={
                 'name': 'Test Agent',
                 'system_prompt': 'Updated prompt',
                 'department_id': test_department.id
@@ -429,11 +429,11 @@ class TestAgentWorkflows:
         # Enable QuickBooks integration
         response = client.post(
             f'/tenant/agents/{agent.id}/update',
-            data={
+            json={
                 'name': 'Integration Agent',
                 'department_id': test_department.id,
                 'system_prompt': 'Test',
-                'enable_quickbooks': 'on'  # Checkbox sends 'on'
+                'enable_quickbooks': True  # JSON uses boolean
             }
         )
 
