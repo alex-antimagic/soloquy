@@ -116,7 +116,7 @@ class TestDepartmentTenantIsolation:
             sess['current_tenant_id'] = test_tenant.id
 
         # Get department list
-        response = client.get('/tenant/agents')  # Departments are shown on agents page
+        response = client.get('/department/')
 
         # Should show only test_tenant departments
         assert response.status_code == 200
