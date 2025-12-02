@@ -52,7 +52,7 @@ class TestTaskTenantIsolation:
         # Try to update task from tenant_2
         response = client.post(
             f'/tasks/{task_2.id}/update',
-            data={'title': 'Updated Title', 'status': 'completed'}
+            json={'title': 'Updated Title', 'status': 'completed'}
         )
 
         # Should be denied
@@ -112,7 +112,7 @@ class TestTaskTenantIsolation:
             sess['current_tenant_id'] = test_tenant.id
 
         # Get task list
-        response = client.get('/tasks')
+        response = client.get('/tasks/')
 
         # Should show only test_tenant tasks
         assert response.status_code == 200
@@ -131,7 +131,7 @@ class TestTaskWorkflows:
             sess['current_tenant_id'] = test_tenant.id
 
         # Create task
-        response = client.post('/tasks/create', data={
+        response = client.post('/tasks/create', json={
             'title': 'New Task',
             'description': 'Task description',
             'priority': 'high',
@@ -176,7 +176,7 @@ class TestTaskWorkflows:
         # Assign task to test_user_2
         response = client.post(
             f'/tasks/{task.id}/update',
-            data={
+            json={
                 'title': 'Assignable Task',
                 'assigned_to_id': test_user_2.id
             }
@@ -228,7 +228,7 @@ class TestTaskWorkflows:
             sess['current_tenant_id'] = test_tenant.id
 
         # Create task with department
-        response = client.post('/tasks/create', data={
+        response = client.post('/tasks/create', json={
             'title': 'Department Task',
             'department_id': test_department.id
         }, follow_redirects=False)
@@ -265,7 +265,7 @@ class TestTaskWorkflows:
             sess['current_tenant_id'] = test_tenant.id
 
         # Filter by pending status
-        response = client.get('/tasks?status=pending')
+        response = client.get('/tasks/?status=pending')
 
         # Should show only pending tasks
         assert response.status_code == 200
@@ -292,7 +292,7 @@ class TestTaskWorkflows:
         # Update priority
         response = client.post(
             f'/tasks/{task.id}/update',
-            data={
+            json={
                 'title': 'Priority Task',
                 'priority': 'urgent'
             }
@@ -322,7 +322,7 @@ class TestTaskWorkflows:
             sess['current_tenant_id'] = test_tenant.id
 
         # Create subtask
-        response = client.post('/tasks/create', data={
+        response = client.post('/tasks/create', json={
             'title': 'Subtask',
             'parent_task_id': parent_task.id
         }, follow_redirects=False)
