@@ -14,7 +14,22 @@ def index():
     from app.models.project import Project
 
     # Get all tasks for current tenant
-    tasks = Task.query.filter_by(tenant_id=g.current_tenant.id).order_by(Task.created_at.desc()).all()
+    query = Task.query.filter_by(tenant_id=g.current_tenant.id)
+
+    # Apply filters from query parameters
+    status_filter = request.args.get('status')
+    if status_filter:
+        query = query.filter_by(status=status_filter)
+
+    priority_filter = request.args.get('priority')
+    if priority_filter:
+        query = query.filter_by(priority=priority_filter)
+
+    project_filter = request.args.get('project')
+    if project_filter:
+        query = query.filter_by(project_id=project_filter)
+
+    tasks = query.order_by(Task.created_at.desc()).all()
 
     # Get departments and projects for filtering
     departments = Department.query.filter_by(tenant_id=g.current_tenant.id).all()

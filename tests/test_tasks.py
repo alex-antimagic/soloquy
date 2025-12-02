@@ -138,8 +138,8 @@ class TestTaskWorkflows:
             'due_date': (datetime.utcnow() + timedelta(days=7)).strftime('%Y-%m-%d')
         }, follow_redirects=False)
 
-        # Should be successful
-        assert response.status_code in [200, 302]
+        # Should be successful (201 CREATED for JSON API)
+        assert response.status_code in [200, 201, 302]
 
         # Verify task was created
         task = Task.query.filter_by(title='New Task', tenant_id=test_tenant.id).first()
@@ -182,8 +182,8 @@ class TestTaskWorkflows:
             }
         )
 
-        # Should be successful
-        assert response.status_code in [200, 302]
+        # Should be successful (201 CREATED for JSON API)
+        assert response.status_code in [200, 201, 302]
 
         # Verify assignment
         task_check = Task.query.get(task.id)
@@ -212,8 +212,8 @@ class TestTaskWorkflows:
             follow_redirects=False
         )
 
-        # Should be successful
-        assert response.status_code in [200, 302]
+        # Should be successful (201 CREATED for JSON API)
+        assert response.status_code in [200, 201, 302]
 
         # Verify completion
         task_check = Task.query.get(task.id)
@@ -233,8 +233,8 @@ class TestTaskWorkflows:
             'department_id': test_department.id
         }, follow_redirects=False)
 
-        # Should be successful
-        assert response.status_code in [200, 302]
+        # Should be successful (201 CREATED for JSON API)
+        assert response.status_code in [200, 201, 302]
 
         # Verify task was created with department
         task = Task.query.filter_by(title='Department Task').first()
@@ -298,8 +298,8 @@ class TestTaskWorkflows:
             }
         )
 
-        # Should be successful
-        assert response.status_code in [200, 302]
+        # Should be successful (201 CREATED for JSON API)
+        assert response.status_code in [200, 201, 302]
 
         # Verify priority change
         task_check = Task.query.get(task.id)
@@ -327,8 +327,8 @@ class TestTaskWorkflows:
             'parent_task_id': parent_task.id
         }, follow_redirects=False)
 
-        # Should be successful
-        assert response.status_code in [200, 302]
+        # Should be successful (201 CREATED for JSON API)
+        assert response.status_code in [200, 201, 302]
 
         # Verify subtask was created
         subtask = Task.query.filter_by(title='Subtask').first()

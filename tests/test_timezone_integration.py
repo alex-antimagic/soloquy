@@ -61,6 +61,7 @@ def test_message_created_at_conversion(db_session, test_user):
 
     dept = Department(
         name='Test Dept',
+        slug='test-dept',
         tenant_id=tenant.id,
         description='Test'
     )
