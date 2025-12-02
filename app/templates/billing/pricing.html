@@ -49,6 +49,7 @@
                                 </a>
                             {% else %}
                                 <form action="{{ url_for('billing.create_checkout_session') }}" method="POST">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                     <input type="hidden" name="plan" value="{{ plan_id }}">
                                     <button type="submit" class="btn btn-primary w-100">
                                         {% if current_plan == 'free' %}
