@@ -114,7 +114,11 @@ class ProductionConfig(Config):
 class TestingConfig(Config):
     """Testing configuration"""
     TESTING = True
-    SQLALCHEMY_DATABASE_URI = 'postgresql://localhost/soloquy_test'
+    # Use DATABASE_URL from environment if set (for CI), otherwise use local default
+    test_db_url = os.environ.get('DATABASE_URL') or 'postgresql://localhost/soloquy_test'
+    if test_db_url.startswith('postgres://'):
+        test_db_url = test_db_url.replace('postgres://', 'postgresql://', 1)
+    SQLALCHEMY_DATABASE_URI = test_db_url
     WTF_CSRF_ENABLED = False
     RATELIMIT_ENABLED = False  # Disable rate limiting in tests
     SOCKETIO_ASYNC_MODE = 'threading'  # Use threading mode for tests
