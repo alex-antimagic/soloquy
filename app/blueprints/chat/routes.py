@@ -6,6 +6,7 @@ from app.models.department import Department
 from app.models.channel import Channel
 from app.models.agent import Agent
 from app.models.task import Task
+from app.models.user import User
 from app.services.ai_service import get_ai_service
 from app.services.cloudinary_service import upload_image
 from app import db, limiter, socketio
@@ -26,7 +27,6 @@ def index():
 @login_required
 def user_chat(user_id):
     """Direct message with a user"""
-    from app.models.user import User
     other_user = User.query.get_or_404(user_id)
 
     messages = Message.get_conversation(user1_id=current_user.id,

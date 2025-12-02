@@ -120,7 +120,7 @@ class TestCRMTenantIsolation:
         # Try to move deal to tenant_2's pipeline/stage
         response = client.post(
             f'/crm/deals/{deal.id}/move',
-            data={'stage_id': stage_2.id}
+            json={'stage_id': stage_2.id}
         )
 
         # Should be rejected
@@ -150,7 +150,7 @@ class TestCRMWorkflows:
         }, follow_redirects=False)
 
         # Should be successful
-        assert response.status_code in [200, 302]
+        assert response.status_code in [200, 201, 302]
 
         # Verify company was created in correct tenant
         company = Company.query.filter_by(name='Acme Corp', tenant_id=test_tenant.id).first()
@@ -174,7 +174,7 @@ class TestCRMWorkflows:
         }, follow_redirects=False)
 
         # Should be successful
-        assert response.status_code in [200, 302]
+        assert response.status_code in [200, 201, 302]
 
         # Verify contact was created in correct tenant
         contact = Contact.query.filter_by(email='jane@example.com', tenant_id=test_tenant.id).first()
@@ -322,7 +322,7 @@ class TestCRMWorkflows:
         # Move deal to stage 2
         response = client.post(
             f'/crm/deals/{deal.id}/move',
-            data={'stage_id': stage_2.id}
+            json={'stage_id': stage_2.id}
         )
 
         # Should be successful

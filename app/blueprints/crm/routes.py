@@ -581,7 +581,7 @@ def create_deal():
         probability=first_stage.probability,
         company_id=data.get('company_id'),
         description=data.get('description'),
-        close_date=datetime.strptime(data['close_date'], '%Y-%m-%d') if data.get('close_date') else None,
+        expected_close_date=datetime.strptime(data['close_date'], '%Y-%m-%d').date() if data.get('close_date') else None,
         owner_id=current_user.id
     )
 
