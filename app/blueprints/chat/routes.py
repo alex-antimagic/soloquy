@@ -1,4 +1,4 @@
-from flask import render_template, request, jsonify, g, current_app
+from flask import render_template, request, jsonify, g, current_app, flash, abort
 from flask_login import login_required, current_user
 from app.blueprints.chat import chat_bp
 from app.models.message import Message
@@ -663,11 +663,10 @@ def channel_chat(slug):
         slug=slug
     ).first_or_404()
 
-    # For now, allow all users to access public channels
-    # TODO: Add membership checks for private channels
-    if channel.is_private:
-        # Check membership (to be implemented)
-        pass
+    # Check if user has access to this channel
+    if not channel.can_user_access(current_user):
+        flash('You do not have access to this private channel.', 'danger')
+        abort(403)
 
     # Get messages for this channel
     messages = Message.query.filter_by(
@@ -695,6 +694,10 @@ def get_channel_mentions(slug):
         tenant_id=g.current_tenant.id,
         slug=slug
     ).first_or_404()
+
+    # Check if user has access to this channel
+    if not channel.can_user_access(current_user):
+        abort(403)
 
     # Get all agents in tenant and filter by access control
     from app.models.user import User
@@ -785,6 +788,10 @@ def send_channel_message(slug):
         tenant_id=g.current_tenant.id,
         slug=slug
     ).first_or_404()
+
+    # Check if user has access to this channel
+    if not channel.can_user_access(current_user):
+        return jsonify({'error': 'You do not have access to this private channel'}), 403
 
     data = request.get_json()
     content = data.get('content', '').strip()
@@ -1062,6 +1069,10 @@ def update_channel_description(slug):
     if not channel:
         return jsonify({'error': 'Channel not found'}), 404
 
+    # Check if user has access to this channel
+    if not channel.can_user_access(current_user):
+        return jsonify({'error': 'You do not have access to this private channel'}), 403
+
     # Check if user can edit (creator or admin)
     if channel.created_by_id != current_user.id:
         return jsonify({'error': 'Only the channel creator can edit the description'}), 403
@@ -1108,9 +1119,13 @@ def channel_members(slug):
 @login_required
 def add_channel_member(slug):
     """Add a member to a private channel"""
-    channel = Channel.query.filter_by(slug=slug, tenant_id=current_tenant.id).first()
+    channel = Channel.query.filter_by(slug=slug, tenant_id=g.current_tenant.id).first()
     if not channel:
         return jsonify({'error': 'Channel not found'}), 404
+
+    # Check if user has access to this channel
+    if not channel.can_user_access(current_user):
+        return jsonify({'error': 'You do not have access to this private channel'}), 403
 
     # Only channel creator or admins can add members to private channels
     if not channel.is_private:
@@ -1142,9 +1157,13 @@ def add_channel_member(slug):
 @login_required
 def remove_channel_member(slug):
     """Remove a member from a private channel"""
-    channel = Channel.query.filter_by(slug=slug, tenant_id=current_tenant.id).first()
+    channel = Channel.query.filter_by(slug=slug, tenant_id=g.current_tenant.id).first()
     if not channel:
         return jsonify({'error': 'Channel not found'}), 404
+
+    # Check if user has access to this channel
+    if not channel.can_user_access(current_user):
+        return jsonify({'error': 'You do not have access to this private channel'}), 403
 
     if not channel.is_private:
         return jsonify({'error': 'Cannot remove members from public channels'}), 400
@@ -1182,6 +1201,10 @@ def add_channel_agent(slug):
     if not channel:
         return jsonify({'error': 'Channel not found'}), 404
 
+    # Check if user has access to this channel
+    if not channel.can_user_access(current_user):
+        return jsonify({'error': 'You do not have access to this private channel'}), 403
+
     # Only channel creator can add agents
     if channel.created_by_id != current_user.id:
         return jsonify({'error': 'Only the channel creator can add agents'}), 403
@@ -1217,6 +1240,10 @@ def remove_channel_agent(slug):
     channel = Channel.query.filter_by(slug=slug, tenant_id=g.current_tenant.id).first()
     if not channel:
         return jsonify({'error': 'Channel not found'}), 404
+
+    # Check if user has access to this channel
+    if not channel.can_user_access(current_user):
+        return jsonify({'error': 'You do not have access to this private channel'}), 403
 
     # Only channel creator can remove agents
     if channel.created_by_id != current_user.id:
