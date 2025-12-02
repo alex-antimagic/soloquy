@@ -342,6 +342,64 @@
         </div>
     </div>
 </div>
+
+<!-- Edit Task Modal -->
+<div class="modal fade" id="editTaskModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Task</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editTaskForm">
+                    <input type="hidden" id="editTaskId">
+                    <div class="mb-3">
+                        <label for="editTaskTitle" class="form-label">Title *</label>
+                        <input type="text" class="form-control" id="editTaskTitle" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editTaskDescription" class="form-label">Description</label>
+                        <textarea class="form-control" id="editTaskDescription" rows="3"></textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="editTaskPriority" class="form-label">Priority</label>
+                            <select class="form-select" id="editTaskPriority">
+                                <option value="low">Low</option>
+                                <option value="medium">Medium</option>
+                                <option value="high">High</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="editTaskDueDate" class="form-label">Due Date</label>
+                            <input type="date" class="form-control" id="editTaskDueDate">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="editTaskProject" class="form-label">Project</label>
+                            <select class="form-select" id="editTaskProject">
+                                <option value="">None</option>
+                                {% for project in projects %}
+                                <option value="{{ project.id }}">{{ project.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="editTaskStoryPoints" class="form-label">Story Points</label>
+                            <input type="number" class="form-control" id="editTaskStoryPoints" min="1" max="100">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveTaskEdit()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -463,8 +521,103 @@ function createTask() {
 }
 
 function editTask(taskId) {
-    // TODO: Implement edit modal
-    alert('Edit functionality coming soon');
+    // Find the task card
+    const taskCard = document.querySelector(`[data-task-id="${taskId}"]`);
+    if (!taskCard) {
+        alert('Task not found');
+        return;
+    }
+
+    // Extract task data from the card
+    const title = taskCard.querySelector('h5').textContent.trim().replace(/\s*✓\s*$/, '');
+    const descriptionEl = taskCard.querySelector('.text-muted');
+    const description = descriptionEl ? descriptionEl.textContent.trim().replace(/\.\.\.$/, '') : '';
+    const priority = taskCard.dataset.priority;
+    const status = taskCard.dataset.status;
+
+    // Get due date if exists
+    const dueDateEl = taskCard.querySelector('.bi-calendar-event');
+    let dueDate = '';
+    if (dueDateEl && dueDateEl.parentElement) {
+        const dueDateText = dueDateEl.parentElement.textContent.trim();
+        const dateMatch = dueDateText.match(/Due (.+)/);
+        if (dateMatch) {
+            const parsedDate = new Date(dateMatch[1]);
+            if (!isNaN(parsedDate)) {
+                dueDate = parsedDate.toISOString().split('T')[0];
+            }
+        }
+    }
+
+    // Get project if exists
+    const projectId = taskCard.dataset.project || '';
+
+    // Get story points if exists
+    const storyPointsEl = taskCard.querySelector('.bi-star');
+    let storyPoints = '';
+    if (storyPointsEl && storyPointsEl.parentElement) {
+        const match = storyPointsEl.parentElement.textContent.match(/(\d+) pts/);
+        if (match) {
+            storyPoints = match[1];
+        }
+    }
+
+    // Populate edit modal
+    document.getElementById('editTaskId').value = taskId;
+    document.getElementById('editTaskTitle').value = title;
+    document.getElementById('editTaskDescription').value = description;
+    document.getElementById('editTaskPriority').value = priority;
+    document.getElementById('editTaskDueDate').value = dueDate;
+    document.getElementById('editTaskProject').value = projectId;
+    document.getElementById('editTaskStoryPoints').value = storyPoints;
+
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('editTaskModal'));
+    modal.show();
+}
+
+function saveTaskEdit() {
+    const taskId = document.getElementById('editTaskId').value;
+    const title = document.getElementById('editTaskTitle').value;
+    const description = document.getElementById('editTaskDescription').value;
+    const priority = document.getElementById('editTaskPriority').value;
+    const dueDate = document.getElementById('editTaskDueDate').value;
+    const projectId = document.getElementById('editTaskProject').value;
+    const storyPoints = document.getElementById('editTaskStoryPoints').value;
+
+    if (!title) {
+        alert('Please enter a task title');
+        return;
+    }
+
+    fetch(`/tasks/${taskId}/update`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            title: title,
+            description: description,
+            priority: priority,
+            due_date: dueDate || null,
+            project_id: projectId || null,
+            story_points: storyPoints || null
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            alert('Error: ' + data.error);
+        } else {
+            // Hide modal and reload page
+            bootstrap.Modal.getInstance(document.getElementById('editTaskModal')).hide();
+            location.reload();
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to update task');
+    });
 }
 
 function toggleComplete(taskId) {
