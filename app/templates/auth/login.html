@@ -29,6 +29,9 @@
                 <form method="POST" action="{{ url_for('auth.login') }}">
                     {{ form.hidden_tag() }}
 
+                    <!-- Hidden field for timezone detection -->
+                    <input type="hidden" name="detected_timezone" id="detected_timezone">
+
                     <div class="mb-3">
                         {{ form.email.label(class="form-label") }}
                         {{ form.email(class="form-control" + (" is-invalid" if form.email.errors else ""), placeholder="you@example.com") }}
@@ -75,4 +78,13 @@
 </div>
 
 <script src="{{ url_for('static', filename='js/particle_wave.js') }}"></script>
+<script>
+// Detect user's timezone using JavaScript
+try {
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    document.getElementById('detected_timezone').value = timezone;
+} catch(e) {
+    console.log('Could not detect timezone:', e);
+}
+</script>
 {% endblock %}

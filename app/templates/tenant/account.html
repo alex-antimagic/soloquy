@@ -130,6 +130,60 @@
                 </div>
             </div>
 
+            <!-- Timezone Settings -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-clock me-2"></i>Timezone</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('tenant.account_settings') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="action" value="update_timezone">
+
+                        <div class="mb-3">
+                            <label for="timezone_preference" class="form-label">Timezone Preference</label>
+                            <div class="form-text mb-2">Set your timezone for accurate time displays and calendar events.</div>
+                            <select class="form-select" id="timezone_preference" name="timezone_preference">
+                                {% set common_timezones = [
+                                    'America/New_York',
+                                    'America/Chicago',
+                                    'America/Denver',
+                                    'America/Los_Angeles',
+                                    'America/Phoenix',
+                                    'America/Anchorage',
+                                    'Pacific/Honolulu',
+                                    'America/Toronto',
+                                    'America/Vancouver',
+                                    'Europe/London',
+                                    'Europe/Paris',
+                                    'Europe/Berlin',
+                                    'Europe/Rome',
+                                    'Europe/Madrid',
+                                    'Asia/Tokyo',
+                                    'Asia/Shanghai',
+                                    'Asia/Hong_Kong',
+                                    'Asia/Singapore',
+                                    'Asia/Dubai',
+                                    'Asia/Kolkata',
+                                    'Australia/Sydney',
+                                    'Australia/Melbourne',
+                                    'UTC'
+                                ] %}
+                                {% for tz in common_timezones %}
+                                    <option value="{{ tz }}" {% if current_user.timezone_preference == tz %}selected{% endif %}>
+                                        {{ tz.replace('_', ' ') }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg me-2"></i>Save Timezone
+                        </button>
+                    </form>
+                </div>
+            </div>
+
             <!-- Change Password -->
             <div class="card mb-4">
                 <div class="card-header">

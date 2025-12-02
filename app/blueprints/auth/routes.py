@@ -57,6 +57,17 @@ def login():
             session.modified = True
 
             login_user(user, remember=form.remember_me.data)
+
+            # Auto-detect timezone on first login if still UTC default
+            if user.timezone_preference == 'UTC':
+                detected_tz = request.form.get('detected_timezone')
+                if detected_tz:
+                    import pytz
+                    # Validate timezone before saving
+                    if detected_tz in pytz.all_timezones:
+                        user.timezone_preference = detected_tz
+                        current_app.logger.info(f"Auto-detected timezone for user {user.id}: {detected_tz}")
+
             user.is_online = True
             db.session.commit()
 
@@ -112,6 +123,15 @@ def register():
             email_confirmed=False  # Require email confirmation
         )
         user.set_password(form.password.data)
+
+        # Auto-detect timezone during registration
+        detected_tz = request.form.get('detected_timezone')
+        if detected_tz:
+            import pytz
+            # Validate timezone before saving
+            if detected_tz in pytz.all_timezones:
+                user.timezone_preference = detected_tz
+                current_app.logger.info(f"Auto-detected timezone for new user: {detected_tz}")
 
         db.session.add(user)
         db.session.commit()

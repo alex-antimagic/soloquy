@@ -192,6 +192,19 @@ def create_app(config_name='default'):
     import json
     app.jinja_env.filters['from_json'] = lambda x: json.loads(x) if x else []
 
+    # Register timezone template filter
+    from app.utils.timezone_utils import format_datetime_for_user
+
+    @app.template_filter('user_timezone')
+    def user_timezone_filter(utc_datetime, format_str='%b %d, %I:%M %p %Z'):
+        """Convert UTC datetime to current user's timezone"""
+        from flask_login import current_user
+        if current_user.is_authenticated and hasattr(current_user, 'timezone_preference') and current_user.timezone_preference:
+            return format_datetime_for_user(utc_datetime, current_user.timezone_preference, format_str)
+        return utc_datetime.strftime('%b %d, %I:%M %p UTC') if utc_datetime else ''
+
+    app.jinja_env.filters['user_timezone'] = user_timezone_filter
+
     # Context processor for templates
     @app.context_processor
     def inject_tenant():

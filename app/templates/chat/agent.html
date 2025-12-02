@@ -30,7 +30,7 @@
                     <div class="message-content">
                         <div class="message-header">
                             <span class="message-author">{{ message.get_sender_name() }}</span>
-                            <span class="message-time">{{ message.created_at.strftime('%I:%M %p') }}</span>
+                            <span class="message-time">{{ message.created_at|user_timezone('%I:%M %p %Z') }}</span>
                         </div>
                         <div class="message-body">{{ message.content | format_message }}</div>
                     </div>

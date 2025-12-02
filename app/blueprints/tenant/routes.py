@@ -982,6 +982,18 @@ def account_settings():
             else:
                 flash('Invalid theme preference.', 'danger')
 
+        elif action == 'update_timezone':
+            # Update timezone preference
+            import pytz
+            timezone = request.form.get('timezone_preference', 'UTC')
+
+            if timezone in pytz.all_timezones:
+                current_user.timezone_preference = timezone
+                db.session.commit()
+                flash(f'Timezone updated to {timezone}!', 'success')
+            else:
+                flash('Invalid timezone selected.', 'danger')
+
         return redirect(url_for('tenant.account_settings'))
 
     return render_template('tenant/account.html', title='Account Settings')
