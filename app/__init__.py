@@ -205,6 +205,24 @@ def create_app(config_name='default'):
 
     app.jinja_env.filters['user_timezone'] = user_timezone_filter
 
+    # Register avatar resizing template filter
+    from app.utils.avatar_utils import resize_avatar_url
+
+    @app.template_filter('resize_avatar')
+    def resize_avatar_filter(avatar_url, size='medium'):
+        """Resize avatar URL for faster loading"""
+        size_map = {
+            'thumbnail': 48,
+            'small': 64,
+            'medium': 128,
+            'large': 256,
+            'xlarge': 512
+        }
+        pixel_size = size_map.get(size, 128) if isinstance(size, str) else int(size)
+        return resize_avatar_url(avatar_url, pixel_size)
+
+    app.jinja_env.filters['resize_avatar'] = resize_avatar_filter
+
     # Context processor for templates
     @app.context_processor
     def inject_tenant():

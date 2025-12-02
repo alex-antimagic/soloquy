@@ -68,7 +68,7 @@
                                onclick="markAsRead('agent', '{{ agent.id }}')">
                                 <div class="position-relative" style="flex-shrink: 0;">
                                     {% if agent.avatar_url %}
-                                        <img src="{{ agent.avatar_url }}" alt="{{ agent.name }}" class="conversation-avatar rounded" width="24" height="24">
+                                        <img src="{{ agent.avatar_url|resize_avatar('thumbnail') }}" alt="{{ agent.name }}" class="conversation-avatar rounded" width="24" height="24">
                                     {% else %}
                                         <i class="bi bi-robot" style="font-size: 24px;"></i>
                                     {% endif %}
@@ -94,7 +94,7 @@
                                onclick="markAsRead('user', '{{ member.id }}')">
                                 <div class="position-relative" style="flex-shrink: 0;">
                                     {% if member.avatar_url %}
-                                        <img src="{{ member.avatar_url }}" alt="{{ member.full_name }}" class="rounded-circle" style="width: 32px; height: 32px; object-fit: cover;">
+                                        <img src="{{ member.avatar_url|resize_avatar('thumbnail') }}" alt="{{ member.full_name }}" class="rounded-circle" style="width: 32px; height: 32px; object-fit: cover;">
                                     {% else %}
                                         <i class="bi bi-person-square rounded" style="font-size: 24px; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;"></i>
                                     {% endif %}

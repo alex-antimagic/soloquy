@@ -175,7 +175,7 @@
                 {% for agent in context_channel.department.get_agents() %}
                     <a href="{{ url_for('chat.agent_chat', agent_id=agent.id) }}" class="member-item">
                         {% if agent.avatar_url %}
-                            <img src="{{ agent.avatar_url }}" alt="{{ agent.name }}" class="member-avatar rounded" width="32" height="32">
+                            <img src="{{ agent.avatar_url|resize_avatar('thumbnail') }}" alt="{{ agent.name }}" class="member-avatar rounded" width="32" height="32">
                         {% else %}
                             <span class="user-status online"></span>
                         {% endif %}
