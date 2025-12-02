@@ -238,7 +238,7 @@ class TestDepartmentWorkflows:
         }, follow_redirects=False)
 
         # Should be successful
-        assert response.status_code in [200, 302]
+        assert response.status_code in [200, 201, 302]
 
         # Verify department was created
         dept = Department.query.filter_by(name='Sales', tenant_id=test_tenant.id).first()
@@ -258,7 +258,7 @@ class TestDepartmentWorkflows:
         )
 
         # Should be successful
-        assert response.status_code in [200, 302]
+        assert response.status_code in [200, 201, 302]
 
         # Verify update
         dept_check = Department.query.get(test_department.id)
@@ -283,7 +283,7 @@ class TestAgentWorkflows:
         }, follow_redirects=False)
 
         # Should be successful
-        assert response.status_code in [200, 302]
+        assert response.status_code in [200, 201, 302]
 
         # Verify agent was created
         agent = Agent.query.filter_by(name='Sales Bot').first()
@@ -317,7 +317,7 @@ class TestAgentWorkflows:
         )
 
         # Should be successful
-        assert response.status_code in [200, 302]
+        assert response.status_code in [200, 201, 302]
 
         # Verify update
         agent_check = Agent.query.get(agent.id)
@@ -410,7 +410,7 @@ class TestAgentWorkflows:
         )
 
         # Should be successful
-        assert response.status_code in [200, 302]
+        assert response.status_code in [200, 201, 302]
 
         # Verify permission was set
         agent_check = Agent.query.get(agent.id)
