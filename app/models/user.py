@@ -44,6 +44,7 @@ class User(UserMixin, db.Model):
 
     # Preferences
     theme_preference = db.Column(db.String(10), default='dark', nullable=False)  # 'dark' or 'light'
+    timezone_preference = db.Column(db.String(50), default='UTC', nullable=False)  # IANA timezone name like 'America/Los_Angeles'
 
     # Timestamps
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)

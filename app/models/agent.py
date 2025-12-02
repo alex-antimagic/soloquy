@@ -312,6 +312,28 @@ class Agent(db.Model):
             context_parts.append(tenant.custom_context)
             context_parts.append("")  # Blank line for separation
 
+        # Timezone Context (for calendar/scheduling operations)
+        if user and hasattr(user, 'timezone_preference') and user.timezone_preference:
+            from datetime import datetime
+            import pytz
+
+            context_parts.append("=== TIMEZONE CONTEXT ===")
+            context_parts.append(f"User's timezone: {user.timezone_preference}")
+
+            # Show current time in user's timezone
+            try:
+                user_tz = pytz.timezone(user.timezone_preference)
+                current_time = datetime.utcnow().replace(tzinfo=pytz.UTC).astimezone(user_tz)
+                context_parts.append(f"Current time in user's timezone: {current_time.strftime('%Y-%m-%d %I:%M %p %Z')}")
+            except:
+                pass
+
+            context_parts.append("IMPORTANT: When creating calendar events or displaying times, always:")
+            context_parts.append(f"1. Show times in {user.timezone_preference} format (include timezone abbreviation like 'PST', 'EST', etc.)")
+            context_parts.append("2. Convert user's local time inputs to UTC for API calls")
+            context_parts.append("3. Display 'Creating calendar event at 2pm PST' to confirm timezone")
+            context_parts.append("")
+
         # Workspace context
         if tenant:
             context_parts.append(f"You are working in the '{tenant.name}' workspace.")

@@ -137,11 +137,11 @@ class AIService:
                         },
                         "start": {
                             "type": "string",
-                            "description": "Start time in ISO format (e.g., '2024-01-15T14:00:00')"
+                            "description": "Start time in ISO format WITHOUT timezone (e.g., '2024-01-15T14:00:00'). The AI should convert user's local time to UTC before passing here."
                         },
                         "end": {
                             "type": "string",
-                            "description": "End time in ISO format"
+                            "description": "End time in ISO format WITHOUT timezone. The AI should convert user's local time to UTC before passing here."
                         },
                         "attendees": {
                             "type": "array",

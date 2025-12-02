@@ -66,6 +66,7 @@ sentry-sdk[flask]==1.40.0  # Error tracking and performance monitoring
 
 # Development
 python-dateutil==2.8.2
+pytz==2024.1  # Timezone support for Python
 
 # Testing
 pytest==7.4.3
