@@ -71,7 +71,8 @@ def test_message_created_at_conversion(db_session, test_user):
     agent = Agent(
         name='Test Agent',
         department_id=dept.id,
-        system_prompt='Test'
+        system_prompt='Test',
+        created_by_id=test_user.id
     )
     db_session.add(agent)
     db_session.commit()
