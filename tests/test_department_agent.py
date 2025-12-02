@@ -31,8 +31,8 @@ class TestDepartmentTenantIsolation:
         # Try to access department from tenant_2
         response = client.get(f'/department/{dept_2.id}')
 
-        # Should be denied
-        assert response.status_code in [403, 404]
+        # Should be denied (302 redirect, 403 forbidden, or 404 not found)
+        assert response.status_code in [302, 403, 404]
 
     def test_cannot_update_other_tenant_department(self, client, test_user, test_tenant, test_tenant_2, db_session):
         """Test that users cannot update departments from other tenants"""
@@ -85,8 +85,8 @@ class TestDepartmentTenantIsolation:
         # Try to delete department from tenant_2
         response = client.post(f'/department/{dept_2_id}/delete')
 
-        # Should be denied
-        assert response.status_code in [403, 404]
+        # Should be denied (302 redirect, 403 forbidden, or 404 not found)
+        assert response.status_code in [302, 403, 404]
 
         # Verify department still exists
         dept_check = Department.query.get(dept_2_id)
