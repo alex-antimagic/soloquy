@@ -186,9 +186,8 @@
                     </p>
                     <ul class="small">
                         <li>Add platform: "Web"</li>
-                        <li>Add redirect URIs:<br>
-                            <code class="small">{{ url_for('integrations.outlook_callback', scope='workspace', _external=True) }}</code><br>
-                            <code class="small">{{ url_for('integrations.outlook_callback', scope='user', _external=True) }}</code>
+                        <li>Add redirect URI:<br>
+                            <code class="small">{{ url_for('integrations.outlook_callback', _external=True) }}</code>
                         </li>
                         <li>Enable "Access tokens" and "ID tokens"</li>
                     </ul>

@@ -24,10 +24,9 @@ The Outlook integration uses a **single Azure AD app registration per tenant**. 
 
 1. In your app, go to **Authentication**
 2. Click **Add a platform** → **Web**
-3. Add both redirect URIs:
+3. Add the redirect URI:
    ```
-   https://your-domain.com/integrations/outlook/callback/workspace
-   https://your-domain.com/integrations/outlook/callback/user
+   https://your-domain.com/integrations/outlook/callback
    ```
 4. Under **Implicit grant and hybrid flows**, enable:
    - ✅ Access tokens
