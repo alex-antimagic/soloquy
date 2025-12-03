@@ -55,10 +55,29 @@
             <div class="card mb-4">
                 <div class="card-header">
                     <h5 class="mb-0">
-                        <i class="bi bi-key me-2"></i>Microsoft Azure OAuth Credentials
+                        {% if is_workspace %}
+                            <i class="bi bi-key me-2"></i>Microsoft Azure OAuth Credentials
+                        {% else %}
+                            <i class="bi bi-person-check me-2"></i>Connect Your Personal Outlook
+                        {% endif %}
                     </h5>
                 </div>
                 <div class="card-body">
+                    {% if not is_workspace and tenant_integration %}
+                    <div class="alert alert-info d-flex align-items-start mb-4" role="alert">
+                        <i class="bi bi-info-circle-fill me-3 fs-5 flex-shrink-0"></i>
+                        <div>
+                            <h6 class="alert-heading mb-1">Using Workspace Azure AD App</h6>
+                            <p class="mb-0 small">
+                                This integration will use your workspace's existing Azure AD app registration
+                                (<code>{{ tenant_integration.client_id[:8] }}...</code>).
+                                You'll authenticate with your own Microsoft credentials, and your personal access token
+                                will only grant access to your mailbox.
+                            </p>
+                        </div>
+                    </div>
+                    {% endif %}
+
                     <form method="POST">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
@@ -77,6 +96,7 @@
                             </small>
                         </div>
 
+                        {% if is_workspace %}
                         <div class="mb-3">
                             <label for="client_id" class="form-label">
                                 Application (client) ID <span class="text-danger">*</span>
@@ -120,9 +140,14 @@
                                 Add this to your Azure App "Redirect URIs" under Authentication
                             </small>
                         </div>
+                        {% endif %}
 
                         <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-check-lg me-2"></i>Save Credentials
+                            {% if is_workspace %}
+                                <i class="bi bi-check-lg me-2"></i>Save Credentials
+                            {% else %}
+                                <i class="bi bi-box-arrow-up-right me-2"></i>Continue to Microsoft Sign-In
+                            {% endif %}
                         </button>
                         <a href="{{ url_for('integrations.index') }}" class="btn btn-secondary">
                             Cancel
@@ -134,9 +159,10 @@
 
         <!-- Setup Instructions -->
         <div class="col-lg-4">
+            {% if is_workspace %}
             <div class="card">
                 <div class="card-header">
-                    <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Setup Instructions</h6>
+                    <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Azure AD Setup Instructions</h6>
                 </div>
                 <div class="card-body">
                     <h6>1. Sign in to Azure Portal</h6>
@@ -150,8 +176,8 @@
                         Navigate to "Azure Active Directory" → "App registrations" → "New registration"
                     </p>
                     <ul class="small">
-                        <li>Name: "Soloquy MCP Integration"</li>
-                        <li>Supported account types: "Accounts in any organizational directory and personal Microsoft accounts"</li>
+                        <li>Name: "{{ g.current_tenant.name }} - Soloquy"</li>
+                        <li>Supported account types: "Accounts in this organizational directory only"</li>
                     </ul>
 
                     <h6>3. Configure Authentication</h6>
@@ -160,8 +186,9 @@
                     </p>
                     <ul class="small">
                         <li>Add platform: "Web"</li>
-                        <li>Add redirect URI:<br>
-                            <code class="small">{{ url_for('integrations.outlook_callback', scope=scope, _external=True) }}</code>
+                        <li>Add redirect URIs:<br>
+                            <code class="small">{{ url_for('integrations.outlook_callback', scope='workspace', _external=True) }}</code><br>
+                            <code class="small">{{ url_for('integrations.outlook_callback', scope='user', _external=True) }}</code>
                         </li>
                         <li>Enable "Access tokens" and "ID tokens"</li>
                     </ul>
@@ -171,28 +198,73 @@
                         In "Certificates & secrets" → "Client secrets" → "New client secret"
                     </p>
                     <ul class="small">
-                        <li>Description: "Soloquy MCP"</li>
-                        <li>Expiration: Your choice</li>
+                        <li>Description: "Soloquy"</li>
+                        <li>Expiration: Your choice (24 months recommended)</li>
                         <li><strong>Copy the secret value immediately</strong> (you can't see it again)</li>
                     </ul>
 
                     <h6>5. API Permissions</h6>
                     <p class="small">
-                        In "API permissions" → "Add a permission" → "Microsoft Graph":
+                        In "API permissions" → "Add a permission" → "Microsoft Graph" → "Delegated permissions":
                     </p>
                     <ul class="small">
-                        <li>Mail.ReadWrite (Delegated)</li>
-                        <li>Mail.Send (Delegated)</li>
-                        <li>offline_access (Delegated)</li>
+                        <li>Mail.ReadWrite</li>
+                        <li>Mail.Send</li>
+                        <li>Calendars.ReadWrite</li>
+                        <li>offline_access</li>
+                    </ul>
+                    <p class="small">
+                        <strong>Optional:</strong> Click "Grant admin consent" to pre-approve for all workspace users.
+                    </p>
+
+                    <div class="alert alert-info small mt-3 mb-0">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <strong>Note:</strong> This same Azure AD app will be used for all users in your workspace.
+                        Each user authenticates with their own credentials and gets their own access token.
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>How This Works</h6>
+                </div>
+                <div class="card-body">
+                    <h6 class="mb-2">OAuth Authentication</h6>
+                    <p class="small">
+                        When you click "Continue to Microsoft Sign-In", you'll:
+                    </p>
+                    <ol class="small">
+                        <li>Sign in with your Microsoft credentials</li>
+                        <li>Grant permission for Soloquy to access your mailbox</li>
+                        <li>Get redirected back here with your personal access token</li>
+                    </ol>
+
+                    <div class="alert alert-success small mt-3 mb-3">
+                        <i class="bi bi-shield-check me-2"></i>
+                        <strong>Privacy:</strong> Your access token only grants access to <strong>your mailbox</strong>.
+                        No one else in the workspace can access your emails.
+                    </div>
+
+                    <h6 class="mb-2">After Connecting</h6>
+                    <p class="small">
+                        You'll be able to enable Outlook access for your personal AI agents. They can:
+                    </p>
+                    <ul class="small">
+                        <li>Read and search your emails</li>
+                        <li>Send emails on your behalf</li>
+                        <li>Access your calendar</li>
+                        <li>Manage shared mailboxes you have access to</li>
                     </ul>
 
                     <div class="alert alert-warning small mt-3 mb-0">
                         <i class="bi bi-exclamation-triangle me-2"></i>
-                        <strong>Security Note:</strong> Your credentials are encrypted at rest. The Outlook MCP server
-                        runs as a separate process and only your authorized agents can access it.
+                        <strong>Token Expiry:</strong> Your access token is automatically refreshed.
+                        You may need to re-authenticate if it expires or is revoked.
                     </div>
                 </div>
             </div>
+            {% endif %}
 
             {% if integration and integration.is_active %}
             <div class="card border-success mt-3">

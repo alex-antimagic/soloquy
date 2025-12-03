@@ -170,15 +170,15 @@ def index():
             'category': 'Email',
             'available': True,
             'connected': outlook_personal is not None and outlook_personal.is_active,
-            'configured': outlook_personal is not None and bool(outlook_personal.client_id),
-            'configure_url': 'integrations.outlook_configure',
-            'configure_params': {'scope': 'user'},
-            'connect_url': 'integrations.outlook_connect' if outlook_personal and outlook_personal.client_id else None,
+            'configured': outlook_workspace is not None and bool(outlook_workspace.client_id),  # Configured if workspace has credentials
+            'configure_url': None,  # No configuration needed for users
+            'connect_url': 'integrations.outlook_connect' if outlook_workspace and outlook_workspace.client_id else None,
             'connect_params': {'scope': 'user'},
             'status_url': 'integrations.outlook_status',
             'status_params': {'scope': 'user'},
             'disconnect_url': 'integrations.outlook_disconnect' if outlook_personal and outlook_personal.is_active else None,
-            'display_name': outlook_personal.display_name if outlook_personal else None
+            'display_name': outlook_personal.display_name if outlook_personal else None,
+            'requires_workspace_setup': outlook_workspace is None or not outlook_workspace.client_id  # Flag to show warning
         },
         {
             'name': 'Google Drive',

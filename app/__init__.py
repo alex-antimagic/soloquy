@@ -67,6 +67,33 @@ def init_sentry(app):
         print("⚠ Sentry DSN not configured - error tracking disabled")
 
 
+def get_app_version():
+    """Get application version from git commit hash or Heroku slug"""
+    import subprocess
+    import os
+
+    # Production: Use Heroku slug commit
+    heroku_commit = os.environ.get('HEROKU_SLUG_COMMIT', '')
+    if heroku_commit:
+        return f"v1.0.0-{heroku_commit[:7]}"
+
+    # Development: Use git command
+    try:
+        result = subprocess.run(
+            ['git', 'rev-parse', '--short=7', 'HEAD'],
+            capture_output=True,
+            text=True,
+            timeout=2
+        )
+        if result.returncode == 0:
+            commit_hash = result.stdout.strip()
+            return f"v1.0.0-{commit_hash}"
+    except Exception:
+        pass
+
+    return "v1.0.0-dev"
+
+
 def create_app(config_name='default'):
     """Application factory pattern"""
     app = Flask(__name__)
@@ -239,7 +266,7 @@ def create_app(config_name='default'):
     # Context processor for templates
     @app.context_processor
     def inject_tenant():
-        """Make current tenant and enabled applets available to all templates"""
+        """Make current tenant, enabled applets, and version available to all templates"""
         from app.models.tenant import Tenant
         from app.services.applet_manager import get_enabled_applets
 
@@ -253,7 +280,8 @@ def create_app(config_name='default'):
 
         return dict(
             current_tenant=current_tenant,
-            enabled_applets=enabled_applets
+            enabled_applets=enabled_applets,
+            app_version=get_app_version()
         )
 
     # Before request handler for tenant context
