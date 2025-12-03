@@ -133,11 +133,11 @@
                             <label class="form-label">Redirect URI (Auto-configured)</label>
                             <input type="text"
                                    class="form-control font-monospace"
-                                   value="{{ url_for('integrations.outlook_callback', scope=scope, _external=True) }}"
+                                   value="{{ url_for('integrations.outlook_callback', _external=True) }}"
                                    disabled
                                    readonly>
                             <small class="form-text text-muted">
-                                Add this to your Azure App "Redirect URIs" under Authentication
+                                Add this single URI to your Azure App "Redirect URIs" under Authentication (used for both workspace and user flows)
                             </small>
                         </div>
                         {% endif %}
