@@ -32,6 +32,7 @@ class Integration(db.Model):
     company_id = db.Column(db.String(255))  # QuickBooks Realm ID or Google Drive email
     redirect_uri = db.Column(db.String(500))  # Per-tenant OAuth redirect URI
     environment = db.Column(db.String(50))  # 'sandbox' or 'production'
+    azure_tenant_id = db.Column(db.String(255))  # Azure AD tenant ID (GUID or domain like tsgglobal.onmicrosoft.com)
 
     # MCP-specific fields (Model Context Protocol)
     integration_mode = db.Column(db.String(20), default='oauth')  # 'oauth' or 'mcp'

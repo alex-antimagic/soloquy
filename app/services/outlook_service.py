@@ -12,7 +12,7 @@ class OutlookGraphService:
     """Service for Microsoft Outlook using Graph API directly"""
 
     BASE_URL = "https://graph.microsoft.com/v1.0"
-    TOKEN_URL = "https://login.microsoftonline.com/common/oauth2/v2.0/token"
+    # TOKEN_URL moved to dynamic method - uses tenant-specific endpoint
 
     def __init__(self, access_token: str, integration=None):
         """
@@ -53,6 +53,10 @@ class OutlookGraphService:
             raise ValueError("No refresh token available - user must re-authenticate")
 
         try:
+            # Use tenant-specific endpoint instead of /common for single-tenant apps
+            tenant_endpoint = integration.azure_tenant_id if integration.azure_tenant_id else 'common'
+            token_url = f'https://login.microsoftonline.com/{tenant_endpoint}/oauth2/v2.0/token'
+
             data = {
                 'client_id': integration.client_id,
                 'client_secret': integration.client_secret,
@@ -66,7 +70,7 @@ class OutlookGraphService:
                 ])
             }
 
-            response = requests.post(OutlookGraphService.TOKEN_URL, data=data)
+            response = requests.post(token_url, data=data)
             response.raise_for_status()
 
             result = response.json()

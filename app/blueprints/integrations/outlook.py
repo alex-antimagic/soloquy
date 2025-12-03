@@ -67,9 +67,14 @@ def outlook_configure():
         display_name = request.form.get('display_name', '').strip()
         client_id = request.form.get('client_id', '').strip()
         client_secret = request.form.get('client_secret', '').strip()
+        azure_tenant_id = request.form.get('azure_tenant_id', '').strip()
 
         if not client_id or not client_secret:
             flash('Please provide both Client ID and Client Secret.', 'danger')
+            return redirect(url_for('integrations.outlook_configure'))
+
+        if not azure_tenant_id:
+            flash('Please provide your Azure AD Tenant ID or domain.', 'danger')
             return redirect(url_for('integrations.outlook_configure'))
 
         # Create or update integration
@@ -88,6 +93,7 @@ def outlook_configure():
         # Set credentials and display name
         integration.client_id = client_id
         integration.client_secret = client_secret
+        integration.azure_tenant_id = azure_tenant_id
 
         # Generate display name for workspace
         integration.display_name = display_name or f"{g.current_tenant.name} Outlook"
@@ -199,6 +205,7 @@ def outlook_connect():
             is_active=False,
             client_id=tenant_integration.client_id,
             client_secret=tenant_integration.client_secret,
+            azure_tenant_id=tenant_integration.azure_tenant_id,  # Copy from workspace
             display_name=f"{target_user.full_name}'s Outlook" if target_user else "Personal Outlook",
             redirect_uri=url_for('integrations.outlook_callback', _external=True)  # Single URI for all flows
         )
@@ -216,7 +223,10 @@ def outlook_connect():
         # Join scopes into space-separated string for OAuth
         scopes_str = ' '.join(OUTLOOK_SCOPES)
 
-        # Build OAuth authorization URL
+        # Build OAuth authorization URL with tenant-specific endpoint
+        # Use tenant-specific endpoint instead of /common for single-tenant apps
+        tenant_endpoint = integration.azure_tenant_id if integration.azure_tenant_id else 'common'
+
         auth_params = {
             'client_id': integration.client_id,
             'response_type': 'code',
@@ -226,7 +236,7 @@ def outlook_connect():
             'prompt': 'consent'  # Force consent to get refresh token
         }
 
-        auth_url = f"https://login.microsoftonline.com/common/oauth2/v2.0/authorize?{urllib.parse.urlencode(auth_params)}"
+        auth_url = f"https://login.microsoftonline.com/{tenant_endpoint}/oauth2/v2.0/authorize?{urllib.parse.urlencode(auth_params)}"
 
         # Store scope in session for callback
         session['outlook_oauth_scope'] = scope
@@ -290,7 +300,9 @@ def outlook_callback():
 
     try:
         # Exchange code for tokens manually (avoiding MSAL frozenset bug)
-        token_url = 'https://login.microsoftonline.com/common/oauth2/v2.0/token'
+        # Use tenant-specific endpoint instead of /common for single-tenant apps
+        tenant_endpoint = integration.azure_tenant_id if integration.azure_tenant_id else 'common'
+        token_url = f'https://login.microsoftonline.com/{tenant_endpoint}/oauth2/v2.0/token'
 
         token_data = {
             'client_id': integration.client_id,

@@ -129,6 +129,22 @@
                             </small>
                         </div>
 
+                        <div class="mb-3">
+                            <label for="azure_tenant_id" class="form-label">
+                                Azure AD Tenant ID <span class="text-danger">*</span>
+                            </label>
+                            <input type="text"
+                                   class="form-control font-monospace"
+                                   id="azure_tenant_id"
+                                   name="azure_tenant_id"
+                                   value="{{ integration.azure_tenant_id if integration else '' }}"
+                                   required
+                                   placeholder="tsgglobal.onmicrosoft.com or tenant GUID">
+                            <small class="form-text text-muted">
+                                Your Azure AD tenant domain (e.g., "tsgglobal.onmicrosoft.com") or tenant ID (GUID). Find this in Azure Portal → Azure Active Directory → Overview.
+                            </small>
+                        </div>
+
                         <div class="mb-4">
                             <label class="form-label">Redirect URI (Auto-configured)</label>
                             <input type="text"
@@ -171,7 +187,16 @@
                         and sign in with your Microsoft account
                     </p>
 
-                    <h6>2. Register App</h6>
+                    <h6>2. Note Your Tenant ID</h6>
+                    <p class="small">
+                        In Azure AD → Overview, copy either:
+                    </p>
+                    <ul class="small">
+                        <li><strong>Primary domain</strong> (e.g., "tsgglobal.onmicrosoft.com"), OR</li>
+                        <li><strong>Tenant ID</strong> (GUID)</li>
+                    </ul>
+
+                    <h6>3. Register App</h6>
                     <p class="small">
                         Navigate to "Azure Active Directory" → "App registrations" → "New registration"
                     </p>
@@ -180,7 +205,7 @@
                         <li>Supported account types: "Accounts in this organizational directory only"</li>
                     </ul>
 
-                    <h6>3. Configure Authentication</h6>
+                    <h6>4. Configure Authentication</h6>
                     <p class="small">
                         In your app's "Authentication" section:
                     </p>
@@ -192,7 +217,7 @@
                         <li>Enable "Access tokens" and "ID tokens"</li>
                     </ul>
 
-                    <h6>4. Create Client Secret</h6>
+                    <h6>5. Create Client Secret</h6>
                     <p class="small">
                         In "Certificates & secrets" → "Client secrets" → "New client secret"
                     </p>
@@ -202,7 +227,7 @@
                         <li><strong>Copy the secret value immediately</strong> (you can't see it again)</li>
                     </ul>
 
-                    <h6>5. API Permissions</h6>
+                    <h6>6. API Permissions</h6>
                     <p class="small">
                         In "API permissions" → "Add a permission" → "Microsoft Graph" → "Delegated permissions":
                     </p>
