@@ -178,8 +178,8 @@ def outlook_connect():
         owner_id=owner_id
     ).first()
 
-    # For user-scope integrations, auto-create using workspace credentials
-    if scope == 'user' and not integration:
+    # For user-scope integrations, sync with workspace credentials
+    if scope == 'user':
         tenant_integration = Integration.query.filter_by(
             tenant_id=g.current_tenant.id,
             integration_type='outlook',
@@ -191,25 +191,30 @@ def outlook_connect():
             flash('Azure AD credentials not configured for this workspace. Please ask an admin to configure the workspace Outlook integration first.', 'danger')
             return redirect(url_for('integrations.index'))
 
-        # Create user integration using workspace credentials
+        # Create or update user integration with workspace credentials
         from app.models.user import User
         target_user = User.query.get(owner_id)
 
-        integration = Integration(
-            tenant_id=g.current_tenant.id,
-            integration_type='outlook',
-            owner_type='user',
-            owner_id=owner_id,
-            integration_mode='mcp',
-            mcp_server_type='outlook',
-            is_active=False,
-            client_id=tenant_integration.client_id,
-            client_secret=tenant_integration.client_secret,
-            azure_tenant_id=tenant_integration.azure_tenant_id,  # Copy from workspace
-            display_name=f"{target_user.full_name}'s Outlook" if target_user else "Personal Outlook",
-            redirect_uri=url_for('integrations.outlook_callback', _external=True)  # Single URI for all flows
-        )
-        db.session.add(integration)
+        if not integration:
+            # Create new user integration
+            integration = Integration(
+                tenant_id=g.current_tenant.id,
+                integration_type='outlook',
+                owner_type='user',
+                owner_id=owner_id,
+                integration_mode='mcp',
+                mcp_server_type='outlook',
+                is_active=False,
+                display_name=f"{target_user.full_name}'s Outlook" if target_user else "Personal Outlook",
+                redirect_uri=url_for('integrations.outlook_callback', _external=True)
+            )
+            db.session.add(integration)
+
+        # Always sync credentials from workspace (in case they were updated)
+        integration.client_id = tenant_integration.client_id
+        integration.client_secret = tenant_integration.client_secret
+        integration.azure_tenant_id = tenant_integration.azure_tenant_id
+        integration.redirect_uri = url_for('integrations.outlook_callback', _external=True)
         db.session.commit()
 
     if not integration or not integration.client_id or not integration.client_secret:
