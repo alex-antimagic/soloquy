@@ -353,9 +353,14 @@
 
                 <!-- Action Buttons -->
                 <div class="d-flex justify-content-between mb-4">
-                    <a href="{{ url_for('department.view', department_id=department.id) }}" class="btn btn-secondary">
-                        <i class="bi bi-arrow-left me-2"></i>Cancel
-                    </a>
+                    <div>
+                        <a href="{{ url_for('department.view', department_id=department.id) }}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left me-2"></i>Cancel
+                        </a>
+                        <button type="button" class="btn btn-danger ms-2" data-bs-toggle="modal" data-bs-target="#deleteAgentModal">
+                            <i class="bi bi-trash me-2"></i>Delete Agent
+                        </button>
+                    </div>
                     {{ form.submit(class="btn btn-primary") }}
                 </div>
             </form>
@@ -401,6 +406,36 @@
                 </div>
             </div>
             {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Delete Agent Confirmation Modal -->
+<div class="modal fade" id="deleteAgentModal" tabindex="-1" aria-labelledby="deleteAgentModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteAgentModalLabel">
+                    <i class="bi bi-exclamation-triangle me-2"></i>Delete Agent
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-3">Are you sure you want to permanently delete <strong>{{ agent.name }}</strong>?</p>
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <strong>Warning:</strong> This action cannot be undone. All conversation history and agent configurations will be permanently deleted.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="POST" action="{{ url_for('department.delete_agent', agent_id=agent.id) }}" style="display: inline;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash me-2"></i>Yes, Delete Agent
+                    </button>
+                </form>
+            </div>
         </div>
     </div>
 </div>

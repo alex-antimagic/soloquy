@@ -207,16 +207,14 @@ def delete(department_id):
 
 @department_bp.route('/agent/<int:agent_id>/edit', methods=['GET', 'POST'])
 @login_required
-@require_role('owner', 'admin')
 def edit_agent(agent_id):
     """Edit an agent's configuration"""
     agent = get_agent_secure(agent_id)  # Secure fetch with tenant validation
     department = agent.department
 
-    # Check ownership: only the creator or workspace owner can edit
-    user_role = current_user.get_role_in_tenant(g.current_tenant.id)
-    if agent.created_by_id != current_user.id and user_role != 'owner':
-        flash('You can only edit agents you created. Contact the workspace owner for assistance.', 'danger')
+    # Check ownership: only the creator can edit (for privacy/security)
+    if agent.created_by_id != current_user.id:
+        flash('You can only edit agents you created.', 'danger')
         return redirect(url_for('department.view_department', department_id=department.id))
 
     form = AgentForm(obj=agent)
@@ -451,6 +449,44 @@ def export_agent(agent_id):
     response.headers['Content-Disposition'] = f'attachment; filename={filename}'
 
     return response
+
+
+@department_bp.route('/agent/<int:agent_id>/delete', methods=['POST'])
+@login_required
+def delete_agent(agent_id):
+    """Delete an agent (creator only)"""
+    agent = get_agent_secure(agent_id)  # Secure fetch with tenant validation
+    department = agent.department
+
+    # Check ownership: only the creator can delete (for privacy/security)
+    if agent.created_by_id != current_user.id:
+        flash('You can only delete agents you created.', 'danger')
+        return redirect(url_for('department.view_department', department_id=department.id))
+
+    agent_name = agent.name
+
+    try:
+        # Delete related records first (foreign key constraints)
+        from app.models.message import Message
+        from app.models.agent_version import AgentVersion
+
+        # Delete messages
+        Message.query.filter_by(agent_id=agent.id).delete()
+
+        # Delete agent versions
+        AgentVersion.query.filter_by(agent_id=agent.id).delete()
+
+        # Delete the agent
+        db.session.delete(agent)
+        db.session.commit()
+
+        flash(f'Agent "{agent_name}" has been permanently deleted.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error deleting agent: {e}")
+        flash('An error occurred while deleting the agent.', 'danger')
+
+    return redirect(url_for('department.view_department', department_id=department.id))
 
 
 @department_bp.route('/<int:department_id>/agent/import', methods=['GET', 'POST'])
