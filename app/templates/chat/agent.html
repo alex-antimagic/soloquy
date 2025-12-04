@@ -651,9 +651,13 @@
                 // Add agent response if present (includes generated_files)
                 if (data.agent_response) {
                     console.log('[DEBUG] Agent response exists:', JSON.stringify(data.agent_response, null, 2));
+                    console.log('[DEBUG] Messages container children count BEFORE:', messagesContainer.children.length);
                     try {
-                        addMessageToUI(data.agent_response, true);
+                        const messageEl = addMessageToUI(data.agent_response, true);
                         console.log('[DEBUG] Successfully added agent message to UI');
+                        console.log('[DEBUG] Messages container children count AFTER:', messagesContainer.children.length);
+                        console.log('[DEBUG] Added message element:', messageEl);
+                        console.log('[DEBUG] Message element parent:', messageEl.parentElement);
                     } catch (error) {
                         console.error('[ERROR] Failed to add agent message to UI:', error);
                         console.error('[ERROR] Stack trace:', error.stack);
@@ -661,6 +665,7 @@
                     }
                 } else {
                     console.warn('[WARN] No agent_response in data!');
+                    console.warn('[WARN] Full data object:', data);
                 }
             } else {
                 console.error('[ERROR] Response not OK:', response.status, response.statusText);
