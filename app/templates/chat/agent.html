@@ -113,8 +113,8 @@
         socket.on('new_message', (messageData) => {
             console.log('Received new message:', messageData);
 
-            // Only add if message is from the agent (user already sees their own message)
-            if (messageData.agent_id) {
+            // Only add if message is from THIS specific agent (prevents chat bleed)
+            if (messageData.agent_id && messageData.agent_id === agentId) {
                 addAgentMessageToUI(messageData);
                 // Play notification sound
                 notificationSound.play().catch(e => console.log('Audio play failed:', e));
