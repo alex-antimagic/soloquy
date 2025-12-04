@@ -63,7 +63,7 @@ class AgentForm(FlaskForm):
     model = SelectField('Claude Model', choices=[
         ('claude-haiku-4-5-20251001', 'Claude Haiku 4.5 (Fastest - Near-frontier intelligence)'),
         ('claude-sonnet-4-5-20250929', 'Claude Sonnet 4.5 (Smartest - Complex agents & coding)'),
-        ('claude-opus-4-1-20250805', 'Claude Opus 4.1 (Exceptional - Specialized reasoning)')
+        ('claude-opus-4-5-20251101', 'Claude Opus 4.5 (Most Capable - Advanced reasoning)')
     ], default='claude-haiku-4-5-20251001')
 
     temperature = FloatField('Temperature', validators=[

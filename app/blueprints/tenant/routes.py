@@ -770,7 +770,7 @@ def create_agent():
             system_prompt=request.form.get('system_prompt', '').strip(),
             is_active=True,
             is_primary=False,
-            model=request.form.get('model', 'claude-3-5-sonnet-20241022'),
+            model=request.form.get('model', 'claude-sonnet-4-5-20250929'),
             temperature=float(request.form.get('temperature', 1.0)),
             max_tokens=int(request.form.get('max_tokens', 4096)),
             enable_gmail=request.form.get('enable_gmail') == 'on',
