@@ -238,7 +238,7 @@ def outlook_connect():
             'redirect_uri': integration.redirect_uri,
             'scope': scopes_str,
             'response_mode': 'query',
-            'prompt': 'consent'  # Force consent to get refresh token
+            'prompt': 'select_account'  # Let user select account; offline_access scope ensures refresh token
         }
 
         auth_url = f"https://login.microsoftonline.com/{tenant_endpoint}/oauth2/v2.0/authorize?{urllib.parse.urlencode(auth_params)}"
