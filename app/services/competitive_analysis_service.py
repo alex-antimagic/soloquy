@@ -51,8 +51,9 @@ class CompetitiveAnalysisService:
         db.session.add(analysis)
         db.session.commit()
 
-        # Start analysis synchronously for now (can be moved to background job later)
-        self.run_analysis(analysis.id)
+        # Queue analysis as background job (analyzing multiple competitors takes 5-10 minutes)
+        from app.tasks import run_competitive_analysis
+        run_competitive_analysis.queue(analysis.id)
 
         return analysis
 
