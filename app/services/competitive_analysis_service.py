@@ -335,6 +335,17 @@ IMPORTANT: Return ONLY valid JSON, no additional text or explanation."""
     def _parse_analysis_json(self, response_text: str) -> Dict:
         """Parse analysis JSON from Claude's response"""
         try:
+            import re
+
+            # Strip markdown code blocks if present
+            # Claude sometimes wraps JSON in ```json ... ```
+            response_text = response_text.strip()
+            if response_text.startswith('```'):
+                # Remove opening ``` or ```json
+                response_text = re.sub(r'^```(?:json)?\s*\n?', '', response_text)
+                # Remove closing ```
+                response_text = re.sub(r'\n?```\s*$', '', response_text)
+
             # Try to find JSON object in response
             start = response_text.find('{')
             end = response_text.rfind('}') + 1
@@ -344,7 +355,6 @@ IMPORTANT: Return ONLY valid JSON, no additional text or explanation."""
 
                 # Try to fix common JSON issues
                 # Remove trailing commas before closing braces/brackets
-                import re
                 json_str = re.sub(r',(\s*[}\]])', r'\1', json_str)
 
                 analysis = json.loads(json_str)
