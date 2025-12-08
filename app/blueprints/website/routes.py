@@ -9,6 +9,7 @@ from app.blueprints.website import website_bp
 from app.blueprints.website.forms import WebsiteSettingsForm, WebsitePageForm, WebsiteThemeForm, WebsiteFormBuilderForm
 from app.models.website import Website, WebsitePage, WebsiteTheme, WebsiteForm, FormSubmission
 from app.models.workspace_applet import WorkspaceApplet
+from app.models.department import Department
 from app.services.applet_manager import is_applet_enabled
 import secrets
 
