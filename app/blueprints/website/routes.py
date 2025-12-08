@@ -425,7 +425,20 @@ def suggest_competitors():
         if len(suggestions) > 0:
             flash(f'Found {len(suggestions)} potential competitors!', 'success')
         else:
-            flash('No competitors found. Try adding business context to your workspace for better suggestions.', 'info')
+            # Provide specific guidance on what's missing
+            missing_context = []
+            if not tenant.business_context:
+                missing_context.append('business description')
+            if not tenant.custom_context:
+                missing_context.append('workspace context')
+            if not tenant.website_url:
+                missing_context.append('website URL')
+
+            if missing_context:
+                flash(f'No competitors found. To get AI suggestions, please add: {", ".join(missing_context)}. '
+                      f'Go to Settings to update your workspace information.', 'warning')
+            else:
+                flash('No competitors found. Try adding more details about your business, products, or industry.', 'info')
 
         return redirect(url_for('website.competitors'))
 

@@ -59,13 +59,30 @@ class CompetitorIdentificationService:
             business_data = self._build_business_data(tenant)
             print(f"[COMPETITOR] Business data for {tenant.name}: {business_data}")
 
-            ai_competitors = self._identify_competitors_with_ai(business_data, tenant.name, limit)
-            print(f"[COMPETITOR] AI identified {len(ai_competitors)} competitors")
+            # Check if we have sufficient context for AI suggestions
+            has_context = (
+                (business_data.get('company_description', '') and
+                 business_data['company_description'] != f'{tenant.name} company') or
+                business_data.get('industry', 'business') != 'business' or
+                business_data.get('products_services') or
+                business_data.get('target_market') or
+                business_data.get('website_url')
+            )
 
-            for comp in ai_competitors:
-                if comp['website'] not in seen_domains:
-                    competitors.append(comp)
-                    seen_domains.add(comp['website'])
+            if not has_context:
+                print(f"[COMPETITOR] Insufficient context for {tenant.name}. Skipping AI suggestions.")
+                print(f"[COMPETITOR] Available: description={business_data.get('company_description')}, "
+                      f"industry={business_data.get('industry')}, "
+                      f"products={len(business_data.get('products_services', []))}, "
+                      f"website_url={business_data.get('website_url')}")
+            else:
+                ai_competitors = self._identify_competitors_with_ai(business_data, tenant.name, limit)
+                print(f"[COMPETITOR] AI identified {len(ai_competitors)} competitors")
+
+                for comp in ai_competitors:
+                    if comp['website'] not in seen_domains:
+                        competitors.append(comp)
+                        seen_domains.add(comp['website'])
 
         except Exception as e:
             print(f"[COMPETITOR] Error in AI suggestion: {type(e).__name__}: {e}")
