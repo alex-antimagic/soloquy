@@ -57,16 +57,20 @@ class CompetitorIdentificationService:
         try:
             # Build business data from all available sources
             business_data = self._build_business_data(tenant)
+            print(f"[COMPETITOR] Business data for {tenant.name}: {business_data}")
 
             ai_competitors = self._identify_competitors_with_ai(business_data, tenant.name, limit)
+            print(f"[COMPETITOR] AI identified {len(ai_competitors)} competitors")
 
             for comp in ai_competitors:
                 if comp['website'] not in seen_domains:
                     competitors.append(comp)
                     seen_domains.add(comp['website'])
 
-        except (json.JSONDecodeError, ValueError):
-            pass  # Skip if business_context is invalid
+        except Exception as e:
+            print(f"[COMPETITOR] Error in AI suggestion: {type(e).__name__}: {e}")
+            import traceback
+            traceback.print_exc()
 
         # Sort by confidence score (descending) and limit results
         competitors.sort(key=lambda x: x.get('confidence', 0), reverse=True)
@@ -181,6 +185,8 @@ class CompetitorIdentificationService:
         prompt = self._build_competitor_identification_prompt(business_data, company_name, limit)
 
         try:
+            print(f"[COMPETITOR] Calling Claude API with prompt length: {len(prompt)}")
+
             # Call Claude API
             response = self.anthropic_client.messages.create(
                 model="claude-sonnet-4-5-20251022",
@@ -194,9 +200,11 @@ class CompetitorIdentificationService:
 
             # Parse response
             response_text = response.content[0].text
+            print(f"[COMPETITOR] Claude response length: {len(response_text)}")
 
             # Extract JSON from response
             competitors = self._parse_competitor_json(response_text)
+            print(f"[COMPETITOR] Parsed {len(competitors)} competitors from response")
 
             # Validate and enrich with domain discovery
             validated_competitors = []
@@ -204,11 +212,17 @@ class CompetitorIdentificationService:
                 validated = self._validate_and_enrich_competitor(comp)
                 if validated:
                     validated_competitors.append(validated)
+                    print(f"[COMPETITOR] Validated: {comp['name']} -> {validated['website']}")
+                else:
+                    print(f"[COMPETITOR] Failed validation: {comp['name']}")
 
+            print(f"[COMPETITOR] Returning {len(validated_competitors)} validated competitors")
             return validated_competitors
 
         except Exception as e:
-            print(f"Error identifying competitors with AI: {e}")
+            print(f"[COMPETITOR] Error identifying competitors with AI: {type(e).__name__}: {e}")
+            import traceback
+            traceback.print_exc()
             return []
 
     def _build_competitor_identification_prompt(self, business_data: Dict, company_name: str, limit: int) -> str:
