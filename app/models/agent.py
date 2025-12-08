@@ -671,7 +671,7 @@ class Agent(db.Model):
         # Validate model choice
         valid_models = [
             'claude-haiku-4-5-20251001',
-            'claude-sonnet-4-5-20251022',
+            'claude-sonnet-4-5-20250929',
             'claude-opus-4-20250514'
         ]
         model = agent_data.get('model', 'claude-haiku-4-5-20251001')

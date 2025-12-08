@@ -216,7 +216,7 @@ class CompetitiveAnalysisService:
         try:
             # Call Claude API for analysis
             response = self.anthropic_client.messages.create(
-                model="claude-sonnet-4-5-20251022",
+                model="claude-sonnet-4-5-20250929",
                 max_tokens=4096,
                 temperature=0.7,
                 messages=[{
