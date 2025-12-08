@@ -216,10 +216,11 @@ class CompetitiveAnalysisService:
 
         try:
             # Call Claude API for analysis
+            # Use lower temperature for more structured, deterministic JSON output
             response = self.anthropic_client.messages.create(
                 model="claude-sonnet-4-5-20250929",
                 max_tokens=4096,
-                temperature=0.7,
+                temperature=0.3,  # Lower temp = more consistent JSON structure
                 messages=[{
                     "role": "user",
                     "content": prompt
