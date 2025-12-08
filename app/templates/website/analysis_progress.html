@@ -1,0 +1,130 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Header -->
+            <div class="mb-4">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="{{ url_for('website.dashboard') }}">Website</a></li>
+                        <li class="breadcrumb-item"><a href="{{ url_for('website.competitors') }}">Competitors</a></li>
+                        <li class="breadcrumb-item active">Analysis in Progress</li>
+                    </ol>
+                </nav>
+            </div>
+
+            <!-- Progress Card -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center py-5">
+                    <div class="mb-4">
+                        <div class="spinner-border text-primary" role="status" style="width: 4rem; height: 4rem;">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+
+                    <h3 class="mb-3">Analyzing Your Competitive Landscape...</h3>
+                    <p class="text-muted mb-4">
+                        Maya is performing a comprehensive analysis of {{ analysis.competitor_count }} competitor(s).
+                        <br>This typically takes 5-10 minutes.
+                    </p>
+
+                    <!-- Status -->
+                    <div class="alert alert-info mb-4" role="alert">
+                        <div class="d-flex align-items-center justify-content-center">
+                            <i class="bi bi-info-circle me-2 fs-5"></i>
+                            <div>
+                                <strong>Status:</strong> {{ analysis.status|title }}
+                                <br>
+                                <small>Started {{ analysis.created_at.strftime('%I:%M %p') }}</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Steps -->
+                    <div class="text-start mb-4">
+                        <h6 class="mb-3">Analysis Steps:</h6>
+                        <div class="list-group">
+                            <div class="list-group-item">
+                                <div class="d-flex align-items-center">
+                                    <i class="bi bi-check-circle-fill text-success me-3 fs-5"></i>
+                                    <div>
+                                        <strong>Workspace Context Loaded</strong>
+                                        <br><small class="text-muted">Understanding your business and offerings</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="list-group-item">
+                                <div class="d-flex align-items-center">
+                                    <div class="spinner-border spinner-border-sm text-primary me-3" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    <div>
+                                        <strong>Fetching Competitor Websites</strong>
+                                        <br><small class="text-muted">Scraping and analyzing competitor content</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="list-group-item text-muted">
+                                <div class="d-flex align-items-center">
+                                    <i class="bi bi-circle me-3 fs-5"></i>
+                                    <div>
+                                        <strong>Comparative Analysis</strong>
+                                        <br><small>Identifying strengths, gaps, and opportunities</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="list-group-item text-muted">
+                                <div class="d-flex align-items-center">
+                                    <i class="bi bi-circle me-3 fs-5"></i>
+                                    <div>
+                                        <strong>Generating Insights</strong>
+                                        <br><small>Creating actionable recommendations</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="d-flex gap-2 justify-content-center">
+                        <button type="button" class="btn btn-outline-secondary" onclick="window.location.reload()">
+                            <i class="bi bi-arrow-clockwise me-1"></i>Refresh Status
+                        </button>
+                        <a href="{{ url_for('website.competitors') }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-1"></i>Back to Competitors
+                        </a>
+                    </div>
+
+                    <!-- Auto-refresh notice -->
+                    <p class="text-muted small mt-3 mb-0">
+                        <i class="bi bi-clock me-1"></i>This page will automatically redirect when analysis is complete
+                    </p>
+                </div>
+            </div>
+
+            <!-- Helpful Tips -->
+            <div class="card border-0 mt-4">
+                <div class="card-body">
+                    <h6 class="mb-3"><i class="bi bi-lightbulb me-2"></i>While You Wait...</h6>
+                    <ul class="small mb-0">
+                        <li>The analysis examines competitor websites, messaging, features, and positioning</li>
+                        <li>Results will include your competitive strengths, gaps, and strategic opportunities</li>
+                        <li>You can chat with Maya about the results after the analysis completes</li>
+                        <li>Feel free to close this page - the analysis continues in the background</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Auto-refresh every 10 seconds to check status
+setTimeout(function() {
+    window.location.reload();
+}, 10000);
+</script>
+
+{% endblock %}

@@ -1,0 +1,264 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('website.dashboard') }}">Website</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('website.competitors') }}">Competitors</a></li>
+                    <li class="breadcrumb-item active">Analysis Results</li>
+                </ol>
+            </nav>
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <h2><i class="bi bi-graph-up-arrow me-2"></i>Competitive Analysis Results</h2>
+                    <p class="text-muted">
+                        Completed {{ analysis.created_at.strftime('%B %d, %Y at %I:%M %p') }} | {{ analysis.competitor_count }} competitor(s) analyzed
+                    </p>
+                </div>
+                <div>
+                    <a href="{{ url_for('website.competitors') }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-1"></i>Back to Competitors
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Executive Summary -->
+    <div class="row mb-4">
+        <div class="col-lg-12">
+            <div class="card border-start border-info border-3">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="bi bi-file-text me-2"></i>Executive Summary</h5>
+                </div>
+                <div class="card-body">
+                    <p class="lead">{{ analysis.executive_summary or 'Analysis in progress...' }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Strengths -->
+    {% if strengths %}
+    <div class="row mb-4">
+        <div class="col-lg-12">
+            <div class="card border-start border-success border-3">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="bi bi-trophy me-2"></i>Your Competitive Strengths</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-3">Areas where you outperform your competitors:</p>
+                    <div class="row">
+                        {% for strength in strengths %}
+                        <div class="col-md-6 mb-3">
+                            <div class="card h-100 border-success">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <h6 class="card-title mb-0">
+                                            <i class="bi bi-check-circle-fill text-success me-1"></i>
+                                            {{ strength.title }}
+                                        </h6>
+                                        {% if strength.score %}
+                                        <span class="badge bg-success">{{ strength.score }}/10</span>
+                                        {% endif %}
+                                    </div>
+                                    <p class="card-text small">{{ strength.description }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Gaps -->
+    {% if gaps %}
+    <div class="row mb-4">
+        <div class="col-lg-12">
+            <div class="card border-start border-warning border-3">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="bi bi-exclamation-triangle me-2"></i>Competitive Gaps</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-3">Areas where competitors have an advantage:</p>
+                    <div class="row">
+                        {% for gap in gaps %}
+                        <div class="col-md-6 mb-3">
+                            <div class="card h-100 border-warning">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <h6 class="card-title mb-0">
+                                            <i class="bi bi-dash-circle-fill text-warning me-1"></i>
+                                            {{ gap.title }}
+                                        </h6>
+                                        {% if gap.priority %}
+                                        <span class="badge {% if gap.priority == 'high' %}bg-danger{% elif gap.priority == 'medium' %}bg-warning{% else %}bg-secondary{% endif %}">
+                                            {{ gap.priority|title }} Priority
+                                        </span>
+                                        {% endif %}
+                                    </div>
+                                    <p class="card-text small">{{ gap.description }}</p>
+                                    {% if gap.benchmark %}
+                                    <p class="card-text small text-muted">
+                                        <i class="bi bi-bar-chart me-1"></i><strong>Benchmark:</strong> {{ gap.benchmark }}
+                                    </p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Opportunities -->
+    {% if opportunities %}
+    <div class="row mb-4">
+        <div class="col-lg-12">
+            <div class="card border-start border-primary border-3">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="bi bi-lightbulb me-2"></i>Strategic Opportunities</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-3">Actionable recommendations to improve your competitive position:</p>
+                    {% for opportunity in opportunities %}
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <div class="row align-items-center">
+                                <div class="col-md-8">
+                                    <h6 class="mb-2">
+                                        <i class="bi bi-arrow-right-circle text-primary me-1"></i>
+                                        {{ opportunity.title }}
+                                    </h6>
+                                    <p class="mb-2">{{ opportunity.description }}</p>
+                                    {% if opportunity.impact %}
+                                    <p class="small text-muted mb-0">
+                                        <i class="bi bi-graph-up me-1"></i><strong>Expected Impact:</strong> {{ opportunity.impact }}
+                                    </p>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-4 text-end">
+                                    {% if opportunity.priority %}
+                                    <div class="mb-2">
+                                        <span class="badge {% if opportunity.priority == 'high' %}bg-danger{% elif opportunity.priority == 'medium' %}bg-warning{% else %}bg-secondary{% endif %} fs-6">
+                                            {{ opportunity.priority|title }} Priority
+                                        </span>
+                                    </div>
+                                    {% endif %}
+                                    <a href="{{ url_for('chat.index') }}" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-chat-dots me-1"></i>Chat with Maya
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Comparison Matrix -->
+    {% if comparison_matrix and comparison_matrix.metrics %}
+    <div class="row mb-4">
+        <div class="col-lg-12">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="bi bi-table me-2"></i>Competitor Comparison Matrix</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-3">Side-by-side comparison of key metrics:</p>
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Metric</th>
+                                    <th class="table-success">Your Company</th>
+                                    {% for competitor in competitors %}
+                                    <th>{{ competitor.company_name }}</th>
+                                    {% endfor %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for metric in comparison_matrix.metrics %}
+                                <tr>
+                                    <td><strong>{{ metric.name }}</strong></td>
+                                    <td class="table-success"><strong>{{ metric.your_value }}</strong></td>
+                                    {% for i in range(competitors|length) %}
+                                    <td>{{ metric['comp' ~ (i+1) ~ '_value'] or 'N/A' }}</td>
+                                    {% endfor %}
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Competitors Analyzed -->
+    <div class="row mb-4">
+        <div class="col-lg-12">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="bi bi-buildings me-2"></i>Competitors Analyzed</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for competitor in competitors %}
+                        <div class="col-md-4 mb-3">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h6 class="card-title">{{ competitor.company_name }}</h6>
+                                    <p class="card-text small text-muted mb-0">
+                                        <i class="bi bi-globe me-1"></i>
+                                        <a href="https://{{ competitor.domain }}" target="_blank" rel="noopener">
+                                            {{ competitor.domain }} <i class="bi bi-box-arrow-up-right small"></i>
+                                        </a>
+                                    </p>
+                                    {% if competitor.industry %}
+                                    <p class="card-text small text-muted mb-0">
+                                        <i class="bi bi-building me-1"></i>{{ competitor.industry }}
+                                    </p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="row mb-4">
+        <div class="col-lg-12">
+            <div class="card bg-light">
+                <div class="card-body text-center">
+                    <p class="mb-3">Want to dive deeper or run a new analysis?</p>
+                    <a href="{{ url_for('website.competitors') }}" class="btn btn-primary me-2">
+                        <i class="bi bi-arrow-repeat me-1"></i>Run New Analysis
+                    </a>
+                    <a href="{{ url_for('chat.index') }}" class="btn btn-outline-primary">
+                        <i class="bi bi-chat-dots me-1"></i>Discuss with Maya
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

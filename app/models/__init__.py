@@ -33,3 +33,5 @@ from app.models.ticket_status_history import TicketStatusHistory
 
 # Website Builder Models
 from app.models.website import Website, WebsitePage, WebsiteTheme, WebsiteForm, FormSubmission
+from app.models.competitor_profile import CompetitorProfile
+from app.models.competitive_analysis import CompetitiveAnalysis

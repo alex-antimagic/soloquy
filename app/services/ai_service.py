@@ -306,6 +306,59 @@ class AIService:
             }
         ]
 
+    def _get_competitive_analysis_tools(self) -> List[Dict]:
+        """
+        Get competitive analysis tool definitions for AI agents
+
+        Returns:
+            List of competitive analysis tool definitions
+        """
+        return [
+            {
+                "name": "competitive_analysis_suggest_competitors",
+                "description": "Suggest competitor companies based on workspace business context",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "limit": {
+                            "type": "number",
+                            "description": "Maximum number of competitors to suggest (default: 10)",
+                            "default": 10
+                        }
+                    }
+                }
+            },
+            {
+                "name": "competitive_analysis_analyze",
+                "description": "Run comprehensive competitive analysis comparing workspace against specified competitors",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "competitor_ids": {
+                            "type": "array",
+                            "items": {"type": "number"},
+                            "description": "CompetitorProfile IDs to analyze (use after suggesting competitors)"
+                        },
+                        "analysis_type": {
+                            "type": "string",
+                            "enum": ["comprehensive", "website", "marketing"],
+                            "description": "Type of analysis to perform",
+                            "default": "comprehensive"
+                        }
+                    },
+                    "required": ["competitor_ids"]
+                }
+            },
+            {
+                "name": "competitive_analysis_get_status",
+                "description": "Get status and results of the most recent competitive analysis",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {}
+                }
+            }
+        ]
+
     def _get_file_generation_tools(self) -> List[Dict]:
         """
         Get file generation tool definitions for AI agents
@@ -543,6 +596,12 @@ class AIService:
                     print(f"[FILE_GEN] Got {len(file_gen_tools)} File Generation tools")
                     tools.extend(file_gen_tools)
 
+                if agent.enable_competitive_analysis:
+                    print(f"[COMPETITIVE] Getting Competitive Analysis tools for agent {agent.id}")
+                    competitive_tools = self._get_competitive_analysis_tools()
+                    print(f"[COMPETITIVE] Got {len(competitive_tools)} Competitive Analysis tools")
+                    tools.extend(competitive_tools)
+
                 if tools:
                     api_params['tools'] = tools
                     current_app.logger.info(f"Agent {agent.name} has {len(tools)} tools available")
@@ -588,6 +647,13 @@ class AIService:
                             )
                         elif tool_use.name in ['generate_pdf_report', 'export_to_csv', 'create_spreadsheet', 'create_markdown_document', 'create_word_document']:
                             result = self._execute_file_generation_tool(
+                                tool_name=tool_use.name,
+                                tool_input=tool_use.input,
+                                agent=agent,
+                                user=user
+                            )
+                        elif tool_use.name.startswith('competitive_analysis_'):
+                            result = self._execute_competitive_analysis_tool(
                                 tool_name=tool_use.name,
                                 tool_input=tool_use.input,
                                 agent=agent,
@@ -1271,6 +1337,181 @@ Return ONLY valid JSON in this format:
             import traceback
             traceback.print_exc()
             return {"error": f"Failed to generate file: {str(e)}. Please check the file format and try again."}
+
+    def _execute_competitive_analysis_tool(self, tool_name: str, tool_input: Dict, agent, user) -> Any:
+        """
+        Execute competitive analysis tool
+
+        Args:
+            tool_name: Name of the tool (competitive_analysis_suggest_competitors, competitive_analysis_analyze, competitive_analysis_get_status)
+            tool_input: Tool input parameters
+            agent: Agent model
+            user: User model
+
+        Returns:
+            Result dictionary with competitive analysis data or error
+        """
+        from app.services.competitive_analysis_service import competitive_analysis_service
+        from app.services.competitor_identification_service import competitor_identification_service
+        from app.models.competitor_profile import CompetitorProfile
+        from app import db
+
+        print(f"[COMPETITIVE] Executing tool: {tool_name}")
+        print(f"[COMPETITIVE] Input: {tool_input}")
+
+        try:
+            # Get tenant and website from agent's department
+            if not agent or not agent.department:
+                return {"error": "No workspace context available"}
+
+            tenant = agent.department.tenant
+            website = tenant.website
+
+            if not website:
+                return {"error": "No website configured for this workspace. Please set up a website first."}
+
+            print(f"[COMPETITIVE] Tenant: {tenant.name}, Website ID: {website.id}")
+
+            if tool_name == "competitive_analysis_suggest_competitors":
+                # Suggest competitors based on workspace context
+                limit = tool_input.get('limit', 10)
+
+                suggestions = competitor_identification_service.suggest_competitors(
+                    tenant_id=tenant.id,
+                    limit=limit
+                )
+
+                # Create CompetitorProfile records for suggestions
+                created_count = 0
+                for suggestion in suggestions:
+                    existing = CompetitorProfile.query.filter_by(
+                        website_id=website.id,
+                        domain=suggestion['website']
+                    ).first()
+
+                    if not existing:
+                        competitor = CompetitorProfile(
+                            website_id=website.id,
+                            company_name=suggestion['name'],
+                            domain=suggestion['website'],
+                            is_confirmed=False,
+                            suggested_by_agent=True,
+                            confidence_score=suggestion.get('confidence', 0.8),
+                            source=suggestion.get('source', 'ai_suggested')
+                        )
+                        db.session.add(competitor)
+                        created_count += 1
+
+                db.session.commit()
+
+                # Get all competitors for this website
+                all_competitors = CompetitorProfile.query.filter_by(website_id=website.id).all()
+                competitor_list = [
+                    {
+                        'id': c.id,
+                        'name': c.company_name,
+                        'domain': c.domain,
+                        'confidence': c.confidence_score,
+                        'is_confirmed': c.is_confirmed
+                    }
+                    for c in all_competitors
+                ]
+
+                return {
+                    "success": True,
+                    "message": f"Found {len(suggestions)} potential competitors. Created {created_count} new competitor profiles.",
+                    "competitors": competitor_list,
+                    "total_count": len(competitor_list)
+                }
+
+            elif tool_name == "competitive_analysis_analyze":
+                # Run competitive analysis
+                competitor_ids = tool_input.get('competitor_ids', [])
+                analysis_type = tool_input.get('analysis_type', 'comprehensive')
+
+                if not competitor_ids:
+                    return {"error": "Please provide at least one competitor ID to analyze"}
+
+                # Create and run analysis
+                analysis = competitive_analysis_service.create_analysis(
+                    website_id=website.id,
+                    competitor_ids=competitor_ids,
+                    analysis_type=analysis_type,
+                    agent_id=agent.id
+                )
+
+                # Check if analysis completed
+                if analysis.status == 'completed':
+                    return {
+                        "success": True,
+                        "status": "completed",
+                        "analysis_id": analysis.id,
+                        "message": f"Competitive analysis completed successfully. Analyzed {analysis.competitor_count} competitors.",
+                        "executive_summary": analysis.executive_summary,
+                        "strengths_count": len(json.loads(analysis.strengths)) if analysis.strengths else 0,
+                        "gaps_count": len(json.loads(analysis.gaps)) if analysis.gaps else 0,
+                        "opportunities_count": len(json.loads(analysis.opportunities)) if analysis.opportunities else 0
+                    }
+                elif analysis.status == 'failed':
+                    return {
+                        "success": False,
+                        "status": "failed",
+                        "message": f"Analysis failed: {analysis.executive_summary}"
+                    }
+                else:
+                    return {
+                        "success": True,
+                        "status": analysis.status,
+                        "analysis_id": analysis.id,
+                        "message": "Analysis is in progress. This may take 5-10 minutes."
+                    }
+
+            elif tool_name == "competitive_analysis_get_status":
+                # Get latest analysis status
+                analysis = competitive_analysis_service.get_latest_analysis(website.id)
+
+                if not analysis:
+                    return {
+                        "success": True,
+                        "status": "not_started",
+                        "message": "No competitive analysis has been run yet."
+                    }
+
+                if analysis.status == 'completed':
+                    import json
+                    strengths = json.loads(analysis.strengths) if analysis.strengths else []
+                    gaps = json.loads(analysis.gaps) if analysis.gaps else []
+                    opportunities = json.loads(analysis.opportunities) if analysis.opportunities else []
+
+                    return {
+                        "success": True,
+                        "status": "completed",
+                        "analysis_id": analysis.id,
+                        "created_at": analysis.created_at.isoformat(),
+                        "competitor_count": analysis.competitor_count,
+                        "executive_summary": analysis.executive_summary,
+                        "strengths": strengths[:3],  # Top 3 strengths
+                        "gaps": gaps[:3],  # Top 3 gaps
+                        "opportunities": opportunities[:3]  # Top 3 opportunities
+                    }
+                else:
+                    return {
+                        "success": True,
+                        "status": analysis.status,
+                        "analysis_id": analysis.id,
+                        "message": f"Analysis is currently {analysis.status}"
+                    }
+
+            else:
+                return {"error": f"Unknown competitive analysis tool: {tool_name}"}
+
+        except Exception as e:
+            error_msg = f"Error executing competitive analysis tool {tool_name}: {str(e)}"
+            print(f"[COMPETITIVE] ERROR: {error_msg}")
+            current_app.logger.error(error_msg)
+            import traceback
+            traceback.print_exc()
+            return {"error": str(e)}
 
     def analyze_bug_screenshot(
         self,

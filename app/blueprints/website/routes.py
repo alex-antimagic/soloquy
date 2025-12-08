@@ -57,12 +57,38 @@ def dashboard():
     total_forms = WebsiteForm.query.filter_by(website_id=website.id).count()
     total_submissions = FormSubmission.query.join(WebsiteForm).filter(WebsiteForm.website_id == website.id).count()
 
+    # Get competitive analysis data
+    from app.models.competitive_analysis import CompetitiveAnalysis
+    from app.models.competitor_profile import CompetitorProfile
+    import json
+
+    latest_analysis = CompetitiveAnalysis.query.filter_by(
+        website_id=website.id,
+        status='completed'
+    ).order_by(CompetitiveAnalysis.created_at.desc()).first()
+
+    competitor_count = CompetitorProfile.query.filter_by(
+        website_id=website.id,
+        is_confirmed=True
+    ).count()
+
+    opportunity_count = 0
+    if latest_analysis and latest_analysis.opportunities:
+        try:
+            opportunities = json.loads(latest_analysis.opportunities)
+            opportunity_count = len(opportunities)
+        except (json.JSONDecodeError, TypeError):
+            pass
+
     return render_template('website/dashboard.html',
                          website=website,
                          total_pages=total_pages,
                          published_pages=published_pages,
                          total_forms=total_forms,
-                         total_submissions=total_submissions)
+                         total_submissions=total_submissions,
+                         latest_analysis=latest_analysis,
+                         competitor_count=competitor_count,
+                         opportunity_count=opportunity_count)
 
 
 @website_bp.route('/pages')
@@ -321,3 +347,281 @@ def settings():
         return redirect(url_for('website.settings'))
 
     return render_template('website/settings.html', form=form, website=website)
+
+
+# =============================================================================
+# COMPETITIVE ANALYSIS ROUTES
+# =============================================================================
+
+@website_bp.route('/competitors')
+@login_required
+def competitors():
+    """Competitor management page"""
+    tenant = g.current_tenant
+    website = Website.query.filter_by(tenant_id=tenant.id).first()
+
+    if not website:
+        flash('Please set up your website first.', 'warning')
+        return redirect(url_for('website.dashboard'))
+
+    from app.models.competitor_profile import CompetitorProfile
+
+    # Get all competitors for this website
+    all_competitors = CompetitorProfile.query.filter_by(website_id=website.id).all()
+
+    # Separate confirmed vs suggested
+    confirmed = [c for c in all_competitors if c.is_confirmed]
+    suggested = [c for c in all_competitors if not c.is_confirmed]
+
+    return render_template('website/competitors.html',
+                         website=website,
+                         confirmed_competitors=confirmed,
+                         suggested_competitors=suggested)
+
+
+@website_bp.route('/competitors/suggest', methods=['POST'])
+@login_required
+def suggest_competitors():
+    """API endpoint to trigger AI competitor suggestion"""
+    tenant = g.current_tenant
+    website = Website.query.filter_by(tenant_id=tenant.id).first()
+
+    if not website:
+        return jsonify({"success": False, "error": "No website found"}), 404
+
+    from app.services.competitor_identification_service import competitor_identification_service
+    from app.models.competitor_profile import CompetitorProfile
+
+    try:
+        suggestions = competitor_identification_service.suggest_competitors(
+            tenant_id=tenant.id,
+            limit=10
+        )
+
+        # Create CompetitorProfile records for suggestions
+        created_count = 0
+        for suggestion in suggestions:
+            existing = CompetitorProfile.query.filter_by(
+                website_id=website.id,
+                domain=suggestion['website']
+            ).first()
+
+            if not existing:
+                competitor = CompetitorProfile(
+                    website_id=website.id,
+                    company_name=suggestion['name'],
+                    domain=suggestion['website'],
+                    is_confirmed=False,
+                    suggested_by_agent=True,
+                    confidence_score=suggestion.get('confidence', 0.8),
+                    source=suggestion.get('source', 'ai_suggested'),
+                    created_by_id=current_user.id
+                )
+                db.session.add(competitor)
+                created_count += 1
+
+        db.session.commit()
+
+        flash(f'Found {len(suggestions)} potential competitors!', 'success')
+        return jsonify({"success": True, "count": created_count})
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@website_bp.route('/competitors/<int:competitor_id>/confirm', methods=['POST'])
+@login_required
+def confirm_competitor(competitor_id):
+    """Confirm a suggested competitor"""
+    from app.models.competitor_profile import CompetitorProfile
+
+    competitor = CompetitorProfile.query.get_or_404(competitor_id)
+
+    # Ensure user has access to this website
+    if competitor.website.tenant_id != g.current_tenant.id:
+        flash('Access denied.', 'danger')
+        return redirect(url_for('website.competitors'))
+
+    competitor.is_confirmed = True
+    db.session.commit()
+
+    flash(f'{competitor.company_name} confirmed as competitor.', 'success')
+    return redirect(url_for('website.competitors'))
+
+
+@website_bp.route('/competitors/<int:competitor_id>/remove', methods=['POST'])
+@login_required
+def remove_competitor(competitor_id):
+    """Remove a competitor"""
+    from app.models.competitor_profile import CompetitorProfile
+
+    competitor = CompetitorProfile.query.get_or_404(competitor_id)
+
+    # Ensure user has access to this website
+    if competitor.website.tenant_id != g.current_tenant.id:
+        flash('Access denied.', 'danger')
+        return redirect(url_for('website.competitors'))
+
+    company_name = competitor.company_name
+    db.session.delete(competitor)
+    db.session.commit()
+
+    flash(f'{company_name} removed from competitors.', 'success')
+    return redirect(url_for('website.competitors'))
+
+
+@website_bp.route('/competitors/add', methods=['POST'])
+@login_required
+def add_competitor():
+    """Add competitor manually"""
+    tenant = g.current_tenant
+    website = Website.query.filter_by(tenant_id=tenant.id).first()
+
+    if not website:
+        flash('No website found.', 'danger')
+        return redirect(url_for('website.dashboard'))
+
+    from app.models.competitor_profile import CompetitorProfile
+
+    company_name = request.form.get('company_name', '').strip()
+    domain = request.form.get('domain', '').strip()
+    industry = request.form.get('industry', '').strip()
+    notes = request.form.get('notes', '').strip()
+
+    if not company_name or not domain:
+        flash('Company name and domain are required.', 'danger')
+        return redirect(url_for('website.competitors'))
+
+    # Check if already exists
+    existing = CompetitorProfile.query.filter_by(
+        website_id=website.id,
+        domain=domain
+    ).first()
+
+    if existing:
+        flash(f'{company_name} is already in your competitor list.', 'warning')
+        return redirect(url_for('website.competitors'))
+
+    competitor = CompetitorProfile(
+        website_id=website.id,
+        company_name=company_name,
+        domain=domain,
+        industry=industry,
+        notes=notes,
+        is_confirmed=True,
+        suggested_by_agent=False,
+        source='manual',
+        created_by_id=current_user.id
+    )
+
+    db.session.add(competitor)
+    db.session.commit()
+
+    flash(f'{company_name} added successfully!', 'success')
+    return redirect(url_for('website.competitors'))
+
+
+@website_bp.route('/analysis/start', methods=['POST'])
+@login_required
+def start_analysis():
+    """Trigger new competitive analysis"""
+    tenant = g.current_tenant
+    website = Website.query.filter_by(tenant_id=tenant.id).first()
+
+    if not website:
+        flash('No website found.', 'danger')
+        return redirect(url_for('website.dashboard'))
+
+    from app.services.competitive_analysis_service import competitive_analysis_service
+    from app.models.agent import Agent
+
+    competitor_ids = request.form.getlist('competitor_ids[]')
+
+    if not competitor_ids:
+        flash('Please select at least one competitor to analyze.', 'warning')
+        return redirect(url_for('website.competitors'))
+
+    # Convert to integers
+    competitor_ids = [int(id) for id in competitor_ids]
+
+    # Get Maya agent (or first agent with competitive analysis enabled)
+    maya = Agent.query.join(Agent.department).filter(
+        Agent.department.has(tenant_id=tenant.id),
+        Agent.enable_competitive_analysis == True
+    ).first()
+
+    try:
+        analysis = competitive_analysis_service.create_analysis(
+            website_id=website.id,
+            competitor_ids=competitor_ids,
+            analysis_type='comprehensive',
+            agent_id=maya.id if maya else None
+        )
+
+        if analysis.status == 'completed':
+            flash('Competitive analysis completed!', 'success')
+            return redirect(url_for('website.view_analysis', analysis_id=analysis.id))
+        elif analysis.status == 'failed':
+            flash(f'Analysis failed: {analysis.executive_summary}', 'danger')
+            return redirect(url_for('website.competitors'))
+        else:
+            flash('Competitive analysis started. This may take a few minutes.', 'info')
+            return redirect(url_for('website.analysis_progress', analysis_id=analysis.id))
+
+    except Exception as e:
+        flash(f'Error starting analysis: {str(e)}', 'danger')
+        return redirect(url_for('website.competitors'))
+
+
+@website_bp.route('/analysis/<int:analysis_id>')
+@login_required
+def view_analysis(analysis_id):
+    """View completed analysis results"""
+    from app.models.competitive_analysis import CompetitiveAnalysis
+    from app.models.competitor_profile import CompetitorProfile
+    import json
+
+    analysis = CompetitiveAnalysis.query.get_or_404(analysis_id)
+
+    # Ensure user has access to this analysis
+    if analysis.website.tenant_id != g.current_tenant.id:
+        flash('Access denied.', 'danger')
+        return redirect(url_for('website.dashboard'))
+
+    # Get competitor details
+    competitors = CompetitorProfile.query.filter(
+        CompetitorProfile.id.in_(analysis.competitor_ids or [])
+    ).all()
+
+    # Parse JSON fields
+    strengths = json.loads(analysis.strengths) if analysis.strengths else []
+    gaps = json.loads(analysis.gaps) if analysis.gaps else []
+    opportunities = json.loads(analysis.opportunities) if analysis.opportunities else []
+    comparison_matrix = json.loads(analysis.comparison_matrix) if analysis.comparison_matrix else {}
+
+    return render_template('website/analysis_view.html',
+                         analysis=analysis,
+                         competitors=competitors,
+                         strengths=strengths,
+                         gaps=gaps,
+                         opportunities=opportunities,
+                         comparison_matrix=comparison_matrix)
+
+
+@website_bp.route('/analysis/<int:analysis_id>/progress')
+@login_required
+def analysis_progress(analysis_id):
+    """Show analysis progress (polling page)"""
+    from app.models.competitive_analysis import CompetitiveAnalysis
+
+    analysis = CompetitiveAnalysis.query.get_or_404(analysis_id)
+
+    # Ensure user has access to this analysis
+    if analysis.website.tenant_id != g.current_tenant.id:
+        flash('Access denied.', 'danger')
+        return redirect(url_for('website.dashboard'))
+
+    if analysis.status == 'completed':
+        return redirect(url_for('website.view_analysis', analysis_id=analysis.id))
+
+    return render_template('website/analysis_progress.html', analysis=analysis)

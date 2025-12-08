@@ -33,6 +33,7 @@ class Agent(db.Model):
     enable_google_drive = db.Column(db.Boolean, default=False, nullable=False)  # Allow access to Google Drive (MCP)
     enable_website_builder = db.Column(db.Boolean, default=False, nullable=False)  # Allow AI to create/edit website content
     enable_file_generation = db.Column(db.Boolean, default=True, nullable=False)  # Allow AI to generate files (PDF, CSV, Excel)
+    enable_competitive_analysis = db.Column(db.Boolean, default=False, nullable=False)  # Allow AI to perform competitive analysis
 
     # User access control (who can chat with this agent)
     access_control = db.Column(db.String(20), default='all', nullable=False)  # 'all', 'role', 'department', 'users'
@@ -592,6 +593,7 @@ class Agent(db.Model):
                 'enable_google_drive': self.enable_google_drive,
                 'enable_website_builder': self.enable_website_builder,
                 'enable_file_generation': self.enable_file_generation,
+                'enable_competitive_analysis': self.enable_competitive_analysis,
                 'access_control': self.access_control,
                 'allowed_roles': self.allowed_roles,
                 'allowed_department_ids': self.allowed_department_ids,
@@ -704,6 +706,7 @@ class Agent(db.Model):
             enable_google_drive=agent_data.get('enable_google_drive', False),
             enable_website_builder=agent_data.get('enable_website_builder', False),
             enable_file_generation=agent_data.get('enable_file_generation', False),
+            enable_competitive_analysis=agent_data.get('enable_competitive_analysis', False),
             access_control=agent_data.get('access_control', 'all'),
             allowed_roles=agent_data.get('allowed_roles'),
             allowed_department_ids=agent_data.get('allowed_department_ids'),
