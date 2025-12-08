@@ -370,10 +370,21 @@ IMPORTANT: Return ONLY valid JSON, no additional text or explanation."""
             # Log the problematic JSON snippet around the error
             if hasattr(e, 'pos'):
                 error_pos = e.pos
-                snippet_start = max(0, error_pos - 100)
-                snippet_end = min(len(json_str) if 'json_str' in locals() else len(response_text), error_pos + 100)
+                snippet_start = max(0, error_pos - 200)
+                snippet_end = min(len(json_str) if 'json_str' in locals() else len(response_text), error_pos + 200)
                 problem_area = (json_str if 'json_str' in locals() else response_text)[snippet_start:snippet_end]
-                print(f"[COMPETITIVE_ANALYSIS] Problem area: ...{problem_area}...")
+                print(f"[COMPETITIVE_ANALYSIS] Problem area (±200 chars): ...{problem_area}...")
+
+                # Try to save full JSON for debugging
+                try:
+                    if 'json_str' in locals():
+                        print(f"[COMPETITIVE_ANALYSIS] Full JSON length: {len(json_str)} chars")
+                        # Print in chunks to avoid log truncation
+                        chunk_size = 1000
+                        for i in range(0, min(len(json_str), 5000), chunk_size):
+                            print(f"[COMPETITIVE_ANALYSIS] JSON chunk {i//chunk_size + 1}: {json_str[i:i+chunk_size]}")
+                except Exception as log_error:
+                    print(f"[COMPETITIVE_ANALYSIS] Error logging full JSON: {log_error}")
 
         # Return default structure if parsing fails
         return {
