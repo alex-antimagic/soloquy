@@ -304,8 +304,16 @@ Please analyze and provide a comprehensive competitive analysis with the followi
    - impact: Expected business impact
    - description: Detailed recommendation
 
-5. **Comparison Matrix**: Key metrics compared side-by-side
-   Include metrics like: number of products, pricing signals, content quality, etc.
+5. **Comparison Matrix**: Qualitative comparison of key dimensions
+   Compare on these dimensions (use assessments like "Strong", "Moderate", "Limited", "Not visible"):
+   - API/Platform Maturity
+   - Developer Resources (docs, SDKs, support)
+   - Market Focus (Enterprise, SMB, Developer-first, etc.)
+   - Technology Innovation (AI, blockchain, advanced features)
+   - Geographic Coverage
+   - Pricing Transparency
+
+   For each dimension, provide your assessment based on visible website content. Use "Not visible" if you cannot determine from the content.
 
 Return your analysis as valid JSON with this structure:
 {{
@@ -320,8 +328,15 @@ Return your analysis as valid JSON with this structure:
     {{"title": "...", "priority": "high", "impact": "...", "description": "..."}}
   ],
   "comparison_matrix": {{
-    "metrics": [
-      {{"name": "Product Count", "your_value": "5", "comp1_value": "8", "comp2_value": "12"}}
+    "dimensions": [
+      {{
+        "name": "API/Platform Maturity",
+        "your_company": "Limited - Consultative focus",
+        "competitors": [
+          {{"name": "Twilio", "assessment": "Strong - Comprehensive API platform"}},
+          {{"name": "Bandwidth", "assessment": "Strong - Developer-focused APIs"}}
+        ]
+      }}
     ]
   }},
   "detailed_findings": [
