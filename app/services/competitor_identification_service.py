@@ -54,18 +54,28 @@ class CompetitorIdentificationService:
                 seen_domains.add(comp['website'])
 
         # Strategy 2: Use Claude AI to identify competitors based on business context
-        if tenant.business_context:
-            try:
+        try:
+            # Parse business context if available, otherwise use minimal data
+            if tenant.business_context:
                 business_data = json.loads(tenant.business_context)
-                ai_competitors = self._identify_competitors_with_ai(business_data, tenant.name, limit)
+            else:
+                # Fallback: use minimal business data with just company name
+                business_data = {
+                    'company_description': f'{tenant.name} company',
+                    'industry': 'business',
+                    'products_services': [],
+                    'target_market': ''
+                }
 
-                for comp in ai_competitors:
-                    if comp['website'] not in seen_domains:
-                        competitors.append(comp)
-                        seen_domains.add(comp['website'])
+            ai_competitors = self._identify_competitors_with_ai(business_data, tenant.name, limit)
 
-            except (json.JSONDecodeError, ValueError):
-                pass  # Skip if business_context is invalid
+            for comp in ai_competitors:
+                if comp['website'] not in seen_domains:
+                    competitors.append(comp)
+                    seen_domains.add(comp['website'])
+
+        except (json.JSONDecodeError, ValueError):
+            pass  # Skip if business_context is invalid
 
         # Sort by confidence score (descending) and limit results
         competitors.sort(key=lambda x: x.get('confidence', 0), reverse=True)
@@ -162,18 +172,30 @@ class CompetitorIdentificationService:
 
         products_str = ', '.join(products[:5]) if products else 'N/A'
 
-        prompt = f"""Identify the top {limit} direct competitors for {company_name}.
+        # Build context section based on available data
+        context_parts = []
+        if description and description != f'{company_name} company':
+            context_parts.append(f"- Description: {description}")
+        if industry and industry != 'business':
+            context_parts.append(f"- Industry: {industry}")
+        if products and products_str != 'N/A':
+            context_parts.append(f"- Products/Services: {products_str}")
+        if target_market:
+            context_parts.append(f"- Target Market: {target_market}")
+
+        context_str = '\n'.join(context_parts) if context_parts else "Limited information available."
+
+        prompt = f"""Identify the top {limit} potential competitors for {company_name}.
 
 Company Information:
-- Industry: {industry}
-- Description: {description}
-- Products/Services: {products_str}
-- Target Market: {target_market}
+{context_str}
 
-Please identify {limit} companies that compete directly with {company_name}. For each competitor, provide:
+Based on the company name and available context, please identify {limit} companies that might compete with {company_name}. For each competitor, provide:
 1. Company name
 2. Primary domain/website (just the domain, not full URL)
-3. Brief reason why they're a competitor (one sentence)
+3. Brief reason why they might be a competitor (one sentence)
+
+If limited information is available, make reasonable inferences based on the company name and industry context.
 
 Return your response as a JSON array with this exact structure:
 [
