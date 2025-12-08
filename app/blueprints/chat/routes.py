@@ -19,7 +19,26 @@ import json
 @chat_bp.route('/')
 @login_required
 def index():
-    """Chat interface"""
+    """Chat interface - redirect to default agent"""
+    from flask import redirect, url_for
+
+    # Find the workspace's primary agent (Maya or first available agent)
+    primary_agent = Agent.query.join(Agent.department).filter(
+        Department.tenant_id == g.current_tenant.id,
+        Agent.is_active == True
+    ).order_by(
+        # Prioritize Maya, then by creation order
+        db.case(
+            (Agent.name.ilike('%maya%'), 1),
+            else_=2
+        ),
+        Agent.created_at.asc()
+    ).first()
+
+    if primary_agent:
+        return redirect(url_for('chat.agent_chat', agent_id=primary_agent.id))
+
+    # Fallback to index if no agents found
     return render_template('chat/index.html', title='Chat')
 
 
