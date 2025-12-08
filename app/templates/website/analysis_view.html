@@ -54,6 +54,38 @@
     }
 }
 </style>
+
+<script>
+// Handle "Chat with Maya" button clicks to pre-populate message
+document.addEventListener('DOMContentLoaded', function() {
+    const chatButtons = document.querySelectorAll('.chat-maya-btn');
+
+    chatButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            const opportunity = this.dataset.opportunity;
+            const description = this.dataset.description;
+            const context = this.dataset.context;
+            const summary = this.dataset.summary;
+
+            let message = '';
+
+            if (opportunity) {
+                // Opportunity-specific message
+                message = `I'd like to discuss this competitive analysis opportunity:\n\n**${opportunity}**\n\n${description}\n\nHow should we prioritize this and what are the next steps?`;
+            } else if (context === 'general' && summary) {
+                // General analysis discussion
+                message = `I'd like to discuss the competitive analysis results. Here's the executive summary:\n\n${summary}\n\nWhat actions should we take based on these findings?`;
+            }
+
+            if (message) {
+                // Store in localStorage for chat page to read
+                localStorage.setItem('pendingChatMessage', message);
+            }
+        });
+    });
+});
+</script>
+
 <div class="container-fluid">
     <!-- Header -->
     <div class="row mb-4">
@@ -208,9 +240,18 @@
                                         </span>
                                     </div>
                                     {% endif %}
-                                    <a href="{{ url_for('chat.index') }}" class="btn btn-sm btn-outline-primary">
-                                        <i class="bi bi-chat-dots me-1"></i>Chat with Maya
+                                    {% if maya_agent %}
+                                    <a href="{{ url_for('chat.agent_chat', agent_id=maya_agent.id) }}"
+                                       class="btn btn-sm btn-outline-primary chat-maya-btn"
+                                       data-opportunity="{{ opportunity.title }}"
+                                       data-description="{{ opportunity.description }}">
+                                        <i class="bi bi-chat-dots me-1"></i>Chat with {{ maya_agent.name }}
                                     </a>
+                                    {% else %}
+                                    <a href="{{ url_for('chat.index') }}" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-chat-dots me-1"></i>Chat
+                                    </a>
+                                    {% endif %}
                                 </div>
                             </div>
                         </div>
@@ -306,9 +347,18 @@
                     <a href="{{ url_for('website.competitors') }}" class="btn btn-primary me-2">
                         <i class="bi bi-arrow-repeat me-1"></i>Run New Analysis
                     </a>
-                    <a href="{{ url_for('chat.index') }}" class="btn btn-outline-primary">
-                        <i class="bi bi-chat-dots me-1"></i>Discuss with Maya
+                    {% if maya_agent %}
+                    <a href="{{ url_for('chat.agent_chat', agent_id=maya_agent.id) }}"
+                       class="btn btn-outline-primary chat-maya-btn"
+                       data-context="general"
+                       data-summary="{{ analysis.executive_summary }}">
+                        <i class="bi bi-chat-dots me-1"></i>Discuss with {{ maya_agent.name }}
                     </a>
+                    {% else %}
+                    <a href="{{ url_for('chat.index') }}" class="btn btn-outline-primary">
+                        <i class="bi bi-chat-dots me-1"></i>Discuss Results
+                    </a>
+                    {% endif %}
                 </div>
             </div>
         </div>

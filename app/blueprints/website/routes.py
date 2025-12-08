@@ -597,6 +597,7 @@ def view_analysis(analysis_id):
     """View completed analysis results"""
     from app.models.competitive_analysis import CompetitiveAnalysis
     from app.models.competitor_profile import CompetitorProfile
+    from app.models.agent import Agent
     import json
 
     analysis = CompetitiveAnalysis.query.get_or_404(analysis_id)
@@ -617,13 +618,25 @@ def view_analysis(analysis_id):
     opportunities = json.loads(analysis.opportunities) if analysis.opportunities else []
     comparison_matrix = json.loads(analysis.comparison_matrix) if analysis.comparison_matrix else {}
 
+    # Find Maya agent (or the agent who performed this analysis) for chat links
+    maya_agent = None
+    if analysis.analyzed_by_agent_id:
+        maya_agent = Agent.query.get(analysis.analyzed_by_agent_id)
+    else:
+        # Fallback: find any agent with competitive analysis enabled
+        maya_agent = Agent.query.join(Agent.department).filter(
+            Department.tenant_id == g.current_tenant.id,
+            Agent.enable_competitive_analysis == True
+        ).first()
+
     return render_template('website/analysis_view.html',
                          analysis=analysis,
                          competitors=competitors,
                          strengths=strengths,
                          gaps=gaps,
                          opportunities=opportunities,
-                         comparison_matrix=comparison_matrix)
+                         comparison_matrix=comparison_matrix,
+                         maya_agent=maya_agent)
 
 
 @website_bp.route('/analysis/<int:analysis_id>/progress')

@@ -184,6 +184,19 @@
     const messageInput = document.getElementById('message-input');
     const messagesContainer = document.getElementById('messages-container');
 
+    // Check for pending chat message from competitive analysis
+    const pendingMessage = localStorage.getItem('pendingChatMessage');
+    if (pendingMessage) {
+        messageInput.value = pendingMessage;
+        // Clear the stored message
+        localStorage.removeItem('pendingChatMessage');
+        // Trigger resize to accommodate the pre-populated message
+        messageInput.style.height = 'auto';
+        messageInput.style.height = Math.min(messageInput.scrollHeight, 200) + 'px';
+        // Focus the input
+        messageInput.focus();
+    }
+
     // Auto-resize textarea as user types
     function autoResizeTextarea() {
         messageInput.style.height = 'auto';
