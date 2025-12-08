@@ -55,17 +55,8 @@ class CompetitorIdentificationService:
 
         # Strategy 2: Use Claude AI to identify competitors based on business context
         try:
-            # Parse business context if available, otherwise use minimal data
-            if tenant.business_context:
-                business_data = json.loads(tenant.business_context)
-            else:
-                # Fallback: use minimal business data with just company name
-                business_data = {
-                    'company_description': f'{tenant.name} company',
-                    'industry': 'business',
-                    'products_services': [],
-                    'target_market': ''
-                }
+            # Build business data from all available sources
+            business_data = self._build_business_data(tenant)
 
             ai_competitors = self._identify_competitors_with_ai(business_data, tenant.name, limit)
 
@@ -115,6 +106,64 @@ class CompetitorIdentificationService:
                     continue
 
         return competitors
+
+    def _build_business_data(self, tenant: Tenant) -> Dict:
+        """
+        Build comprehensive business data from all available sources:
+        1. Auto-scraped business_context (JSON)
+        2. User-provided custom_context (markdown/text)
+        3. Tenant's website data
+        4. Fallback to minimal data
+
+        Args:
+            tenant: The tenant to build business data for
+
+        Returns:
+            Dictionary with business information
+        """
+        business_data = {
+            'company_description': '',
+            'industry': 'business',
+            'products_services': [],
+            'target_market': '',
+            'website_url': tenant.website_url or ''
+        }
+
+        # Source 1: Auto-scraped business_context (highest priority for structured data)
+        if tenant.business_context:
+            try:
+                scraped_data = json.loads(tenant.business_context)
+                business_data.update(scraped_data)
+            except (json.JSONDecodeError, TypeError):
+                pass
+
+        # Source 2: User-provided custom_context (adds human insight)
+        if tenant.custom_context:
+            # Append custom context to description
+            custom_text = tenant.custom_context.strip()
+            if custom_text:
+                current_desc = business_data.get('company_description', '')
+                if current_desc:
+                    business_data['company_description'] = f"{current_desc}\n\nAdditional Context: {custom_text}"
+                else:
+                    business_data['company_description'] = custom_text
+
+        # Source 3: Tenant's website content (if we have it)
+        if tenant.website and hasattr(tenant.website, 'title'):
+            # Use website title and tagline if available
+            if tenant.website.title and not business_data.get('company_description'):
+                business_data['company_description'] = tenant.website.title
+            if hasattr(tenant.website, 'tagline') and tenant.website.tagline:
+                tagline = tenant.website.tagline.strip()
+                if tagline:
+                    current_desc = business_data.get('company_description', '')
+                    business_data['company_description'] = f"{current_desc}\n{tagline}" if current_desc else tagline
+
+        # Fallback: If still no description, use company name
+        if not business_data.get('company_description'):
+            business_data['company_description'] = f'{tenant.name} company'
+
+        return business_data
 
     def _identify_competitors_with_ai(self, business_data: Dict, company_name: str, limit: int) -> List[Dict]:
         """
@@ -169,11 +218,14 @@ class CompetitorIdentificationService:
         description = business_data.get('company_description', '')
         products = business_data.get('products_services', [])
         target_market = business_data.get('target_market', '')
+        website_url = business_data.get('website_url', '')
 
         products_str = ', '.join(products[:5]) if products else 'N/A'
 
         # Build context section based on available data
         context_parts = []
+        if website_url:
+            context_parts.append(f"- Website: {website_url}")
         if description and description != f'{company_name} company':
             context_parts.append(f"- Description: {description}")
         if industry and industry != 'business':
@@ -190,10 +242,10 @@ class CompetitorIdentificationService:
 Company Information:
 {context_str}
 
-Based on the company name and available context, please identify {limit} companies that might compete with {company_name}. For each competitor, provide:
+Based on the company name, website, and available context, please identify {limit} companies that compete with {company_name}. For each competitor, provide:
 1. Company name
-2. Primary domain/website (just the domain, not full URL)
-3. Brief reason why they might be a competitor (one sentence)
+2. Primary domain/website (just the domain, not full URL - e.g. "example.com" not "https://example.com")
+3. Brief reason why they're a competitor (one sentence)
 
 If limited information is available, make reasonable inferences based on the company name and industry context.
 
