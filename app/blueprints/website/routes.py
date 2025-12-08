@@ -422,11 +422,16 @@ def suggest_competitors():
 
         db.session.commit()
 
-        flash(f'Found {len(suggestions)} potential competitors!', 'success')
-        return jsonify({"success": True, "count": created_count})
+        if len(suggestions) > 0:
+            flash(f'Found {len(suggestions)} potential competitors!', 'success')
+        else:
+            flash('No competitors found. Try adding business context to your workspace for better suggestions.', 'info')
+
+        return redirect(url_for('website.competitors'))
 
     except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
+        flash(f'Error generating suggestions: {str(e)}', 'danger')
+        return redirect(url_for('website.competitors'))
 
 
 @website_bp.route('/competitors/<int:competitor_id>/confirm', methods=['POST'])
