@@ -206,7 +206,7 @@ class CompetitorIdentificationService:
 
             # Call Claude API
             response = self.anthropic_client.messages.create(
-                model="claude-sonnet-4-5-20251022",
+                model="claude-sonnet-4-5-20250929",
                 max_tokens=2048,
                 temperature=0.7,
                 messages=[{
