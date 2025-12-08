@@ -341,6 +341,12 @@ IMPORTANT: Return ONLY valid JSON, no additional text or explanation."""
 
             if start != -1 and end > start:
                 json_str = response_text[start:end]
+
+                # Try to fix common JSON issues
+                # Remove trailing commas before closing braces/brackets
+                import re
+                json_str = re.sub(r',(\s*[}\]])', r'\1', json_str)
+
                 analysis = json.loads(json_str)
 
                 # Validate structure
@@ -348,7 +354,16 @@ IMPORTANT: Return ONLY valid JSON, no additional text or explanation."""
                     return analysis
 
         except (json.JSONDecodeError, ValueError) as e:
-            print(f"Error parsing analysis JSON: {e}")
+            print(f"[COMPETITIVE_ANALYSIS] Error parsing analysis JSON: {e}")
+            # Log first 500 chars of the response for debugging
+            print(f"[COMPETITIVE_ANALYSIS] Response preview: {response_text[:500]}...")
+            # Log the problematic JSON snippet around the error
+            if hasattr(e, 'pos'):
+                error_pos = e.pos
+                snippet_start = max(0, error_pos - 100)
+                snippet_end = min(len(json_str) if 'json_str' in locals() else len(response_text), error_pos + 100)
+                problem_area = (json_str if 'json_str' in locals() else response_text)[snippet_start:snippet_end]
+                print(f"[COMPETITIVE_ANALYSIS] Problem area: ...{problem_area}...")
 
         # Return default structure if parsing fails
         return {
