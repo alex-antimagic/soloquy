@@ -1,6 +1,41 @@
 {% extends "layouts/base.html" %}
 
 {% block content %}
+<style>
+/* Dark mode fixes for competitive analysis pages */
+@media (prefers-color-scheme: dark) {
+    /* Main page headers */
+    h2, h3, h4, h5, h6 {
+        color: var(--bs-body-color, #dee2e6) !important;
+    }
+
+    /* Card titles and headers */
+    .card-header h5,
+    .card-title {
+        color: var(--bs-body-color, #dee2e6) !important;
+    }
+
+    /* Strong text in tables */
+    td strong {
+        color: var(--bs-body-color, #dee2e6);
+    }
+
+    /* Modal titles */
+    .modal-title {
+        color: var(--bs-body-color, #dee2e6) !important;
+    }
+
+    /* Table headers */
+    thead th {
+        color: var(--bs-body-color, #dee2e6) !important;
+    }
+
+    /* Form labels */
+    .form-label {
+        color: var(--bs-body-color, #dee2e6);
+    }
+}
+</style>
 <div class="container-fluid">
     <!-- Header -->
     <div class="row mb-4">
