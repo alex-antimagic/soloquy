@@ -1,6 +1,59 @@
 {% extends "layouts/base.html" %}
 
 {% block content %}
+<style>
+/* Dark mode fixes for competitive analysis results */
+@media (prefers-color-scheme: dark) {
+    /* Fix light backgrounds for dark mode */
+    .bg-light {
+        background-color: var(--bs-dark) !important;
+    }
+
+    /* Card headers with bg-light */
+    .card-header.bg-light {
+        background-color: rgba(255, 255, 255, 0.05) !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    /* Main page headers */
+    h2, h3, h4, h5, h6 {
+        color: var(--bs-body-color, #dee2e6) !important;
+    }
+
+    /* Card titles */
+    .card-title {
+        color: var(--bs-body-color, #dee2e6) !important;
+    }
+
+    /* Table headers */
+    thead th,
+    .table-light {
+        background-color: rgba(255, 255, 255, 0.05) !important;
+        color: var(--bs-body-color, #dee2e6) !important;
+    }
+
+    /* Table bordered */
+    .table-bordered {
+        border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .table-bordered td,
+    .table-bordered th {
+        border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    /* Strong text in cards */
+    .card-body strong,
+    td strong {
+        color: var(--bs-body-color, #dee2e6);
+    }
+
+    /* Lead text */
+    .lead {
+        color: var(--bs-body-color, #dee2e6);
+    }
+}
+</style>
 <div class="container-fluid">
     <!-- Header -->
     <div class="row mb-4">
