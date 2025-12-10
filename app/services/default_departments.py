@@ -299,6 +299,16 @@ def create_default_departments(tenant_id, template='business', selected_departme
             avatar_url=avatar_url,
             is_primary=True
         )
+
+        # Enable specialized capabilities based on department
+        if dept_config['slug'] == 'hr':
+            agent.enable_hr_management = True
+        elif dept_config['slug'] == 'marketing':
+            agent.enable_website_builder = True
+            agent.enable_competitive_analysis = True
+        elif dept_config['slug'] == 'executive':
+            agent.enable_competitive_analysis = True
+
         db.session.add(agent)
         db.session.flush()  # Get agent ID
 

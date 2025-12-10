@@ -1,0 +1,584 @@
+{% extends "layouts/base.html" %}
+
+{% block extra_css %}
+<style>
+    .kanban-container {
+        display: flex;
+        gap: 1rem;
+        overflow-x: auto;
+        padding-bottom: 1rem;
+        min-height: calc(100vh - 200px);
+    }
+
+    .kanban-column {
+        flex: 0 0 320px;
+        min-width: 320px;
+        background: var(--bs-body-bg);
+        border-radius: 8px;
+        border: 1px solid var(--bs-border-color);
+        display: flex;
+        flex-direction: column;
+        max-height: calc(100vh - 220px);
+    }
+
+    .kanban-column-header {
+        padding: 1rem;
+        border-bottom: 1px solid var(--bs-border-color);
+        background: rgba(255, 255, 255, 0.02);
+    }
+
+    .kanban-column-body {
+        flex: 1;
+        overflow-y: auto;
+        padding: 0.75rem;
+    }
+
+    .candidate-card {
+        background: var(--bs-card-bg);
+        border: 1px solid var(--bs-border-color);
+        border-radius: 6px;
+        padding: 0.875rem;
+        margin-bottom: 0.75rem;
+        cursor: grab;
+        transition: box-shadow 0.2s;
+    }
+
+    .candidate-card:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .candidate-card.dragging {
+        opacity: 0.5;
+        cursor: grabbing;
+    }
+
+    .kanban-column-body.drag-over {
+        background: rgba(59, 130, 246, 0.1);
+        border-radius: 8px;
+    }
+
+    .score-badge {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 1.1rem;
+    }
+
+    .score-excellent {
+        background: #10b981;
+        color: white;
+    }
+
+    .score-good {
+        background: #3b82f6;
+        color: white;
+    }
+
+    .score-fair {
+        background: #f59e0b;
+        color: white;
+    }
+
+    .score-poor {
+        background: #ef4444;
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">Recruitment Pipeline</h2>
+            <p class="text-muted mb-0">Drag and drop candidates to move them through the hiring process</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('hr.job_postings_list') }}" class="btn btn-outline-primary">
+                <i class="bi bi-briefcase"></i> Job Postings
+            </a>
+            <a href="{{ url_for('hr.interviews_list') }}" class="btn btn-outline-info">
+                <i class="bi bi-calendar-check"></i> Interviews
+            </a>
+        </div>
+    </div>
+
+    <!-- Kanban Board -->
+    <div class="kanban-container">
+        <!-- Applied Column -->
+        <div class="kanban-column">
+            <div class="kanban-column-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-1" style="color: #6b7280">Applied</h6>
+                        <small class="text-muted">New applications</small>
+                    </div>
+                    <span class="badge bg-secondary">{{ candidates_by_status['applied']|length }}</span>
+                </div>
+            </div>
+            <div class="kanban-column-body" data-status="applied">
+                {% for candidate in candidates_by_status['applied'] %}
+                <div class="candidate-card" draggable="true" data-candidate-id="{{ candidate.id }}" onclick="viewCandidateDetail({{ candidate.id }})" style="cursor: pointer;">
+                    <div class="d-flex gap-3 mb-2">
+                        {% if candidate.overall_score %}
+                        <div class="score-badge {% if candidate.overall_score >= 80 %}score-excellent{% elif candidate.overall_score >= 60 %}score-good{% elif candidate.overall_score >= 40 %}score-fair{% else %}score-poor{% endif %}">
+                            {{ "%.0f"|format(candidate.overall_score) }}
+                        </div>
+                        {% else %}
+                        <div class="score-badge bg-secondary bg-opacity-50">
+                            <i class="bi bi-dash"></i>
+                        </div>
+                        {% endif %}
+                        <div class="flex-grow-1">
+                            <strong class="d-block">{{ candidate.full_name }}</strong>
+                            <small class="text-muted">{{ candidate.position }}</small>
+                        </div>
+                    </div>
+
+                    <div class="d-flex flex-column gap-1 small text-muted mt-2">
+                        {% if candidate.experience_years %}
+                        <span><i class="bi bi-briefcase"></i> {{ candidate.experience_years }} years</span>
+                        {% endif %}
+                        <span><i class="bi bi-calendar"></i> Applied {{ candidate.applied_date.strftime('%b %d') }}</span>
+                        {% if candidate.email %}
+                        <span><i class="bi bi-envelope"></i> {{ candidate.email[:25] }}{% if candidate.email|length > 25 %}...{% endif %}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Screening Column -->
+        <div class="kanban-column">
+            <div class="kanban-column-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-1" style="color: #3b82f6">Screening</h6>
+                        <small class="text-muted">Initial review</small>
+                    </div>
+                    <span class="badge bg-secondary">{{ candidates_by_status['screening']|length }}</span>
+                </div>
+            </div>
+            <div class="kanban-column-body" data-status="screening">
+                {% for candidate in candidates_by_status['screening'] %}
+                <div class="candidate-card" draggable="true" data-candidate-id="{{ candidate.id }}" onclick="viewCandidateDetail({{ candidate.id }})" style="cursor: pointer;">
+                    <div class="d-flex gap-3 mb-2">
+                        {% if candidate.overall_score %}
+                        <div class="score-badge {% if candidate.overall_score >= 80 %}score-excellent{% elif candidate.overall_score >= 60 %}score-good{% elif candidate.overall_score >= 40 %}score-fair{% else %}score-poor{% endif %}">
+                            {{ "%.0f"|format(candidate.overall_score) }}
+                        </div>
+                        {% else %}
+                        <div class="score-badge bg-secondary bg-opacity-50">
+                            <i class="bi bi-dash"></i>
+                        </div>
+                        {% endif %}
+                        <div class="flex-grow-1">
+                            <strong class="d-block">{{ candidate.full_name }}</strong>
+                            <small class="text-muted">{{ candidate.position }}</small>
+                        </div>
+                    </div>
+
+                    <div class="d-flex flex-column gap-1 small text-muted mt-2">
+                        {% if candidate.experience_years %}
+                        <span><i class="bi bi-briefcase"></i> {{ candidate.experience_years }} years</span>
+                        {% endif %}
+                        <span><i class="bi bi-calendar"></i> Applied {{ candidate.applied_date.strftime('%b %d') }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Interviewing Column -->
+        <div class="kanban-column">
+            <div class="kanban-column-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-1" style="color: #8b5cf6">Interviewing</h6>
+                        <small class="text-muted">In process</small>
+                    </div>
+                    <span class="badge bg-secondary">{{ candidates_by_status['interviewing']|length }}</span>
+                </div>
+            </div>
+            <div class="kanban-column-body" data-status="interviewing">
+                {% for candidate in candidates_by_status['interviewing'] %}
+                <div class="candidate-card" draggable="true" data-candidate-id="{{ candidate.id }}" onclick="viewCandidateDetail({{ candidate.id }})" style="cursor: pointer;">
+                    <div class="d-flex gap-3 mb-2">
+                        {% if candidate.overall_score %}
+                        <div class="score-badge {% if candidate.overall_score >= 80 %}score-excellent{% elif candidate.overall_score >= 60 %}score-good{% elif candidate.overall_score >= 40 %}score-fair{% else %}score-poor{% endif %}">
+                            {{ "%.0f"|format(candidate.overall_score) }}
+                        </div>
+                        {% else %}
+                        <div class="score-badge bg-secondary bg-opacity-50">
+                            <i class="bi bi-dash"></i>
+                        </div>
+                        {% endif %}
+                        <div class="flex-grow-1">
+                            <strong class="d-block">{{ candidate.full_name }}</strong>
+                            <small class="text-muted">{{ candidate.position }}</small>
+                        </div>
+                    </div>
+
+                    <div class="d-flex flex-column gap-1 small text-muted mt-2">
+                        {% if candidate.experience_years %}
+                        <span><i class="bi bi-briefcase"></i> {{ candidate.experience_years }} years</span>
+                        {% endif %}
+                        <span><i class="bi bi-calendar-event"></i> {{ candidate.interviews.count() }} interview{% if candidate.interviews.count() != 1 %}s{% endif %}</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Offer Extended Column -->
+        <div class="kanban-column">
+            <div class="kanban-column-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-1" style="color: #f59e0b">Offer Extended</h6>
+                        <small class="text-muted">Awaiting response</small>
+                    </div>
+                    <span class="badge bg-secondary">{{ candidates_by_status['offer_extended']|length }}</span>
+                </div>
+            </div>
+            <div class="kanban-column-body" data-status="offer_extended">
+                {% for candidate in candidates_by_status['offer_extended'] %}
+                <div class="candidate-card" draggable="true" data-candidate-id="{{ candidate.id }}" onclick="viewCandidateDetail({{ candidate.id }})" style="cursor: pointer;">
+                    <div class="d-flex gap-3 mb-2">
+                        {% if candidate.overall_score %}
+                        <div class="score-badge {% if candidate.overall_score >= 80 %}score-excellent{% elif candidate.overall_score >= 60 %}score-good{% elif candidate.overall_score >= 40 %}score-fair{% else %}score-poor{% endif %}">
+                            {{ "%.0f"|format(candidate.overall_score) }}
+                        </div>
+                        {% else %}
+                        <div class="score-badge bg-secondary bg-opacity-50">
+                            <i class="bi bi-dash"></i>
+                        </div>
+                        {% endif %}
+                        <div class="flex-grow-1">
+                            <strong class="d-block">{{ candidate.full_name }}</strong>
+                            <small class="text-muted">{{ candidate.position }}</small>
+                        </div>
+                    </div>
+
+                    <div class="d-flex flex-column gap-1 small text-muted mt-2">
+                        {% if candidate.experience_years %}
+                        <span><i class="bi bi-briefcase"></i> {{ candidate.experience_years }} years</span>
+                        {% endif %}
+                        <span><i class="bi bi-envelope-check"></i> Offer sent</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Hired Column -->
+        <div class="kanban-column">
+            <div class="kanban-column-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-1" style="color: #10b981">Hired</h6>
+                        <small class="text-muted">Success!</small>
+                    </div>
+                    <span class="badge bg-success">{{ candidates_by_status['hired']|length }}</span>
+                </div>
+            </div>
+            <div class="kanban-column-body" data-status="hired">
+                {% for candidate in candidates_by_status['hired'] %}
+                <div class="candidate-card" draggable="true" data-candidate-id="{{ candidate.id }}" onclick="viewCandidateDetail({{ candidate.id }})" style="cursor: pointer;">
+                    <div class="d-flex gap-3 mb-2">
+                        <div class="score-badge score-excellent">
+                            <i class="bi bi-check-lg"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <strong class="d-block">{{ candidate.full_name }}</strong>
+                            <small class="text-muted">{{ candidate.position }}</small>
+                        </div>
+                    </div>
+
+                    <div class="d-flex flex-column gap-1 small text-muted mt-2">
+                        <span><i class="bi bi-check-circle"></i> Accepted offer</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Rejected Column -->
+        <div class="kanban-column">
+            <div class="kanban-column-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-1" style="color: #ef4444">Rejected</h6>
+                        <small class="text-muted">Not selected</small>
+                    </div>
+                    <span class="badge bg-danger">{{ candidates_by_status['rejected']|length }}</span>
+                </div>
+            </div>
+            <div class="kanban-column-body" data-status="rejected">
+                {% for candidate in candidates_by_status['rejected'] %}
+                <div class="candidate-card" draggable="true" data-candidate-id="{{ candidate.id }}" onclick="viewCandidateDetail({{ candidate.id }})" style="cursor: pointer;">
+                    <div class="d-flex gap-3 mb-2">
+                        <div class="score-badge bg-danger">
+                            <i class="bi bi-x-lg"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <strong class="d-block">{{ candidate.full_name }}</strong>
+                            <small class="text-muted">{{ candidate.position }}</small>
+                        </div>
+                    </div>
+
+                    <div class="d-flex flex-column gap-1 small text-muted mt-2">
+                        <span><i class="bi bi-x-circle"></i> Not selected</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Candidate Detail Modal -->
+<div class="modal fade" id="candidateDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="candidateModalTitle">Candidate Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="candidateModalBody">
+                <div class="text-center py-5">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Drag and Drop functionality
+let draggedCandidate = null;
+let draggedFromStatus = null;
+
+// Initialize drag events for all candidate cards
+function initializeDragAndDrop() {
+    document.querySelectorAll('.candidate-card').forEach(card => {
+        card.addEventListener('dragstart', function(e) {
+            draggedCandidate = this;
+            draggedFromStatus = this.closest('.kanban-column-body');
+            this.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/html', this.innerHTML);
+
+            // Stop propagation to prevent navigation
+            e.stopPropagation();
+        });
+
+        card.addEventListener('dragend', function(e) {
+            this.classList.remove('dragging');
+            document.querySelectorAll('.kanban-column-body').forEach(col => {
+                col.classList.remove('drag-over');
+            });
+        });
+
+        // Prevent click during drag
+        card.addEventListener('click', function(e) {
+            if (this.classList.contains('dragging')) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+        });
+    });
+
+    // Setup drop zones
+    document.querySelectorAll('.kanban-column-body').forEach(column => {
+        column.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            this.classList.add('drag-over');
+        });
+
+        column.addEventListener('dragleave', function(e) {
+            if (e.target === this) {
+                this.classList.remove('drag-over');
+            }
+        });
+
+        column.addEventListener('drop', async function(e) {
+            e.preventDefault();
+            this.classList.remove('drag-over');
+
+            if (!draggedCandidate) return;
+
+            const candidateId = draggedCandidate.getAttribute('data-candidate-id');
+            const newStatus = this.getAttribute('data-status');
+            const oldStatus = draggedFromStatus.getAttribute('data-status');
+
+            // Don't do anything if dropped in same column
+            if (newStatus === oldStatus) {
+                draggedCandidate = null;
+                draggedFromStatus = null;
+                return;
+            }
+
+            try {
+                const response = await fetch(`/hr/recruitment/candidates/${candidateId}/update-status`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        status: newStatus
+                    })
+                });
+
+                if (response.ok) {
+                    // Move the card visually
+                    this.appendChild(draggedCandidate);
+
+                    // Update badges
+                    updateStatusCounts();
+
+                    // Re-initialize drag events for the moved card
+                    initializeDragAndDrop();
+                } else {
+                    const error = await response.json();
+                    alert(error.error || 'Failed to move candidate');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to move candidate. Please try again.');
+            }
+
+            draggedCandidate = null;
+            draggedFromStatus = null;
+        });
+    });
+}
+
+function updateStatusCounts() {
+    document.querySelectorAll('.kanban-column').forEach(column => {
+        const status = column.querySelector('.kanban-column-body').getAttribute('data-status');
+        const candidateCount = column.querySelectorAll('.candidate-card').length;
+        const badge = column.querySelector('.badge');
+        if (badge) {
+            badge.textContent = candidateCount;
+        }
+    });
+}
+
+async function viewCandidateDetail(candidateId) {
+    const modal = new bootstrap.Modal(document.getElementById('candidateDetailModal'));
+    const modalBody = document.getElementById('candidateModalBody');
+    const modalTitle = document.getElementById('candidateModalTitle');
+
+    // Reset modal content
+    modalBody.innerHTML = '<div class="text-center py-5"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+
+    modal.show();
+
+    try {
+        const response = await fetch(`/hr/recruitment/candidates/${candidateId}`);
+        const candidate = await response.json();
+
+        modalTitle.textContent = candidate.full_name;
+
+        // Build modal content
+        let content = `
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <h6 class="text-muted">Contact Information</h6>
+                    <p class="mb-1"><strong>Email:</strong> ${candidate.email}</p>
+                    ${candidate.phone ? `<p class="mb-1"><strong>Phone:</strong> ${candidate.phone}</p>` : ''}
+                    ${candidate.linkedin_url ? `<p class="mb-1"><strong>LinkedIn:</strong> <a href="${candidate.linkedin_url}" target="_blank">${candidate.linkedin_url}</a></p>` : ''}
+                </div>
+                <div class="col-md-6">
+                    <h6 class="text-muted">Application Details</h6>
+                    <p class="mb-1"><strong>Position:</strong> ${candidate.position}</p>
+                    <p class="mb-1"><strong>Status:</strong> <span class="badge bg-primary">${candidate.status}</span></p>
+                    <p class="mb-1"><strong>Applied:</strong> ${new Date(candidate.applied_date).toLocaleDateString()}</p>
+                    ${candidate.experience_years ? `<p class="mb-1"><strong>Experience:</strong> ${candidate.experience_years} years</p>` : ''}
+                </div>
+            </div>
+        `;
+
+        if (candidate.overall_score || Object.keys(candidate.category_scores || {}).length > 0) {
+            content += '<div class="mb-4"><h6 class="text-muted">Scores</h6>';
+            if (candidate.overall_score) {
+                content += `<p class="mb-1"><strong>Overall Score:</strong> <span class="badge bg-success">${candidate.overall_score}/100</span></p>`;
+            }
+            if (candidate.category_scores && Object.keys(candidate.category_scores).length > 0) {
+                content += '<p class="mb-1"><strong>Category Scores:</strong></p><ul class="small">';
+                for (const [category, score] of Object.entries(candidate.category_scores)) {
+                    content += `<li>${category}: ${score}/100</li>`;
+                }
+                content += '</ul>';
+            }
+            content += '</div>';
+        }
+
+        if (candidate.skills && candidate.skills.length > 0) {
+            content += '<div class="mb-4"><h6 class="text-muted">Skills</h6>';
+            content += '<div class="d-flex flex-wrap gap-2">';
+            for (const skill of candidate.skills) {
+                content += `<span class="badge bg-secondary">${skill}</span>`;
+            }
+            content += '</div></div>';
+        }
+
+        if (candidate.cover_letter) {
+            content += `<div class="mb-4"><h6 class="text-muted">Cover Letter</h6><p class="small">${candidate.cover_letter}</p></div>`;
+        }
+
+        if (candidate.interviews && candidate.interviews.length > 0) {
+            content += '<div class="mb-4"><h6 class="text-muted">Interview History</h6>';
+            for (const interview of candidate.interviews) {
+                content += `
+                    <div class="card mb-2">
+                        <div class="card-body small">
+                            <strong>${interview.type.replace('_', ' ').toUpperCase()}</strong>
+                            <p class="mb-1">${new Date(interview.scheduled_date).toLocaleString()}</p>
+                            ${interview.score ? `<p class="mb-1">Score: ${interview.score}/100</p>` : ''}
+                            ${interview.feedback ? `<p class="mb-1 text-muted">${interview.feedback}</p>` : ''}
+                        </div>
+                    </div>
+                `;
+            }
+            content += '</div>';
+        }
+
+        if (candidate.notes && candidate.notes.length > 0) {
+            content += '<div class="mb-4"><h6 class="text-muted">Notes</h6>';
+            for (const note of candidate.notes) {
+                content += `<div class="card mb-2"><div class="card-body small">${note.note}<div class="text-muted mt-1">${note.created_by} - ${new Date(note.created_at).toLocaleString()}</div></div></div>`;
+            }
+            content += '</div>';
+        }
+
+        if (candidate.resume_url) {
+            content += `<div class="mb-4"><a href="${candidate.resume_url}" target="_blank" class="btn btn-primary"><i class="bi bi-file-earmark-pdf"></i> View Resume</a></div>`;
+        }
+
+        modalBody.innerHTML = content;
+    } catch (error) {
+        console.error('Error:', error);
+        modalBody.innerHTML = '<div class="alert alert-danger">Failed to load candidate details</div>';
+    }
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    initializeDragAndDrop();
+});
+</script>
+{% endblock %}

@@ -44,6 +44,9 @@ class AgentVersion(db.Model):
     enable_google_drive = db.Column(db.Boolean, default=False, nullable=False)
     enable_website_builder = db.Column(db.Boolean, default=False, nullable=False)
     enable_file_generation = db.Column(db.Boolean, default=False, nullable=False)
+    enable_competitive_analysis = db.Column(db.Boolean, default=False, nullable=False)
+    enable_hr_management = db.Column(db.Boolean, default=False, nullable=False)
+    enable_cross_applet_data_access = db.Column(db.Boolean, default=True, nullable=False)
 
     # Timestamp
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
@@ -90,7 +93,10 @@ class AgentVersion(db.Model):
                     'outlook': self.enable_outlook,
                     'google_drive': self.enable_google_drive,
                     'website_builder': self.enable_website_builder,
-                    'file_generation': self.enable_file_generation
+                    'file_generation': self.enable_file_generation,
+                    'competitive_analysis': self.enable_competitive_analysis,
+                    'hr_management': self.enable_hr_management,
+                    'cross_applet_data_access': self.enable_cross_applet_data_access
                 }
             }
         }
@@ -188,7 +194,10 @@ class AgentVersion(db.Model):
             enable_outlook=agent.enable_outlook,
             enable_google_drive=agent.enable_google_drive,
             enable_website_builder=agent.enable_website_builder,
-            enable_file_generation=agent.enable_file_generation
+            enable_file_generation=agent.enable_file_generation,
+            enable_competitive_analysis=agent.enable_competitive_analysis,
+            enable_hr_management=agent.enable_hr_management,
+            enable_cross_applet_data_access=agent.enable_cross_applet_data_access
         )
 
         return version
@@ -231,7 +240,10 @@ class AgentVersion(db.Model):
             ('gmail', 'Gmail'),
             ('outlook', 'Outlook'),
             ('google_drive', 'Google Drive'),
-            ('website_builder', 'Website Builder')
+            ('website_builder', 'Website Builder'),
+            ('competitive_analysis', 'Competitive Analysis'),
+            ('hr_management', 'HR Management'),
+            ('cross_applet_data_access', 'Cross-Applet Data Access')
         ]
 
         for field, display_name in integrations:
@@ -286,7 +298,10 @@ class AgentVersion(db.Model):
             ('enable_outlook', 'Outlook Access'),
             ('enable_google_drive', 'Google Drive Access'),
             ('enable_website_builder', 'Website Builder Access'),
-            ('enable_file_generation', 'File Generation')
+            ('enable_file_generation', 'File Generation'),
+            ('enable_competitive_analysis', 'Competitive Analysis'),
+            ('enable_hr_management', 'HR Management'),
+            ('enable_cross_applet_data_access', 'Cross-Applet Data Access')
         ]
 
         for field, display_name in integrations:

@@ -88,13 +88,23 @@
         </a>
         {% endif %}
 
-        <!-- Website Builder -->
+        <!-- CMS (Content Management System) -->
         {% if 'website' in enabled_applets %}
         <a href="{{ url_for('website.dashboard') }}"
            class="icon-sidebar-item {% if 'website' in request.endpoint %}active{% endif %}"
            data-view="website">
             <i class="bi bi-globe"></i>
-            <span class="icon-label">Website</span>
+            <span class="icon-label">CMS</span>
+        </a>
+        {% endif %}
+
+        <!-- HR/People -->
+        {% if 'hr' in enabled_applets %}
+        <a href="{{ url_for('hr.index') }}"
+           class="icon-sidebar-item {% if 'hr' in request.endpoint %}active{% endif %}"
+           data-view="hr">
+            <i class="bi bi-people-fill"></i>
+            <span class="icon-label">HR</span>
         </a>
         {% endif %}
 

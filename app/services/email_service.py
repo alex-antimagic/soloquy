@@ -663,6 +663,376 @@ Please do not reply to this email
             print(f"✗ Error sending security alert email to {user.email}: {e}")
             return False
 
+    # ===== HR EMAIL METHODS =====
+
+    def send_interview_invitation(self, candidate, interview):
+        """
+        Send interview invitation to candidate
+
+        Args:
+            candidate: Candidate model instance
+            interview: Interview model instance
+
+        Returns:
+            bool: True if email sent successfully
+        """
+        if not self.client:
+            print(f"Skipping interview invitation email to {candidate.email} (SendGrid not configured)")
+            return False
+
+        try:
+            # Format date and time
+            interview_datetime = interview.scheduled_date.strftime('%B %d, %Y at %I:%M %p')
+
+            # Build interviewers list
+            interviewers_str = ', '.join(interview.interviewers_list) if interview.interviewers_list else 'the hiring team'
+
+            subject = f"Interview Scheduled: {candidate.position}"
+
+            html_content = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+        .container {{ max-width: 600px; margin: 40px auto; background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }}
+        .header {{ background: #667eea; color: white; padding: 20px; border-radius: 8px 8px 0 0; margin: -30px -30px 30px; }}
+        h1 {{ margin: 0; font-size: 24px; }}
+        .details {{ background: #f8f9fa; padding: 15px; border-radius: 4px; margin: 20px 0; }}
+        .button {{ display: inline-block; background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 4px; margin-top: 20px; }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Interview Scheduled</h1>
+        </div>
+        <p>Dear {candidate.first_name},</p>
+        <p>We're excited to invite you to interview for the <strong>{candidate.position}</strong> position.</p>
+        <div class="details">
+            <p><strong>Interview Type:</strong> {interview.interview_type.replace('_', ' ').title()}</p>
+            <p><strong>Date & Time:</strong> {interview_datetime}</p>
+            <p><strong>Duration:</strong> {interview.duration_minutes} minutes</p>
+            {'<p><strong>Location:</strong> ' + interview.location + '</p>' if interview.location else ''}
+            <p><strong>Interviewers:</strong> {interviewers_str}</p>
+        </div>
+        {('<p><strong>Notes:</strong><br>' + interview.notes + '</p>') if interview.notes else ''}
+        <p>We look forward to speaking with you!</p>
+        <p>Best regards,<br>The Hiring Team</p>
+    </div>
+</body>
+</html>
+"""
+
+            message = Mail(
+                from_email=Email(self.from_email, self.from_name),
+                to_emails=To(candidate.email),
+                subject=subject,
+                html_content=Content("text/html", html_content)
+            )
+
+            response = self.client.send(message)
+            return response.status_code in [200, 201, 202]
+
+        except Exception as e:
+            print(f"Error sending interview invitation to {candidate.email}: {e}")
+            return False
+
+    def send_candidate_status_update(self, candidate, old_status, new_status, reason=None):
+        """
+        Send candidate status update notification
+
+        Args:
+            candidate: Candidate model instance
+            old_status: Previous status
+            new_status: New status
+            reason: Optional reason for status change
+
+        Returns:
+            bool: True if email sent successfully
+        """
+        if not self.client:
+            print(f"Skipping status update email to {candidate.email} (SendGrid not configured)")
+            return False
+
+        try:
+            # Only send emails for certain status changes
+            if new_status not in ['offer_extended', 'hired', 'rejected']:
+                return False
+
+            status_messages = {
+                'offer_extended': {
+                    'subject': f'Job Offer: {candidate.position}',
+                    'title': 'Congratulations!',
+                    'message': f'We are pleased to extend you an offer for the {candidate.position} position. A member of our team will contact you shortly with details.'
+                },
+                'hired': {
+                    'subject': f'Welcome to the Team!',
+                    'title': 'Welcome Aboard!',
+                    'message': f'We are excited to have you join our team as {candidate.position}. We will be in touch soon with your start date and onboarding information.'
+                },
+                'rejected': {
+                    'subject': f'Application Update: {candidate.position}',
+                    'title': 'Application Update',
+                    'message': f'Thank you for your interest in the {candidate.position} position. While we were impressed with your qualifications, we have decided to move forward with other candidates at this time.'
+                }
+            }
+
+            status_info = status_messages.get(new_status)
+            if not status_info:
+                return False
+
+            html_content = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+        .container {{ max-width: 600px; margin: 40px auto; background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }}
+        .header {{ background: #667eea; color: white; padding: 20px; border-radius: 8px 8px 0 0; margin: -30px -30px 30px; }}
+        h1 {{ margin: 0; font-size: 24px; }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>{status_info['title']}</h1>
+        </div>
+        <p>Dear {candidate.first_name},</p>
+        <p>{status_info['message']}</p>
+        {('<p><strong>Additional notes:</strong> ' + reason + '</p>') if reason else ''}
+        <p>Thank you,<br>The Hiring Team</p>
+    </div>
+</body>
+</html>
+"""
+
+            message = Mail(
+                from_email=Email(self.from_email, self.from_name),
+                to_emails=To(candidate.email),
+                subject=status_info['subject'],
+                html_content=Content("text/html", html_content)
+            )
+
+            response = self.client.send(message)
+            return response.status_code in [200, 201, 202]
+
+        except Exception as e:
+            print(f"Error sending status update to {candidate.email}: {e}")
+            return False
+
+    def send_onboarding_welcome(self, employee, plan):
+        """
+        Send welcome email with onboarding plan
+
+        Args:
+            employee: Employee model instance
+            plan: OnboardingPlan model instance
+
+        Returns:
+            bool: True if email sent successfully
+        """
+        if not self.client:
+            print(f"Skipping onboarding welcome email to {employee.email} (SendGrid not configured)")
+            return False
+
+        try:
+            start_date = plan.start_date.strftime('%B %d, %Y')
+
+            html_content = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+        .container {{ max-width: 600px; margin: 40px auto; background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }}
+        .header {{ background: #10b981; color: white; padding: 20px; border-radius: 8px 8px 0 0; margin: -30px -30px 30px; }}
+        h1 {{ margin: 0; font-size: 24px; }}
+        .highlight {{ background: #f0fdf4; padding: 15px; border-left: 4px solid #10b981; margin: 20px 0; }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Welcome to the Team!</h1>
+        </div>
+        <p>Dear {employee.first_name},</p>
+        <p>We're thrilled to have you joining our team as <strong>{employee.role}</strong> in the {employee.department_name} department!</p>
+        <div class="highlight">
+            <p><strong>Start Date:</strong> {start_date}</p>
+            {('<p><strong>Onboarding Buddy:</strong> ' + plan.buddy_email + '</p>') if plan.buddy_email else ''}
+        </div>
+        <p>Your personalized onboarding plan has been created with {len(list(plan.tasks.all()))} tasks to help you get started. You'll be able to track your progress and complete items as you go.</p>
+        <p>We look forward to seeing you on your first day!</p>
+        <p>Best regards,<br>The HR Team</p>
+    </div>
+</body>
+</html>
+"""
+
+            message = Mail(
+                from_email=Email(self.from_email, self.from_name),
+                to_emails=To(employee.email),
+                subject=f'Welcome to the Team - Your First Day is {start_date}',
+                html_content=Content("text/html", html_content)
+            )
+
+            response = self.client.send(message)
+            return response.status_code in [200, 201, 202]
+
+        except Exception as e:
+            print(f"Error sending onboarding welcome to {employee.email}: {e}")
+            return False
+
+    def send_onboarding_reminders(self, employee, tasks, include_manager=True):
+        """
+        Send reminder emails about incomplete onboarding tasks
+
+        Args:
+            employee: Employee model instance
+            tasks: List of OnboardingTask instances
+            include_manager: Whether to CC the manager
+
+        Returns:
+            bool: True if email sent successfully
+        """
+        if not self.client or not tasks:
+            return False
+
+        try:
+            # Build task list HTML
+            task_list_html = ''.join([
+                f'<li><strong>{task.title}</strong> - Due: {task.due_date.strftime("%B %d, %Y")}</li>'
+                for task in tasks
+            ])
+
+            html_content = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+        .container {{ max-width: 600px; margin: 40px auto; background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }}
+        .header {{ background: #f59e0b; color: white; padding: 20px; border-radius: 8px 8px 0 0; margin: -30px -30px 30px; }}
+        h1 {{ margin: 0; font-size: 24px; }}
+        ul {{ list-style-type: none; padding: 0; }}
+        li {{ padding: 10px; margin: 5px 0; background: #fef3c7; border-radius: 4px; }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Onboarding Reminder</h1>
+        </div>
+        <p>Hi {employee.first_name},</p>
+        <p>Just a friendly reminder about your outstanding onboarding tasks:</p>
+        <ul>
+            {task_list_html}
+        </ul>
+        <p>Please complete these tasks at your earliest convenience. If you have any questions, don't hesitate to reach out!</p>
+        <p>Best regards,<br>The HR Team</p>
+    </div>
+</body>
+</html>
+"""
+
+            # TODO: Add CC to manager if include_manager is True
+            message = Mail(
+                from_email=Email(self.from_email, self.from_name),
+                to_emails=To(employee.email),
+                subject='Onboarding Tasks Reminder',
+                html_content=Content("text/html", html_content)
+            )
+
+            response = self.client.send(message)
+            return response.status_code in [200, 201, 202]
+
+        except Exception as e:
+            print(f"Error sending onboarding reminder to {employee.email}: {e}")
+            return False
+
+    def send_pto_decision_notification(self, pto_request, action, reason=None):
+        """
+        Send PTO approval/denial notification
+
+        Args:
+            pto_request: PTORequest model instance
+            action: 'approve' or 'deny'
+            reason: Optional reason for decision
+
+        Returns:
+            bool: True if email sent successfully
+        """
+        if not self.client:
+            print(f"Skipping PTO decision email (SendGrid not configured)")
+            return False
+
+        try:
+            employee = pto_request.employee
+            date_range = f"{pto_request.start_date.strftime('%B %d')} - {pto_request.end_date.strftime('%B %d, %Y')}"
+
+            if action == 'approve':
+                subject = 'Time Off Request Approved'
+                title = 'Request Approved'
+                message = f'Your time off request for {date_range} ({pto_request.total_days} days) has been approved.'
+                color = '#10b981'
+            else:
+                subject = 'Time Off Request Update'
+                title = 'Request Status'
+                message = f'Your time off request for {date_range} has been reviewed.'
+                color = '#ef4444'
+
+            html_content = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+        .container {{ max-width: 600px; margin: 40px auto; background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }}
+        .header {{ background: {color}; color: white; padding: 20px; border-radius: 8px 8px 0 0; margin: -30px -30px 30px; }}
+        h1 {{ margin: 0; font-size: 24px; }}
+        .details {{ background: #f8f9fa; padding: 15px; border-radius: 4px; margin: 20px 0; }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>{title}</h1>
+        </div>
+        <p>Hi {employee.first_name},</p>
+        <p>{message}</p>
+        <div class="details">
+            <p><strong>Dates:</strong> {date_range}</p>
+            <p><strong>Days:</strong> {pto_request.total_days} business days</p>
+            <p><strong>Type:</strong> {pto_request.request_type.upper()}</p>
+            <p><strong>Status:</strong> {action.title()}d</p>
+        </div>
+        {('<p><strong>Note:</strong> ' + reason + '</p>') if reason else ''}
+        <p>Thank you,<br>The HR Team</p>
+    </div>
+</body>
+</html>
+"""
+
+            message = Mail(
+                from_email=Email(self.from_email, self.from_name),
+                to_emails=To(employee.email),
+                subject=subject,
+                html_content=Content("text/html", html_content)
+            )
+
+            response = self.client.send(message)
+            return response.status_code in [200, 201, 202]
+
+        except Exception as e:
+            print(f"Error sending PTO decision email: {e}")
+            return False
+
 
 # Singleton instance
 email_service = EmailService()

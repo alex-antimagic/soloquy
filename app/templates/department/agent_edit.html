@@ -265,6 +265,44 @@
                             </div>
                         </div>
 
+                        <hr class="my-3">
+
+                        <!-- Competitive Analysis -->
+                        <div class="form-check mb-2">
+                            {{ form.enable_competitive_analysis(class="form-check-input") }}
+                            <label class="form-check-label" for="{{ form.enable_competitive_analysis.id }}">
+                                <strong>Competitive Analysis</strong>
+                                <span class="badge bg-warning text-dark ms-2">Market Research</span>
+                            </label>
+                            <div class="small text-muted ms-4">
+                                Allow this agent to analyze competitors and market trends using web search
+                            </div>
+                        </div>
+
+                        <!-- HR Management -->
+                        <div class="form-check mb-2">
+                            {{ form.enable_hr_management(class="form-check-input") }}
+                            <label class="form-check-label" for="{{ form.enable_hr_management.id }}">
+                                <strong>HR Management</strong>
+                                <span class="badge bg-info ms-2">Recruitment & PTO</span>
+                            </label>
+                            <div class="small text-muted ms-4">
+                                Allow this agent to manage recruitment, onboarding, employee records, and PTO requests
+                            </div>
+                        </div>
+
+                        <!-- Cross-Applet Data Access -->
+                        <div class="form-check mb-2">
+                            {{ form.enable_cross_applet_data_access(class="form-check-input") }}
+                            <label class="form-check-label" for="{{ form.enable_cross_applet_data_access.id }}">
+                                <strong>Cross-Applet Data Access</strong>
+                                <span class="badge bg-secondary ms-2">Read-Only</span>
+                            </label>
+                            <div class="small text-muted ms-4">
+                                Allow this agent to query data from all applets (CRM, HR, Support, Projects). Read-only access - cannot modify data.
+                            </div>
+                        </div>
+
                         <div class="alert alert-info mt-3 mb-0">
                             <i class="bi bi-info-circle me-2"></i>
                             <small>

@@ -34,6 +34,8 @@ class Agent(db.Model):
     enable_website_builder = db.Column(db.Boolean, default=False, nullable=False)  # Allow AI to create/edit website content
     enable_file_generation = db.Column(db.Boolean, default=True, nullable=False)  # Allow AI to generate files (PDF, CSV, Excel)
     enable_competitive_analysis = db.Column(db.Boolean, default=False, nullable=False)  # Allow AI to perform competitive analysis
+    enable_hr_management = db.Column(db.Boolean, default=False, nullable=False)  # Allow access to HR data and operations
+    enable_cross_applet_data_access = db.Column(db.Boolean, default=True, nullable=False)  # Allow read-only queries across all applets (CRM, HR, Support, Projects)
 
     # User access control (who can chat with this agent)
     access_control = db.Column(db.String(20), default='all', nullable=False)  # 'all', 'role', 'department', 'users'
@@ -514,6 +516,9 @@ class Agent(db.Model):
         self.enable_google_drive = target_version.enable_google_drive
         self.enable_website_builder = target_version.enable_website_builder
         self.enable_file_generation = target_version.enable_file_generation
+        self.enable_competitive_analysis = target_version.enable_competitive_analysis
+        self.enable_hr_management = target_version.enable_hr_management
+        self.enable_cross_applet_data_access = getattr(target_version, 'enable_cross_applet_data_access', True)  # Default True if version doesn't have field
         self.access_control = target_version.access_control
         self.allowed_roles = target_version.allowed_roles
         self.allowed_department_ids = target_version.allowed_department_ids
@@ -594,6 +599,8 @@ class Agent(db.Model):
                 'enable_website_builder': self.enable_website_builder,
                 'enable_file_generation': self.enable_file_generation,
                 'enable_competitive_analysis': self.enable_competitive_analysis,
+                'enable_hr_management': self.enable_hr_management,
+                'enable_cross_applet_data_access': self.enable_cross_applet_data_access,
                 'access_control': self.access_control,
                 'allowed_roles': self.allowed_roles,
                 'allowed_department_ids': self.allowed_department_ids,
@@ -707,6 +714,8 @@ class Agent(db.Model):
             enable_website_builder=agent_data.get('enable_website_builder', False),
             enable_file_generation=agent_data.get('enable_file_generation', False),
             enable_competitive_analysis=agent_data.get('enable_competitive_analysis', False),
+            enable_hr_management=agent_data.get('enable_hr_management', False),
+            enable_cross_applet_data_access=agent_data.get('enable_cross_applet_data_access', True),
             access_control=agent_data.get('access_control', 'all'),
             allowed_roles=agent_data.get('allowed_roles'),
             allowed_department_ids=agent_data.get('allowed_department_ids'),

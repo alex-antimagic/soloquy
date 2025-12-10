@@ -5,6 +5,7 @@ from app.models.department import Department
 from app.models.department_membership import DepartmentMembership
 from app.models.agent import Agent
 from app.models.agent_version import AgentVersion
+from app.models.workspace_applet import WorkspaceApplet
 from app.models.channel import Channel
 from app.models.message import Message
 from app.models.generated_file import GeneratedFile
@@ -35,3 +36,11 @@ from app.models.ticket_status_history import TicketStatusHistory
 from app.models.website import Website, WebsitePage, WebsiteTheme, WebsiteForm, FormSubmission
 from app.models.competitor_profile import CompetitorProfile
 from app.models.competitive_analysis import CompetitiveAnalysis
+
+# HR Models
+from app.models.candidate import Candidate
+from app.models.interview import Interview
+from app.models.employee import Employee
+from app.models.onboarding_plan import OnboardingPlan, OnboardingTask
+from app.models.pto_request import PTORequest
+from app.models.job_posting import JobPosting

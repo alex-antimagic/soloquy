@@ -1,0 +1,105 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">Interviews</h2>
+            <p class="text-muted mb-0">Upcoming and past interview schedule</p>
+        </div>
+        <a href="{{ url_for('hr.recruitment') }}" class="btn btn-outline-primary">
+            <i class="bi bi-funnel"></i> View Pipeline
+        </a>
+    </div>
+
+    <!-- Upcoming Interviews -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Upcoming Interviews</h5>
+        </div>
+        <div class="card-body">
+            {% if interviews %}
+            <div class="list-group list-group-flush">
+                {% for interview in interviews %}
+                <div class="list-group-item">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1">
+                            <h6 class="mb-1">
+                                {{ interview.candidate.full_name }}
+                                <span class="badge bg-info ms-2">{{ interview.interview_type.replace('_', ' ')|title }}</span>
+                            </h6>
+                            <p class="text-muted small mb-2">Position: {{ interview.candidate.position }}</p>
+
+                            <div class="small text-muted">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <i class="bi bi-calendar-event"></i> {{ interview.scheduled_date.strftime('%A, %B %d, %Y') }}<br>
+                                        <i class="bi bi-clock"></i> {{ interview.scheduled_date.strftime('%I:%M %p') }}
+                                        ({{ interview.duration_minutes }} min)
+                                    </div>
+                                    <div class="col-md-6">
+                                        {% if interview.location %}
+                                        <i class="bi bi-geo-alt"></i> {{ interview.location }}<br>
+                                        {% endif %}
+                                        <i class="bi bi-people"></i> {{ interview.interviewers_list|length }} interviewer{% if interview.interviewers_list|length != 1 %}s{% endif %}:
+                                        {{ ', '.join(interview.interviewers_list) }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <a href="{{ url_for('hr.candidate_detail', candidate_id=interview.candidate.id) }}"
+                           class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-person"></i> View Candidate
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-5 text-muted">
+                <i class="bi bi-calendar-week fs-1 d-block mb-2"></i>
+                <p class="mb-0">No upcoming interviews scheduled</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Past Interviews -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Recent Past Interviews</h5>
+        </div>
+        <div class="card-body">
+            {% if past_interviews %}
+            <div class="list-group list-group-flush">
+                {% for interview in past_interviews %}
+                <div class="list-group-item opacity-75">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="mb-1">
+                                {{ interview.candidate.full_name }}
+                                <span class="badge bg-secondary ms-2">{{ interview.interview_type.replace('_', ' ')|title }}</span>
+                                {% if interview.score %}
+                                <span class="badge bg-success ms-1">Score: {{ interview.score }}/100</span>
+                                {% endif %}
+                            </h6>
+                            <p class="text-muted small mb-1">{{ interview.candidate.position }}</p>
+                            <small class="text-muted">
+                                <i class="bi bi-calendar"></i> {{ interview.scheduled_date.strftime('%b %d, %Y at %I:%M %p') }}
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-5 text-muted">
+                <i class="bi bi-calendar-x fs-1 d-block mb-2"></i>
+                <p class="mb-0">No past interviews</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

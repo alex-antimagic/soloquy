@@ -1,0 +1,241 @@
+{% extends "layouts/base.html" %}
+
+{% block extra_css %}
+<style>
+    .task-item {
+        transition: background-color 0.2s;
+    }
+
+    .task-item:hover {
+        background-color: rgba(var(--bs-primary-rgb), 0.05);
+    }
+
+    .task-item.completed {
+        opacity: 0.7;
+    }
+
+    .task-item.overdue {
+        border-left: 3px solid var(--bs-danger);
+    }
+
+    .category-badge {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-2">
+                    <li class="breadcrumb-item"><a href="{{ url_for('hr.index') }}">HR</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('hr.onboarding') }}">Onboarding</a></li>
+                    <li class="breadcrumb-item active">{{ plan.employee.full_name }}</li>
+                </ol>
+            </nav>
+            <h2 class="mb-1">{{ plan.employee.full_name }} - Onboarding</h2>
+            <p class="text-muted mb-0">{{ plan.employee.role }} · {{ plan.employee.department_name }}</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('hr.employee_profile', employee_id=plan.employee.id) }}" class="btn btn-outline-primary">
+                <i class="bi bi-person"></i> View Profile
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Left Column: Progress & Info -->
+        <div class="col-lg-4">
+            <!-- Progress Card -->
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">Onboarding Progress</h5>
+
+                    <div class="text-center mb-4">
+                        <div class="display-4 fw-bold text-primary">{{ "%.0f"|format(plan.completion_percentage) }}%</div>
+                        <p class="text-muted mb-0">Complete</p>
+                    </div>
+
+                    <div class="progress mb-3" style="height: 12px;">
+                        <div class="progress-bar bg-success" role="progressbar"
+                             style="width: {{ plan.completion_percentage }}%">
+                        </div>
+                    </div>
+
+                    {% set summary = plan.get_tasks_summary() %}
+                    <div class="d-flex justify-content-between small text-muted mb-2">
+                        <span>Completed</span>
+                        <span>{{ summary.completed }}/{{ summary.total }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between small text-muted">
+                        <span>Pending</span>
+                        <span>{{ summary.pending }}</span>
+                    </div>
+
+                    {% set overdue_tasks = plan.get_overdue_tasks() %}
+                    {% if overdue_tasks %}
+                    <div class="alert alert-danger mt-3 mb-0 py-2">
+                        <i class="bi bi-exclamation-triangle"></i> {{ overdue_tasks|length }} overdue task{% if overdue_tasks|length != 1 %}s{% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Plan Details Card -->
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">Plan Details</h5>
+
+                    <div class="small mb-2">
+                        <i class="bi bi-calendar-event text-muted"></i>
+                        <strong>Start Date:</strong> {{ plan.start_date.strftime('%B %d, %Y') }}
+                    </div>
+
+                    <div class="small mb-2">
+                        <i class="bi bi-tag text-muted"></i>
+                        <strong>Template:</strong> {{ plan.template|title }}
+                    </div>
+
+                    {% if plan.buddy_email %}
+                    <div class="small mb-2">
+                        <i class="bi bi-person-badge text-muted"></i>
+                        <strong>Buddy/Mentor:</strong> {{ plan.buddy_email }}
+                    </div>
+                    {% endif %}
+
+                    <div class="small">
+                        <i class="bi bi-clock-history text-muted"></i>
+                        <strong>Created:</strong> {{ plan.created_at.strftime('%b %d, %Y') }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Task Checklist -->
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Onboarding Checklist</h5>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <input type="radio" class="btn-check" name="filter" id="filterAll" autocomplete="off" checked onclick="filterTasks('all')">
+                            <label class="btn btn-outline-secondary" for="filterAll">All</label>
+
+                            <input type="radio" class="btn-check" name="filter" id="filterPending" autocomplete="off" onclick="filterTasks('pending')">
+                            <label class="btn btn-outline-secondary" for="filterPending">Pending</label>
+
+                            <input type="radio" class="btn-check" name="filter" id="filterCompleted" autocomplete="off" onclick="filterTasks('completed')">
+                            <label class="btn btn-outline-secondary" for="filterCompleted">Completed</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    {% if tasks %}
+                    <div class="list-group list-group-flush">
+                        {% for task in tasks %}
+                        <div class="list-group-item task-item {% if task.is_completed %}completed{% endif %} {% if task.is_overdue %}overdue{% endif %}"
+                             data-status="{% if task.is_completed %}completed{% else %}pending{% endif %}">
+                            <div class="d-flex gap-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox"
+                                           {% if task.is_completed %}checked{% endif %}
+                                           id="task{{ task.id }}"
+                                           onchange="toggleTask({{ task.id }}, this.checked)">
+                                </div>
+                                <div class="flex-grow-1">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <label class="form-check-label {% if task.is_completed %}text-decoration-line-through text-muted{% endif %}"
+                                               for="task{{ task.id }}">
+                                            <strong>{{ task.title }}</strong>
+                                        </label>
+                                        <span class="category-badge badge bg-secondary">{{ task.category }}</span>
+                                    </div>
+
+                                    {% if task.description %}
+                                    <p class="small text-muted mb-2">{{ task.description }}</p>
+                                    {% endif %}
+
+                                    <div class="d-flex gap-3 small text-muted">
+                                        {% if task.due_date %}
+                                        <span>
+                                            <i class="bi bi-calendar"></i> Due: {{ task.due_date.strftime('%b %d, %Y') }}
+                                            {% if task.is_overdue %}
+                                            <span class="badge bg-danger text-white ms-1">Overdue</span>
+                                            {% endif %}
+                                        </span>
+                                        {% endif %}
+
+                                        {% if task.assigned_to_email %}
+                                        <span><i class="bi bi-person"></i> {{ task.assigned_to_email }}</span>
+                                        {% endif %}
+
+                                        {% if task.is_completed %}
+                                        <span>
+                                            <i class="bi bi-check-circle text-success"></i>
+                                            Completed {{ task.completed_at.strftime('%b %d') }}
+                                            {% if task.completed_by_email %}
+                                            by {{ task.completed_by_email }}
+                                            {% endif %}
+                                        </span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5 text-muted">
+                        <i class="bi bi-list-check fs-1 d-block mb-2"></i>
+                        <p class="mb-0">No tasks in this onboarding plan</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function filterTasks(status) {
+    const tasks = document.querySelectorAll('.task-item');
+    tasks.forEach(task => {
+        if (status === 'all') {
+            task.style.display = '';
+        } else {
+            task.style.display = task.dataset.status === status ? '' : 'none';
+        }
+    });
+}
+
+function toggleTask(taskId, isCompleted) {
+    fetch(`/hr/onboarding/tasks/${taskId}/toggle`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ completed: isCompleted })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Reload page to update progress
+            location.reload();
+        } else {
+            alert(data.error || 'Failed to update task');
+            // Revert checkbox
+            event.target.checked = !isCompleted;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to update task');
+        event.target.checked = !isCompleted;
+    });
+}
+</script>
+{% endblock %}

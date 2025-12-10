@@ -1,0 +1,243 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">Time Off Management</h2>
+            <p class="text-muted mb-0">Review PTO requests and view team calendar</p>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Left Column: Pending Requests -->
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header bg-warning bg-opacity-10">
+                    <h5 class="mb-0">
+                        <i class="bi bi-hourglass-split"></i> Pending Requests
+                        <span class="badge bg-warning text-dark ms-2">{{ pending_requests|length }}</span>
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    {% if pending_requests %}
+                    <div class="list-group list-group-flush">
+                        {% for request in pending_requests %}
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <h6 class="mb-1">{{ request.employee.full_name }}</h6>
+                                    <p class="text-muted small mb-0">{{ request.employee.department_name }} · {{ request.employee.role }}</p>
+                                </div>
+                                <span class="badge bg-secondary">{{ request.request_type|title }}</span>
+                            </div>
+
+                            <div class="mb-2 small">
+                                <strong>{{ request.start_date.strftime('%b %d, %Y') }} - {{ request.end_date.strftime('%b %d, %Y') }}</strong>
+                                <span class="text-muted">({{ request.total_days }} day{% if request.total_days != 1 %}s{% endif %})</span>
+                            </div>
+
+                            {% if request.request_reason %}
+                            <p class="small text-muted mb-2">{{ request.request_reason }}</p>
+                            {% endif %}
+
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-sm btn-success" onclick="reviewPTO({{ request.id }}, 'approve')">
+                                    <i class="bi bi-check-lg"></i> Approve
+                                </button>
+                                <button class="btn btn-sm btn-danger" onclick="denyPTO({{ request.id }})">
+                                    <i class="bi bi-x-lg"></i> Deny
+                                </button>
+                                <a href="{{ url_for('hr.employee_profile', employee_id=request.employee.id) }}"
+                                   class="btn btn-sm btn-outline-secondary">
+                                    <i class="bi bi-person"></i> View Employee
+                                </a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5 text-muted">
+                        <i class="bi bi-check-circle fs-1 d-block mb-2"></i>
+                        <p class="mb-0">No pending requests</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Upcoming PTO -->
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header bg-success bg-opacity-10">
+                    <h5 class="mb-0">
+                        <i class="bi bi-calendar-check"></i> Upcoming Time Off
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    {% if upcoming_pto %}
+                    <div class="list-group list-group-flush">
+                        {% for pto in upcoming_pto %}
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6 class="mb-1">{{ pto.employee.full_name }}</h6>
+                                    <p class="text-muted small mb-0">{{ pto.employee.department_name }}</p>
+                                    <div class="mt-1 small">
+                                        <strong>{{ pto.start_date.strftime('%b %d') }} - {{ pto.end_date.strftime('%b %d, %Y') }}</strong>
+                                        <span class="text-muted">({{ pto.total_days }} day{% if pto.total_days != 1 %}s{% endif %})</span>
+                                    </div>
+                                </div>
+                                <span class="badge bg-success">Approved</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5 text-muted">
+                        <i class="bi bi-calendar-x fs-1 d-block mb-2"></i>
+                        <p class="mb-0">No upcoming time off</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Team Calendar -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="bi bi-calendar3"></i> Team Calendar (Next 30 Days)
+            </h5>
+        </div>
+        <div class="card-body">
+            {% if calendar_entries %}
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Employee</th>
+                            <th>Department</th>
+                            <th>Start Date</th>
+                            <th>End Date</th>
+                            <th>Days</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for entry in calendar_entries %}
+                        <tr class="{% if entry.is_pending %}table-warning{% endif %}">
+                            <td>{{ entry.employee_name }}</td>
+                            <td>{{ entry.department }}</td>
+                            <td>{{ entry.start_date }}</td>
+                            <td>{{ entry.end_date }}</td>
+                            <td>{{ entry.days }}</td>
+                            <td>
+                                {% if entry.status == 'approved' %}
+                                <span class="badge bg-success">Approved</span>
+                                {% else %}
+                                <span class="badge bg-warning text-dark">Pending</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5 text-muted">
+                <i class="bi bi-calendar-week fs-1 d-block mb-2"></i>
+                <p class="mb-0">No time off scheduled in the next 30 days</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Denial Reason Modal -->
+<div class="modal fade" id="denyModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Deny PTO Request</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <label class="form-label">Denial Reason *</label>
+                <textarea class="form-control" id="denialReason" rows="3" required></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" onclick="submitDenial()">Deny Request</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentRequestId = null;
+
+function reviewPTO(requestId, action) {
+    if (!confirm(`Are you sure you want to ${action} this PTO request?`)) {
+        return;
+    }
+
+    fetch(`/hr/time-off/${requestId}/review`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: action })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.error || 'Failed to process request');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to process request');
+    });
+}
+
+function denyPTO(requestId) {
+    currentRequestId = requestId;
+    const modal = new bootstrap.Modal(document.getElementById('denyModal'));
+    modal.show();
+}
+
+function submitDenial() {
+    const reason = document.getElementById('denialReason').value.trim();
+    if (!reason) {
+        alert('Please provide a denial reason');
+        return;
+    }
+
+    fetch(`/hr/time-off/${currentRequestId}/review`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            action: 'deny',
+            denial_reason: reason
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.error || 'Failed to deny request');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to deny request');
+    });
+}
+</script>
+{% endblock %}

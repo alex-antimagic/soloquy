@@ -1,0 +1,131 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">Employee Directory</h2>
+            <p class="text-muted mb-0">{{ employees|length }} employee{% if employees|length != 1 %}s{% endif %} found</p>
+        </div>
+    </div>
+
+    <!-- Search and Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" action="{{ url_for('hr.employees') }}">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Search</label>
+                        <input type="text" class="form-control" name="search"
+                               placeholder="Name or email..." value="{{ search }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Department</label>
+                        <select class="form-select" name="department">
+                            <option value="">All Departments</option>
+                            {% for dept in departments %}
+                            <option value="{{ dept }}" {% if dept == selected_department %}selected{% endif %}>
+                                {{ dept }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Status</label>
+                        <select class="form-select" name="status">
+                            <option value="">All Statuses</option>
+                            <option value="active" {% if selected_status == 'active' %}selected{% endif %}>Active</option>
+                            <option value="on_leave" {% if selected_status == 'on_leave' %}selected{% endif %}>On Leave</option>
+                            <option value="terminated" {% if selected_status == 'terminated' %}selected{% endif %}>Terminated</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-search"></i> Search
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Employee List -->
+    {% if employees %}
+    <div class="card">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Employee</th>
+                        <th>Department</th>
+                        <th>Role</th>
+                        <th>Status</th>
+                        <th>Hire Date</th>
+                        <th>Contact</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for employee in employees %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center"
+                                     style="width: 40px; height: 40px;">
+                                    <strong class="text-primary">{{ employee.first_name[0] }}{{ employee.last_name[0] }}</strong>
+                                </div>
+                                <div>
+                                    <strong>{{ employee.full_name }}</strong>
+                                    <br>
+                                    <small class="text-muted">{{ employee.employee_number }}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>{{ employee.department_name or '-' }}</td>
+                        <td>{{ employee.role or '-' }}</td>
+                        <td>
+                            {% if employee.status == 'active' %}
+                            <span class="badge bg-success">Active</span>
+                            {% elif employee.status == 'on_leave' %}
+                            <span class="badge bg-warning text-dark">On Leave</span>
+                            {% elif employee.status == 'terminated' %}
+                            <span class="badge bg-danger">Terminated</span>
+                            {% else %}
+                            <span class="badge bg-secondary">{{ employee.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ employee.hire_date.strftime('%b %d, %Y') }}</td>
+                        <td>
+                            <div class="small">
+                                <div class="text-truncate" style="max-width: 200px;">
+                                    <i class="bi bi-envelope"></i> {{ employee.email }}
+                                </div>
+                                {% if employee.phone %}
+                                <div><i class="bi bi-telephone"></i> {{ employee.phone }}</div>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td>
+                            <a href="{{ url_for('hr.employee_profile', employee_id=employee.id) }}"
+                               class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-eye"></i> View
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+    <div class="card">
+        <div class="card-body text-center py-5">
+            <i class="bi bi-people fs-1 text-muted d-block mb-3"></i>
+            <h5 class="text-muted">No Employees Found</h5>
+            <p class="text-muted mb-0">Try adjusting your search filters</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -536,6 +536,576 @@ class AIService:
             }
         ]
 
+    def _get_hr_tools(self) -> List[Dict]:
+        """
+        Get HR management tool definitions for AI agents
+
+        Returns:
+            List of HR tool definitions
+        """
+        return [
+            # ===== RECRUITMENT TOOLS =====
+            {
+                "name": "hr_search_candidates",
+                "description": "Search candidates with filters for job position, status, minimum score, and required skills",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "job_position": {
+                            "type": "string",
+                            "description": "Filter by job position (partial match)"
+                        },
+                        "status": {
+                            "type": "string",
+                            "enum": ["applied", "screening", "interviewing", "offer_extended", "hired", "rejected"],
+                            "description": "Filter by candidate status"
+                        },
+                        "min_score": {
+                            "type": "number",
+                            "description": "Minimum applicant score (0-100)"
+                        },
+                        "skills": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "List of required skills"
+                        },
+                        "max_results": {
+                            "type": "number",
+                            "description": "Maximum results to return (default: 20)",
+                            "default": 20
+                        }
+                    }
+                }
+            },
+            {
+                "name": "hr_get_candidate_details",
+                "description": "Get detailed information about a specific candidate including application history and interview records",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "candidate_id": {
+                            "type": "number",
+                            "description": "Candidate ID"
+                        }
+                    },
+                    "required": ["candidate_id"]
+                }
+            },
+            {
+                "name": "hr_score_candidate",
+                "description": "Update candidate scoring with overall score and category-specific scores",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "candidate_id": {
+                            "type": "number",
+                            "description": "Candidate ID"
+                        },
+                        "overall_score": {
+                            "type": "number",
+                            "description": "Overall score (0-100)"
+                        },
+                        "category_scores": {
+                            "type": "object",
+                            "description": "Category-specific scores (e.g., {technical: 85, communication: 90})"
+                        },
+                        "note": {
+                            "type": "string",
+                            "description": "Assessment note to add"
+                        }
+                    },
+                    "required": ["candidate_id"]
+                }
+            },
+            {
+                "name": "hr_schedule_interview",
+                "description": "Schedule an interview for a candidate",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "candidate_id": {
+                            "type": "number",
+                            "description": "Candidate ID"
+                        },
+                        "interview_type": {
+                            "type": "string",
+                            "enum": ["phone_screen", "technical", "behavioral", "panel", "final"],
+                            "description": "Type of interview"
+                        },
+                        "start_time": {
+                            "type": "string",
+                            "description": "Interview start time (ISO 8601 format, e.g., 2025-12-15T10:00:00)"
+                        },
+                        "duration_minutes": {
+                            "type": "number",
+                            "description": "Interview duration in minutes (default: 60)",
+                            "default": 60
+                        },
+                        "interviewers": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "List of interviewer email addresses"
+                        },
+                        "location": {
+                            "type": "string",
+                            "description": "Interview location or video link"
+                        },
+                        "notes": {
+                            "type": "string",
+                            "description": "Interview preparation notes"
+                        }
+                    },
+                    "required": ["candidate_id", "interview_type", "start_time", "interviewers"]
+                }
+            },
+            {
+                "name": "hr_move_candidate_stage",
+                "description": "Move candidate to a different stage in the recruitment pipeline",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "candidate_id": {
+                            "type": "number",
+                            "description": "Candidate ID"
+                        },
+                        "new_status": {
+                            "type": "string",
+                            "enum": ["applied", "screening", "interviewing", "offer_extended", "hired", "rejected"],
+                            "description": "New candidate status"
+                        },
+                        "reason": {
+                            "type": "string",
+                            "description": "Optional reason for status change (especially for rejection)"
+                        },
+                        "send_notification": {
+                            "type": "boolean",
+                            "description": "Send email notification to candidate (default: true)",
+                            "default": true
+                        }
+                    },
+                    "required": ["candidate_id", "new_status"]
+                }
+            },
+
+            # ===== ONBOARDING TOOLS =====
+            {
+                "name": "hr_create_onboarding_plan",
+                "description": "Create an onboarding plan for a new hire with tasks from a template or custom tasks",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "employee_id": {
+                            "type": "number",
+                            "description": "Employee ID"
+                        },
+                        "start_date": {
+                            "type": "string",
+                            "description": "Start date (ISO format: YYYY-MM-DD)"
+                        },
+                        "template": {
+                            "type": "string",
+                            "enum": ["standard", "engineering", "sales", "manager"],
+                            "description": "Onboarding template to use (default: standard)",
+                            "default": "standard"
+                        },
+                        "custom_tasks": {
+                            "type": "array",
+                            "description": "Additional custom tasks to include",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "title": {"type": "string"},
+                                    "description": {"type": "string"},
+                                    "due_days": {"type": "number"},
+                                    "assigned_to": {"type": "string"}
+                                }
+                            }
+                        },
+                        "buddy_email": {
+                            "type": "string",
+                            "description": "Optional buddy/mentor email"
+                        }
+                    },
+                    "required": ["employee_id", "start_date"]
+                }
+            },
+            {
+                "name": "hr_get_onboarding_status",
+                "description": "Get onboarding plan status and task progress for an employee",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "employee_id": {
+                            "type": "number",
+                            "description": "Employee ID"
+                        }
+                    },
+                    "required": ["employee_id"]
+                }
+            },
+            {
+                "name": "hr_send_onboarding_reminder",
+                "description": "Send reminder emails for overdue onboarding tasks",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "employee_id": {
+                            "type": "number",
+                            "description": "Employee ID"
+                        },
+                        "include_manager": {
+                            "type": "boolean",
+                            "description": "Also send reminder to manager (default: false)",
+                            "default": false
+                        }
+                    },
+                    "required": ["employee_id"]
+                }
+            },
+
+            # ===== EMPLOYEE RECORDS TOOLS =====
+            {
+                "name": "hr_search_employees",
+                "description": "Search employees with filters for department, status, role, and name/email",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "department": {
+                            "type": "string",
+                            "description": "Filter by department name"
+                        },
+                        "status": {
+                            "type": "string",
+                            "enum": ["active", "on_leave", "terminated"],
+                            "description": "Filter by employment status"
+                        },
+                        "role": {
+                            "type": "string",
+                            "description": "Filter by role (partial match)"
+                        },
+                        "search_query": {
+                            "type": "string",
+                            "description": "Search by name or email"
+                        },
+                        "max_results": {
+                            "type": "number",
+                            "description": "Maximum results to return (default: 50)",
+                            "default": 50
+                        }
+                    }
+                }
+            },
+            {
+                "name": "hr_get_employee_record",
+                "description": "Get detailed employee record including compensation, PTO balance, and employment history",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "employee_id": {
+                            "type": "number",
+                            "description": "Employee ID"
+                        }
+                    },
+                    "required": ["employee_id"]
+                }
+            },
+            {
+                "name": "hr_add_employee_note",
+                "description": "Add a confidential HR note to an employee's record",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "employee_id": {
+                            "type": "number",
+                            "description": "Employee ID"
+                        },
+                        "note": {
+                            "type": "string",
+                            "description": "Note content"
+                        },
+                        "note_type": {
+                            "type": "string",
+                            "enum": ["general", "performance", "disciplinary", "compensation", "leave"],
+                            "description": "Type of note (default: general)",
+                            "default": "general"
+                        }
+                    },
+                    "required": ["employee_id", "note"]
+                }
+            },
+
+            # ===== TIME OFF TOOLS =====
+            {
+                "name": "hr_get_pto_balance",
+                "description": "Get PTO balance and usage for an employee",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "employee_id": {
+                            "type": "number",
+                            "description": "Employee ID"
+                        }
+                    },
+                    "required": ["employee_id"]
+                }
+            },
+            {
+                "name": "hr_view_team_calendar",
+                "description": "View team PTO calendar showing approved and pending time off",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "department": {
+                            "type": "string",
+                            "description": "Filter by department (optional)"
+                        },
+                        "days_ahead": {
+                            "type": "number",
+                            "description": "Days ahead to view (default: 30)",
+                            "default": 30
+                        },
+                        "include_pending": {
+                            "type": "boolean",
+                            "description": "Include pending requests (default: true)",
+                            "default": true
+                        }
+                    }
+                }
+            },
+            {
+                "name": "hr_review_pto_request",
+                "description": "Approve or deny a PTO request",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "request_id": {
+                            "type": "number",
+                            "description": "PTO request ID"
+                        },
+                        "action": {
+                            "type": "string",
+                            "enum": ["approve", "deny"],
+                            "description": "Action to take"
+                        },
+                        "reviewer_name": {
+                            "type": "string",
+                            "description": "Name of person approving/denying"
+                        },
+                        "denial_reason": {
+                            "type": "string",
+                            "description": "Reason for denial (required if action is deny)"
+                        }
+                    },
+                    "required": ["request_id", "action", "reviewer_name"]
+                }
+            }
+        ]
+
+    def _get_cross_applet_query_tools(self) -> List[Dict]:
+        """Get read-only query tools for all applets"""
+        tools = []
+        tools.extend(self._get_crm_query_tools())
+        tools.extend(self._get_hr_query_tools())
+        tools.extend(self._get_support_query_tools())
+        tools.extend(self._get_projects_query_tools())
+        return tools
+
+    def _get_crm_query_tools(self) -> List[Dict]:
+        """4 read-only CRM tools"""
+        return [
+            {
+                "name": "query_crm_companies",
+                "description": "Search companies with filters (READ-ONLY - cannot modify companies)",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "search_query": {"type": "string", "description": "Search by company name"},
+                        "industry": {"type": "string", "description": "Filter by industry"},
+                        "status": {"type": "string", "enum": ["active", "inactive", "prospect", "customer"], "description": "Filter by status"},
+                        "max_results": {"type": "number", "default": 20, "description": "Maximum number of results to return"}
+                    }
+                }
+            },
+            {
+                "name": "query_crm_contacts",
+                "description": "Search contacts with filters (READ-ONLY - cannot modify contacts)",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "search_query": {"type": "string", "description": "Search by name or email"},
+                        "company_id": {"type": "number", "description": "Filter by company ID"},
+                        "max_results": {"type": "number", "default": 20, "description": "Maximum number of results to return"}
+                    }
+                }
+            },
+            {
+                "name": "query_crm_deals",
+                "description": "Search deals/opportunities with filters (READ-ONLY - cannot modify deals)",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "status": {"type": "string", "enum": ["open", "won", "lost"], "description": "Filter by deal status"},
+                        "min_amount": {"type": "number", "description": "Minimum deal amount"},
+                        "company_id": {"type": "number", "description": "Filter by company ID"},
+                        "max_results": {"type": "number", "default": 20, "description": "Maximum number of results to return"}
+                    }
+                }
+            },
+            {
+                "name": "query_crm_deal_details",
+                "description": "Get detailed information about a specific deal including contacts and activities (READ-ONLY)",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "deal_id": {"type": "number", "description": "Deal ID to retrieve"}
+                    },
+                    "required": ["deal_id"]
+                }
+            }
+        ]
+
+    def _get_hr_query_tools(self) -> List[Dict]:
+        """5 read-only HR tools (excluding sensitive data like compensation)"""
+        return [
+            {
+                "name": "query_hr_employees",
+                "description": "Search employees with filters (READ-ONLY - excludes compensation data, cannot modify employee records)",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "department": {"type": "string", "description": "Filter by department name"},
+                        "status": {"type": "string", "enum": ["active", "on_leave", "terminated"], "description": "Filter by employment status"},
+                        "search_query": {"type": "string", "description": "Search by name or email"},
+                        "max_results": {"type": "number", "default": 50, "description": "Maximum number of results to return"}
+                    }
+                }
+            },
+            {
+                "name": "query_hr_candidates",
+                "description": "Search job candidates with filters (READ-ONLY - cannot schedule interviews or change status)",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "job_position": {"type": "string", "description": "Filter by position being recruited for"},
+                        "status": {"type": "string", "description": "Filter by candidate status (applied, screening, interviewing, offer_extended, hired, rejected)"},
+                        "max_results": {"type": "number", "default": 20, "description": "Maximum number of results to return"}
+                    }
+                }
+            },
+            {
+                "name": "query_hr_employee_record",
+                "description": "Get employee details including role, department, hire date (READ-ONLY - excludes compensation and confidential notes)",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "employee_id": {"type": "number", "description": "Employee ID to retrieve"}
+                    },
+                    "required": ["employee_id"]
+                }
+            },
+            {
+                "name": "query_hr_pto_calendar",
+                "description": "View team PTO/time-off calendar (READ-ONLY - cannot approve or deny requests)",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "department": {"type": "string", "description": "Filter by department"},
+                        "days_ahead": {"type": "number", "default": 30, "description": "Number of days to look ahead"}
+                    }
+                }
+            },
+            {
+                "name": "query_hr_pto_balance",
+                "description": "Get PTO balance for an employee (READ-ONLY - view only)",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "employee_id": {"type": "number", "description": "Employee ID to retrieve balance for"}
+                    },
+                    "required": ["employee_id"]
+                }
+            }
+        ]
+
+    def _get_support_query_tools(self) -> List[Dict]:
+        """3 read-only Support tools"""
+        return [
+            {
+                "name": "query_support_tickets",
+                "description": "Search support tickets with filters (READ-ONLY - cannot assign, update status, or add comments)",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "status": {"type": "string", "description": "Filter by status (new, open, pending, on_hold, resolved, closed)"},
+                        "priority": {"type": "string", "description": "Filter by priority (low, medium, high, urgent)"},
+                        "search_query": {"type": "string", "description": "Search ticket number, subject, or description"},
+                        "max_results": {"type": "number", "default": 25, "description": "Maximum number of results to return"}
+                    }
+                }
+            },
+            {
+                "name": "query_support_ticket_details",
+                "description": "Get detailed ticket information including comments and attachments (READ-ONLY)",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "ticket_id": {"type": "number", "description": "Ticket ID to retrieve"}
+                    },
+                    "required": ["ticket_id"]
+                }
+            },
+            {
+                "name": "query_support_metrics",
+                "description": "Get support ticket metrics and statistics (READ-ONLY)",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "department_id": {"type": "number", "description": "Filter by department (optional)"}
+                    }
+                }
+            }
+        ]
+
+    def _get_projects_query_tools(self) -> List[Dict]:
+        """3 read-only Project tools"""
+        return [
+            {
+                "name": "query_project_tasks",
+                "description": "Search tasks with filters (READ-ONLY - cannot create, update, or assign tasks)",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "project_id": {"type": "number", "description": "Filter by project ID"},
+                        "status": {"type": "string", "description": "Filter by task status (pending, in_progress, completed)"},
+                        "assigned_to_id": {"type": "number", "description": "Filter by assigned user ID"},
+                        "max_results": {"type": "number", "default": 50, "description": "Maximum number of results to return"}
+                    }
+                }
+            },
+            {
+                "name": "query_project_details",
+                "description": "Get project information including members, status columns, and task summary (READ-ONLY)",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "project_id": {"type": "number", "description": "Project ID to retrieve"}
+                    },
+                    "required": ["project_id"]
+                }
+            },
+            {
+                "name": "query_projects_list",
+                "description": "List all projects with filters (READ-ONLY)",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "is_archived": {"type": "boolean", "default": False, "description": "Include archived projects"},
+                        "max_results": {"type": "number", "default": 20, "description": "Maximum number of results to return"}
+                    }
+                }
+            }
+        ]
+
     def chat(
         self,
         messages: List[Dict[str, str]],
@@ -602,6 +1172,18 @@ class AIService:
                     print(f"[COMPETITIVE] Got {len(competitive_tools)} Competitive Analysis tools")
                     tools.extend(competitive_tools)
 
+                if agent.enable_hr_management:
+                    print(f"[HR] Getting HR tools for agent {agent.id}")
+                    hr_tools = self._get_hr_tools()
+                    print(f"[HR] Got {len(hr_tools)} HR tools")
+                    tools.extend(hr_tools)
+
+                if agent.enable_cross_applet_data_access:
+                    print(f"[CROSS_APPLET] Getting cross-applet query tools for agent {agent.id}")
+                    cross_applet_tools = self._get_cross_applet_query_tools()
+                    print(f"[CROSS_APPLET] Got {len(cross_applet_tools)} cross-applet query tools")
+                    tools.extend(cross_applet_tools)
+
                 if tools:
                     api_params['tools'] = tools
                     current_app.logger.info(f"Agent {agent.name} has {len(tools)} tools available")
@@ -654,6 +1236,20 @@ class AIService:
                             )
                         elif tool_use.name.startswith('competitive_analysis_'):
                             result = self._execute_competitive_analysis_tool(
+                                tool_name=tool_use.name,
+                                tool_input=tool_use.input,
+                                agent=agent,
+                                user=user
+                            )
+                        elif tool_use.name.startswith('hr_'):
+                            result = self._execute_hr_tool(
+                                tool_name=tool_use.name,
+                                tool_input=tool_use.input,
+                                agent=agent,
+                                user=user
+                            )
+                        elif tool_use.name.startswith('query_'):
+                            result = self._execute_cross_applet_query_tool(
                                 tool_name=tool_use.name,
                                 tool_input=tool_use.input,
                                 agent=agent,
@@ -1512,6 +2108,760 @@ Return ONLY valid JSON in this format:
             import traceback
             traceback.print_exc()
             return {"error": str(e)}
+
+    def _execute_hr_tool(self, tool_name: str, tool_input: Dict, agent, user) -> Any:
+        """
+        Execute HR management tool
+
+        Args:
+            tool_name: Name of the tool (hr_search_candidates, hr_schedule_interview, etc.)
+            tool_input: Tool input parameters
+            agent: Agent model
+            user: User model
+
+        Returns:
+            Result dictionary with HR data or error
+        """
+        from app.services.hr_service import hr_service
+        from app.services.email_service import email_service
+        from app.models.candidate import Candidate
+        from app.models.interview import Interview
+        from app.models.employee import Employee
+        from app.models.onboarding_plan import OnboardingPlan, OnboardingTask
+        from app.models.pto_request import PTORequest
+        from app import db
+        from datetime import datetime, date
+
+        print(f"[HR] Executing tool: {tool_name}")
+        print(f"[HR] Input: {tool_input}")
+
+        try:
+            # Get tenant from agent's department
+            if not agent or not agent.department:
+                return {"error": "No workspace context available"}
+
+            tenant = agent.department.tenant
+
+            # ===== RECRUITMENT TOOLS =====
+            if tool_name == 'hr_search_candidates':
+                candidates = hr_service.search_candidates(
+                    tenant_id=tenant.id,
+                    job_position=tool_input.get('job_position'),
+                    status=tool_input.get('status'),
+                    min_score=tool_input.get('min_score'),
+                    skills=tool_input.get('skills'),
+                    max_results=tool_input.get('max_results', 20)
+                )
+
+                return {
+                    "success": True,
+                    "count": len(candidates),
+                    "candidates": [
+                        {
+                            "id": c.id,
+                            "name": c.full_name,
+                            "email": c.email,
+                            "position": c.position,
+                            "status": c.status,
+                            "overall_score": c.overall_score,
+                            "applied_date": c.applied_date.isoformat(),
+                            "experience_years": c.experience_years
+                        }
+                        for c in candidates
+                    ]
+                }
+
+            elif tool_name == 'hr_get_candidate_details':
+                candidate_id = tool_input.get('candidate_id')
+                candidate = Candidate.query.filter_by(
+                    id=candidate_id,
+                    tenant_id=tenant.id
+                ).first()
+
+                if not candidate:
+                    return {"error": f"Candidate {candidate_id} not found"}
+
+                # Get interview history
+                interviews = Interview.query.filter_by(
+                    candidate_id=candidate.id
+                ).order_by(Interview.scheduled_date.desc()).all()
+
+                return {
+                    "success": True,
+                    "candidate": {
+                        "id": candidate.id,
+                        "name": candidate.full_name,
+                        "email": candidate.email,
+                        "phone": candidate.phone,
+                        "position": candidate.position,
+                        "status": candidate.status,
+                        "applied_date": candidate.applied_date.isoformat(),
+                        "overall_score": candidate.overall_score,
+                        "category_scores": candidate.get_category_scores(),
+                        "skills": candidate.get_skills_list(),
+                        "experience_years": candidate.experience_years,
+                        "resume_url": candidate.resume_url,
+                        "linkedin_url": candidate.linkedin_url,
+                        "notes": candidate.get_notes(),
+                        "interviews": [
+                            {
+                                "id": i.id,
+                                "type": i.interview_type,
+                                "scheduled_date": i.scheduled_date.isoformat(),
+                                "duration_minutes": i.duration_minutes,
+                                "status": i.status,
+                                "interviewers": i.interviewers_list,
+                                "score": i.score
+                            }
+                            for i in interviews
+                        ]
+                    }
+                }
+
+            elif tool_name == 'hr_score_candidate':
+                candidate_id = tool_input.get('candidate_id')
+                candidate = Candidate.query.filter_by(
+                    id=candidate_id,
+                    tenant_id=tenant.id
+                ).first()
+
+                if not candidate:
+                    return {"error": f"Candidate {candidate_id} not found"}
+
+                # Update scores
+                if 'overall_score' in tool_input:
+                    candidate.overall_score = tool_input['overall_score']
+
+                if 'category_scores' in tool_input:
+                    candidate.update_category_scores(tool_input['category_scores'])
+
+                if 'note' in tool_input:
+                    candidate.add_assessment_note(
+                        note=tool_input['note'],
+                        scored_by=user.full_name if user else agent.name
+                    )
+
+                db.session.commit()
+
+                return {
+                    "success": True,
+                    "message": "Candidate scoring updated",
+                    "candidate_id": candidate.id,
+                    "overall_score": candidate.overall_score,
+                    "category_scores": candidate.get_category_scores()
+                }
+
+            elif tool_name == 'hr_schedule_interview':
+                candidate_id = tool_input.get('candidate_id')
+                candidate = Candidate.query.filter_by(
+                    id=candidate_id,
+                    tenant_id=tenant.id
+                ).first()
+
+                if not candidate:
+                    return {"error": f"Candidate {candidate_id} not found"}
+
+                # Schedule interview
+                interview = hr_service.schedule_interview(
+                    candidate=candidate,
+                    interview_type=tool_input['interview_type'],
+                    start_time=tool_input['start_time'],
+                    duration_minutes=tool_input.get('duration_minutes', 60),
+                    interviewers=tool_input['interviewers'],
+                    location=tool_input.get('location'),
+                    notes=tool_input.get('notes')
+                )
+
+                db.session.commit()
+
+                # Calculate end time for response
+                end_time = hr_service.calculate_end_time(
+                    tool_input['start_time'],
+                    interview.duration_minutes
+                )
+
+                # Send invitation email
+                email_service.send_interview_invitation(candidate, interview)
+
+                return {
+                    "success": True,
+                    "message": "Interview scheduled successfully",
+                    "interview_id": interview.id,
+                    "candidate_name": candidate.full_name,
+                    "interview_type": interview.interview_type,
+                    "start_time": interview.scheduled_date.isoformat(),
+                    "end_time": end_time,
+                    "interviewers": interview.interviewers_list,
+                    "location": interview.location
+                }
+
+            elif tool_name == 'hr_move_candidate_stage':
+                candidate_id = tool_input.get('candidate_id')
+                candidate = Candidate.query.filter_by(
+                    id=candidate_id,
+                    tenant_id=tenant.id
+                ).first()
+
+                if not candidate:
+                    return {"error": f"Candidate {candidate_id} not found"}
+
+                old_status = candidate.status
+                new_status = tool_input['new_status']
+                reason = tool_input.get('reason')
+                send_notification = tool_input.get('send_notification', True)
+
+                # Update status
+                candidate.update_status(new_status, reason)
+                db.session.commit()
+
+                # Send notification if requested
+                if send_notification:
+                    email_service.send_candidate_status_update(
+                        candidate, old_status, new_status, reason
+                    )
+
+                return {
+                    "success": True,
+                    "message": f"Candidate moved from {old_status} to {new_status}",
+                    "candidate_id": candidate.id,
+                    "candidate_name": candidate.full_name,
+                    "old_status": old_status,
+                    "new_status": new_status,
+                    "notification_sent": send_notification
+                }
+
+            # ===== ONBOARDING TOOLS =====
+            elif tool_name == 'hr_create_onboarding_plan':
+                employee_id = tool_input.get('employee_id')
+                employee = Employee.query.filter_by(
+                    id=employee_id,
+                    tenant_id=tenant.id
+                ).first()
+
+                if not employee:
+                    return {"error": f"Employee {employee_id} not found"}
+
+                # Check if plan already exists
+                existing_plan = OnboardingPlan.query.filter_by(
+                    employee_id=employee.id
+                ).first()
+
+                if existing_plan:
+                    return {
+                        "error": "Onboarding plan already exists for this employee",
+                        "plan_id": existing_plan.id
+                    }
+
+                # Create onboarding plan
+                plan = hr_service.create_onboarding_plan(
+                    employee=employee,
+                    start_date=tool_input['start_date'],
+                    template=tool_input.get('template', 'standard'),
+                    custom_tasks=tool_input.get('custom_tasks'),
+                    buddy_email=tool_input.get('buddy_email')
+                )
+
+                db.session.commit()
+
+                # Send welcome email
+                email_service.send_onboarding_welcome(employee, plan)
+
+                return {
+                    "success": True,
+                    "message": "Onboarding plan created successfully",
+                    "plan_id": plan.id,
+                    "employee_name": employee.full_name,
+                    "start_date": plan.start_date.isoformat(),
+                    "template": plan.template,
+                    "task_count": plan.tasks.count(),
+                    "buddy_email": plan.buddy_email
+                }
+
+            elif tool_name == 'hr_get_onboarding_status':
+                employee_id = tool_input.get('employee_id')
+                employee = Employee.query.filter_by(
+                    id=employee_id,
+                    tenant_id=tenant.id
+                ).first()
+
+                if not employee:
+                    return {"error": f"Employee {employee_id} not found"}
+
+                plan = employee.onboarding_plan
+                if not plan:
+                    return {
+                        "success": True,
+                        "status": "not_started",
+                        "message": "No onboarding plan exists for this employee"
+                    }
+
+                # Get task summary
+                summary = plan.get_tasks_summary()
+                overdue_tasks = plan.get_overdue_tasks()
+
+                return {
+                    "success": True,
+                    "plan_id": plan.id,
+                    "employee_name": employee.full_name,
+                    "start_date": plan.start_date.isoformat(),
+                    "template": plan.template,
+                    "completion_percentage": plan.completion_percentage,
+                    "total_tasks": summary['total'],
+                    "completed_tasks": summary['completed'],
+                    "pending_tasks": summary['pending'],
+                    "overdue_count": len(overdue_tasks),
+                    "overdue_tasks": [
+                        {
+                            "id": t.id,
+                            "title": t.title,
+                            "due_date": t.due_date.isoformat(),
+                            "category": t.category
+                        }
+                        for t in overdue_tasks
+                    ]
+                }
+
+            elif tool_name == 'hr_send_onboarding_reminder':
+                employee_id = tool_input.get('employee_id')
+                employee = Employee.query.filter_by(
+                    id=employee_id,
+                    tenant_id=tenant.id
+                ).first()
+
+                if not employee:
+                    return {"error": f"Employee {employee_id} not found"}
+
+                plan = employee.onboarding_plan
+                if not plan:
+                    return {"error": "No onboarding plan exists for this employee"}
+
+                # Get overdue tasks
+                overdue_tasks = plan.get_overdue_tasks()
+                if not overdue_tasks:
+                    return {
+                        "success": True,
+                        "message": "No overdue tasks to remind about"
+                    }
+
+                # Send reminder
+                include_manager = tool_input.get('include_manager', False)
+                email_service.send_onboarding_reminders(
+                    employee, overdue_tasks, include_manager
+                )
+
+                return {
+                    "success": True,
+                    "message": "Onboarding reminders sent",
+                    "employee_name": employee.full_name,
+                    "overdue_count": len(overdue_tasks),
+                    "manager_notified": include_manager
+                }
+
+            # ===== EMPLOYEE RECORDS TOOLS =====
+            elif tool_name == 'hr_search_employees':
+                employees = hr_service.search_employees(
+                    tenant_id=tenant.id,
+                    department=tool_input.get('department'),
+                    status=tool_input.get('status'),
+                    role=tool_input.get('role'),
+                    search_query=tool_input.get('search_query'),
+                    max_results=tool_input.get('max_results', 50)
+                )
+
+                return {
+                    "success": True,
+                    "count": len(employees),
+                    "employees": [
+                        {
+                            "id": e.id,
+                            "employee_number": e.employee_number,
+                            "name": e.full_name,
+                            "email": e.email,
+                            "department": e.department_name,
+                            "role": e.role,
+                            "status": e.status,
+                            "hire_date": e.hire_date.isoformat()
+                        }
+                        for e in employees
+                    ]
+                }
+
+            elif tool_name == 'hr_get_employee_record':
+                employee_id = tool_input.get('employee_id')
+                employee = Employee.query.filter_by(
+                    id=employee_id,
+                    tenant_id=tenant.id
+                ).first()
+
+                if not employee:
+                    return {"error": f"Employee {employee_id} not found"}
+
+                return {
+                    "success": True,
+                    "employee": {
+                        "id": employee.id,
+                        "employee_number": employee.employee_number,
+                        "name": employee.full_name,
+                        "email": employee.email,
+                        "phone": employee.phone,
+                        "department": employee.department_name,
+                        "role": employee.role,
+                        "manager": employee.manager_name,
+                        "status": employee.status,
+                        "hire_date": employee.hire_date.isoformat(),
+                        "termination_date": employee.termination_date.isoformat() if employee.termination_date else None,
+                        "salary": float(employee.salary) if employee.salary else None,
+                        "salary_currency": employee.salary_currency,
+                        "bonus_target_percentage": employee.bonus_target_percentage,
+                        "pto_balance": employee.pto_balance,
+                        "pto_used_this_year": employee.pto_used_this_year,
+                        "sick_days_balance": employee.sick_days_balance
+                    }
+                }
+
+            elif tool_name == 'hr_add_employee_note':
+                employee_id = tool_input.get('employee_id')
+                employee = Employee.query.filter_by(
+                    id=employee_id,
+                    tenant_id=tenant.id
+                ).first()
+
+                if not employee:
+                    return {"error": f"Employee {employee_id} not found"}
+
+                # Add note
+                employee.add_hr_note(
+                    note=tool_input['note'],
+                    note_type=tool_input.get('note_type', 'general'),
+                    created_by=user.full_name if user else agent.name
+                )
+
+                db.session.commit()
+
+                return {
+                    "success": True,
+                    "message": "Note added to employee record",
+                    "employee_id": employee.id,
+                    "employee_name": employee.full_name,
+                    "note_type": tool_input.get('note_type', 'general')
+                }
+
+            # ===== TIME OFF TOOLS =====
+            elif tool_name == 'hr_get_pto_balance':
+                employee_id = tool_input.get('employee_id')
+                employee = Employee.query.filter_by(
+                    id=employee_id,
+                    tenant_id=tenant.id
+                ).first()
+
+                if not employee:
+                    return {"error": f"Employee {employee_id} not found"}
+
+                # Get upcoming PTO
+                upcoming_pto = PTORequest.query.filter(
+                    PTORequest.employee_id == employee.id,
+                    PTORequest.start_date >= date.today(),
+                    PTORequest.status == 'approved'
+                ).order_by(PTORequest.start_date).all()
+
+                return {
+                    "success": True,
+                    "employee_name": employee.full_name,
+                    "pto_balance": employee.pto_balance,
+                    "pto_used_this_year": employee.pto_used_this_year,
+                    "sick_days_balance": employee.sick_days_balance,
+                    "upcoming_pto": [
+                        {
+                            "id": pto.id,
+                            "start_date": pto.start_date.isoformat(),
+                            "end_date": pto.end_date.isoformat(),
+                            "total_days": pto.total_days,
+                            "request_type": pto.request_type
+                        }
+                        for pto in upcoming_pto
+                    ]
+                }
+
+            elif tool_name == 'hr_view_team_calendar':
+                calendar_entries = hr_service.get_team_pto_calendar(
+                    tenant_id=tenant.id,
+                    department=tool_input.get('department'),
+                    days_ahead=tool_input.get('days_ahead', 30),
+                    include_pending=tool_input.get('include_pending', True)
+                )
+
+                return {
+                    "success": True,
+                    "entries": calendar_entries,
+                    "count": len(calendar_entries)
+                }
+
+            elif tool_name == 'hr_review_pto_request':
+                request_id = tool_input.get('request_id')
+                pto_request = PTORequest.query.filter_by(
+                    id=request_id,
+                    tenant_id=tenant.id
+                ).first()
+
+                if not pto_request:
+                    return {"error": f"PTO request {request_id} not found"}
+
+                if pto_request.status != 'pending':
+                    return {
+                        "error": f"Cannot review request - status is already {pto_request.status}"
+                    }
+
+                action = tool_input['action']
+                reviewer_name = tool_input['reviewer_name']
+
+                if action == 'approve':
+                    pto_request.approve(reviewer_name)
+                    db.session.commit()
+
+                    # Send notification
+                    email_service.send_pto_decision_notification(
+                        pto_request, 'approved', None
+                    )
+
+                    return {
+                        "success": True,
+                        "message": "PTO request approved",
+                        "request_id": pto_request.id,
+                        "employee_name": pto_request.employee.full_name,
+                        "start_date": pto_request.start_date.isoformat(),
+                        "end_date": pto_request.end_date.isoformat(),
+                        "total_days": pto_request.total_days,
+                        "new_pto_balance": pto_request.employee.pto_balance
+                    }
+
+                elif action == 'deny':
+                    denial_reason = tool_input.get('denial_reason')
+                    if not denial_reason:
+                        return {"error": "denial_reason is required when denying a request"}
+
+                    pto_request.deny(reviewer_name, denial_reason)
+                    db.session.commit()
+
+                    # Send notification
+                    email_service.send_pto_decision_notification(
+                        pto_request, 'denied', denial_reason
+                    )
+
+                    return {
+                        "success": True,
+                        "message": "PTO request denied",
+                        "request_id": pto_request.id,
+                        "employee_name": pto_request.employee.full_name,
+                        "denial_reason": denial_reason
+                    }
+
+                else:
+                    return {"error": f"Invalid action: {action}"}
+
+            else:
+                return {"error": f"Unknown HR tool: {tool_name}"}
+
+        except Exception as e:
+            error_msg = f"Error executing HR tool {tool_name}: {str(e)}"
+            print(f"[HR] ERROR: {error_msg}")
+            current_app.logger.error(error_msg)
+            import traceback
+            traceback.print_exc()
+            return {"error": str(e)}
+
+    def _execute_cross_applet_query_tool(self, tool_name: str, tool_input: Dict, agent, user) -> Any:
+        """Execute read-only cross-applet query tools"""
+        if not agent or not agent.department:
+            return {"error": "No workspace context available"}
+
+        tenant = agent.department.tenant
+
+        # Route to appropriate handler
+        try:
+            if tool_name.startswith('query_crm_'):
+                return self._execute_crm_query(tool_name, tool_input, tenant)
+            elif tool_name.startswith('query_hr_'):
+                return self._execute_hr_query(tool_name, tool_input, tenant)
+            elif tool_name.startswith('query_support_'):
+                return self._execute_support_query(tool_name, tool_input, tenant)
+            elif tool_name.startswith('query_project'):
+                return self._execute_project_query(tool_name, tool_input, tenant)
+            else:
+                return {"error": f"Unknown query tool: {tool_name}"}
+        except Exception as e:
+            error_msg = f"Error executing query tool {tool_name}: {str(e)}"
+            print(f"[CROSS_APPLET] ERROR: {error_msg}")
+            current_app.logger.error(error_msg)
+            import traceback
+            traceback.print_exc()
+            return {"error": str(e)}
+
+    def _execute_crm_query(self, tool_name: str, tool_input: Dict, tenant) -> Any:
+        """Execute CRM query tools"""
+        from app.models.crm import Company, Contact, Deal
+
+        if tool_name == 'query_crm_companies':
+            companies = Company.query.filter_by(tenant_id=tenant.id)
+            if tool_input.get('search_query'):
+                companies = companies.filter(Company.name.ilike(f"%{tool_input['search_query']}%"))
+            if tool_input.get('status'):
+                companies = companies.filter_by(status=tool_input['status'])
+            if tool_input.get('industry'):
+                companies = companies.filter(Company.industry.ilike(f"%{tool_input['industry']}%"))
+            companies = companies.limit(tool_input.get('max_results', 20)).all()
+            return {"companies": [c.to_dict() for c in companies]}
+
+        elif tool_name == 'query_crm_contacts':
+            contacts = Contact.query.filter_by(tenant_id=tenant.id)
+            if tool_input.get('search_query'):
+                query = f"%{tool_input['search_query']}%"
+                contacts = contacts.filter(
+                    (Contact.first_name.ilike(query)) | (Contact.last_name.ilike(query)) | (Contact.email.ilike(query))
+                )
+            if tool_input.get('company_id'):
+                contacts = contacts.filter_by(company_id=tool_input['company_id'])
+            contacts = contacts.limit(tool_input.get('max_results', 20)).all()
+            return {"contacts": [c.to_dict() for c in contacts]}
+
+        elif tool_name == 'query_crm_deals':
+            deals = Deal.query.filter_by(tenant_id=tenant.id)
+            if tool_input.get('status'):
+                deals = deals.filter_by(status=tool_input['status'])
+            if tool_input.get('min_amount'):
+                deals = deals.filter(Deal.amount >= tool_input['min_amount'])
+            if tool_input.get('company_id'):
+                deals = deals.filter_by(company_id=tool_input['company_id'])
+            deals = deals.limit(tool_input.get('max_results', 20)).all()
+            return {"deals": [d.to_dict() for d in deals]}
+
+        elif tool_name == 'query_crm_deal_details':
+            deal = Deal.query.filter_by(tenant_id=tenant.id, id=tool_input['deal_id']).first()
+            if not deal:
+                return {"error": "Deal not found"}
+            return {"deal": deal.to_dict(include_relationships=True)}
+
+        return {"error": f"Unknown CRM query tool: {tool_name}"}
+
+    def _execute_hr_query(self, tool_name: str, tool_input: Dict, tenant) -> Any:
+        """Execute HR query tools (excludes sensitive data like compensation)"""
+        from app.models.employee import Employee
+        from app.models.candidate import Candidate
+        from app.models.pto_request import PTORequest
+        from app.services.hr_service import hr_service
+
+        if tool_name == 'query_hr_employees':
+            employees = hr_service.search_employees(tenant.id, tool_input)
+            # Exclude sensitive data
+            return {"employees": [
+                {k: v for k, v in e.to_dict().items()
+                 if k not in ['salary', 'bonus_target_percentage', 'notes']}
+                for e in employees
+            ]}
+
+        elif tool_name == 'query_hr_candidates':
+            candidates = hr_service.search_candidates(tenant.id, tool_input)
+            return {"candidates": [c.to_dict() for c in candidates]}
+
+        elif tool_name == 'query_hr_employee_record':
+            employee = Employee.query.filter_by(tenant_id=tenant.id, id=tool_input['employee_id']).first()
+            if not employee:
+                return {"error": "Employee not found"}
+            # Exclude sensitive fields
+            data = employee.to_dict()
+            for field in ['salary', 'bonus_target_percentage', 'notes']:
+                data.pop(field, None)
+            return {"employee": data}
+
+        elif tool_name == 'query_hr_pto_calendar':
+            calendar = hr_service.get_team_pto_calendar(
+                tenant.id,
+                tool_input.get('department'),
+                tool_input.get('days_ahead', 30)
+            )
+            return {"pto_calendar": calendar}
+
+        elif tool_name == 'query_hr_pto_balance':
+            employee = Employee.query.filter_by(tenant_id=tenant.id, id=tool_input['employee_id']).first()
+            if not employee:
+                return {"error": "Employee not found"}
+            return {
+                "employee_name": employee.full_name,
+                "pto_balance": employee.pto_balance,
+                "pto_used_this_year": employee.pto_used_this_year
+            }
+
+        return {"error": f"Unknown HR query tool: {tool_name}"}
+
+    def _execute_support_query(self, tool_name: str, tool_input: Dict, tenant) -> Any:
+        """Execute Support query tools"""
+        from app.models.ticket import Ticket
+        from sqlalchemy import func
+
+        if tool_name == 'query_support_tickets':
+            tickets = Ticket.query.filter_by(tenant_id=tenant.id)
+            if tool_input.get('status'):
+                tickets = tickets.filter_by(status=tool_input['status'])
+            if tool_input.get('priority'):
+                tickets = tickets.filter_by(priority=tool_input['priority'])
+            if tool_input.get('search_query'):
+                query = f"%{tool_input['search_query']}%"
+                tickets = tickets.filter(
+                    (Ticket.subject.ilike(query)) | (Ticket.description.ilike(query))
+                )
+            tickets = tickets.limit(tool_input.get('max_results', 25)).all()
+            return {"tickets": [t.to_dict() for t in tickets]}
+
+        elif tool_name == 'query_support_ticket_details':
+            ticket = Ticket.query.filter_by(tenant_id=tenant.id, id=tool_input['ticket_id']).first()
+            if not ticket:
+                return {"error": "Ticket not found"}
+            return {"ticket": ticket.to_dict(include_comments=True)}
+
+        elif tool_name == 'query_support_metrics':
+            from app import db
+            tickets = Ticket.query.filter_by(tenant_id=tenant.id)
+            if tool_input.get('department_id'):
+                tickets = tickets.filter_by(department_id=tool_input['department_id'])
+
+            status_counts = dict(
+                db.session.query(Ticket.status, func.count(Ticket.id))
+                .filter(Ticket.tenant_id == tenant.id)
+                .group_by(Ticket.status)
+                .all()
+            )
+            return {"metrics": {"status_counts": status_counts, "total": sum(status_counts.values())}}
+
+        return {"error": f"Unknown Support query tool: {tool_name}"}
+
+    def _execute_project_query(self, tool_name: str, tool_input: Dict, tenant) -> Any:
+        """Execute Project query tools"""
+        from app.models.project import Project, Task
+
+        if tool_name == 'query_project_tasks':
+            tasks = Task.query.join(Project).filter(Project.tenant_id == tenant.id)
+            if tool_input.get('project_id'):
+                tasks = tasks.filter(Task.project_id == tool_input['project_id'])
+            if tool_input.get('status'):
+                tasks = tasks.filter(Task.status == tool_input['status'])
+            if tool_input.get('assigned_to_id'):
+                tasks = tasks.filter(Task.assigned_to_id == tool_input['assigned_to_id'])
+            tasks = tasks.limit(tool_input.get('max_results', 50)).all()
+            return {"tasks": [t.to_dict() for t in tasks]}
+
+        elif tool_name == 'query_project_details':
+            project = Project.query.filter_by(tenant_id=tenant.id, id=tool_input['project_id']).first()
+            if not project:
+                return {"error": "Project not found"}
+            return {"project": project.to_dict(include_tasks=True)}
+
+        elif tool_name == 'query_projects_list':
+            projects = Project.query.filter_by(tenant_id=tenant.id)
+            if not tool_input.get('is_archived', False):
+                projects = projects.filter_by(is_archived=False)
+            projects = projects.limit(tool_input.get('max_results', 20)).all()
+            return {"projects": [p.to_dict() for p in projects]}
+
+        return {"error": f"Unknown Project query tool: {tool_name}"}
 
     def analyze_bug_screenshot(
         self,

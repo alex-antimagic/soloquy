@@ -61,14 +61,19 @@ class WorkspaceApplet(db.Model):
             'icon': 'plug'
         },
         'website': {
-            'name': 'Website Builder',
-            'description': 'AI-powered website hosting with custom domains and SEO',
+            'name': 'CMS',
+            'description': 'Content Management System - AI-powered website hosting with custom domains and SEO',
             'icon': 'globe'
         },
         'files': {
             'name': 'Files',
             'description': 'Agent-generated documents, reports, and exports',
             'icon': 'folder'
+        },
+        'hr': {
+            'name': 'HR/People',
+            'description': 'Recruitment, onboarding, employee records, and time-off management',
+            'icon': 'people-fill'
         }
     }
 

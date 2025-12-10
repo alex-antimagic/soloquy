@@ -1,0 +1,305 @@
+{% extends "layouts/base.html" %}
+
+{% block extra_css %}
+<style>
+    .metric-icon {
+        width: 60px;
+        height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50% !important;
+    }
+
+    .metric-card {
+        transition: transform 0.2s;
+        cursor: pointer;
+    }
+
+    .metric-card:hover {
+        transform: translateY(-2px);
+    }
+
+    .onboarding-progress {
+        height: 8px;
+        border-radius: 4px;
+        overflow: hidden;
+    }
+
+    .interview-item {
+        border-left: 3px solid var(--bs-info);
+        padding-left: 1rem;
+    }
+
+    .pto-item {
+        border-left: 3px solid var(--bs-warning);
+        padding-left: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">HR Dashboard</h2>
+            <p class="text-muted mb-0">Manage recruitment, onboarding, employees, and time off</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('hr.recruitment') }}" class="btn btn-outline-primary">
+                <i class="bi bi-person-lines-fill"></i> Recruitment
+            </a>
+            <a href="{{ url_for('hr.employees') }}" class="btn btn-primary">
+                <i class="bi bi-people-fill"></i> Employees
+            </a>
+        </div>
+    </div>
+
+    <!-- Metrics Dashboard -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <a href="{{ url_for('hr.employees') }}" class="text-decoration-none">
+                <div class="card metric-card h-100">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div>
+                                <p class="text-muted small mb-1">Total Employees</p>
+                                <h3 class="mb-0">{{ total_employees }}</h3>
+                            </div>
+                            <div class="metric-icon bg-primary bg-opacity-10">
+                                <i class="bi bi-people-fill fs-4 text-primary"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-3">
+            <a href="{{ url_for('hr.recruitment') }}" class="text-decoration-none">
+                <div class="card metric-card h-100">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div>
+                                <p class="text-muted small mb-1">Open Positions</p>
+                                <h3 class="mb-0">{{ open_positions }}</h3>
+                            </div>
+                            <div class="metric-icon bg-info bg-opacity-10">
+                                <i class="bi bi-briefcase fs-4 text-info"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-3">
+            <a href="{{ url_for('hr.time_off') }}" class="text-decoration-none">
+                <div class="card metric-card h-100">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div>
+                                <p class="text-muted small mb-1">Pending PTO</p>
+                                <h3 class="mb-0">{{ pending_pto }}</h3>
+                            </div>
+                            <div class="metric-icon bg-warning bg-opacity-10">
+                                <i class="bi bi-calendar-check fs-4 text-warning"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <p class="text-muted small mb-1">New Hires (This Month)</p>
+                            <h3 class="mb-0">{{ new_hires_count }}</h3>
+                        </div>
+                        <div class="metric-icon bg-success bg-opacity-10">
+                            <i class="bi bi-person-plus-fill fs-4 text-success"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="row g-4">
+        <!-- Left Column -->
+        <div class="col-lg-8">
+            <!-- Active Onboarding Plans -->
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Active Onboarding Plans</h5>
+                    <a href="{{ url_for('hr.onboarding') }}" class="btn btn-sm btn-outline-primary">View All</a>
+                </div>
+                <div class="card-body">
+                    {% if active_onboarding %}
+                    <div class="d-flex flex-column gap-3">
+                        {% for plan in active_onboarding %}
+                        <div>
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <a href="{{ url_for('hr.onboarding_detail', plan_id=plan.id) }}" class="fw-bold text-decoration-none">
+                                        {{ plan.employee.full_name }}
+                                    </a>
+                                    <span class="text-muted">· {{ plan.employee.role }}</span>
+                                </div>
+                                <small class="text-muted">Started {{ plan.start_date.strftime('%b %d, %Y') }}</small>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="flex-grow-1 onboarding-progress bg-light">
+                                    <div class="h-100 bg-success" style="width: {{ plan.completion_percentage }}%;"></div>
+                                </div>
+                                <small class="text-muted">{{ "%.0f"|format(plan.completion_percentage) }}%</small>
+                            </div>
+                            <small class="text-muted">
+                                <i class="bi bi-list-check"></i> {{ plan.tasks.filter_by(is_completed=True).count() }}/{{ plan.tasks.count() }} tasks completed
+                            </small>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center text-muted py-5">
+                        <i class="bi bi-person-workspace fs-1 d-block mb-2"></i>
+                        <p class="mb-0">No active onboarding plans</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Upcoming Interviews -->
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Upcoming Interviews (Next 7 Days)</h5>
+                    <a href="{{ url_for('hr.interviews_list') }}" class="btn btn-sm btn-outline-primary">View All</a>
+                </div>
+                <div class="card-body">
+                    {% if upcoming_interviews %}
+                    <div class="d-flex flex-column gap-3">
+                        {% for interview in upcoming_interviews %}
+                        <div class="interview-item">
+                            <div class="d-flex justify-content-between align-items-start mb-1">
+                                <div>
+                                    <strong>{{ interview.candidate.full_name }}</strong>
+                                    <span class="text-muted">· {{ interview.interview_type.replace('_', ' ').title() }}</span>
+                                </div>
+                                <small class="text-muted">{{ interview.scheduled_date.strftime('%b %d, %I:%M %p') }}</small>
+                            </div>
+                            <p class="text-muted small mb-1">
+                                Position: {{ interview.candidate.position }}
+                                {% if interview.location %}
+                                · {{ interview.location }}
+                                {% endif %}
+                            </p>
+                            <small class="text-muted">
+                                <i class="bi bi-people"></i> {{ interview.interviewers_list|length }} interviewer{% if interview.interviewers_list|length != 1 %}s{% endif %}
+                            </small>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center text-muted py-5">
+                        <i class="bi bi-calendar-week fs-1 d-block mb-2"></i>
+                        <p class="mb-0">No upcoming interviews</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column -->
+        <div class="col-lg-4">
+            <!-- Upcoming Time Off -->
+            <div class="card mb-3">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Upcoming Time Off</h5>
+                    <a href="{{ url_for('hr.time_off') }}" class="btn btn-sm btn-outline-primary">View All</a>
+                </div>
+                <div class="card-body">
+                    {% if upcoming_pto %}
+                    <div class="d-flex flex-column gap-3">
+                        {% for pto in upcoming_pto[:5] %}
+                        <div class="pto-item">
+                            <div class="d-flex justify-content-between align-items-start mb-1">
+                                <strong>{{ pto.employee.full_name }}</strong>
+                                {% if pto.status == 'pending' %}
+                                <span class="badge bg-warning text-dark">Pending</span>
+                                {% else %}
+                                <span class="badge bg-success">Approved</span>
+                                {% endif %}
+                            </div>
+                            <small class="text-muted">
+                                {{ pto.start_date.strftime('%b %d') }} - {{ pto.end_date.strftime('%b %d') }}
+                                ({{ pto.total_days }} day{% if pto.total_days != 1 %}s{% endif %})
+                            </small>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center text-muted py-3">
+                        <i class="bi bi-calendar-x fs-3 d-block mb-2"></i>
+                        <p class="mb-0 small">No upcoming time off</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="mb-0">Quick Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('hr.recruitment') }}" class="btn btn-outline-primary text-start">
+                            <i class="bi bi-person-lines-fill"></i> View Candidates
+                        </a>
+                        <a href="{{ url_for('hr.employees') }}" class="btn btn-outline-info text-start">
+                            <i class="bi bi-people-fill"></i> Employee Directory
+                        </a>
+                        <a href="{{ url_for('hr.onboarding') }}" class="btn btn-outline-success text-start">
+                            <i class="bi bi-person-workspace"></i> Onboarding Plans
+                        </a>
+                        <a href="{{ url_for('hr.time_off') }}" class="btn btn-outline-warning text-start">
+                            <i class="bi bi-calendar-check"></i> Review PTO Requests
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- HR Navigation -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">HR Navigation</h5>
+                </div>
+                <div class="list-group list-group-flush">
+                    <a href="{{ url_for('hr.recruitment') }}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-funnel"></i> Recruitment Pipeline
+                    </a>
+                    <a href="{{ url_for('hr.job_postings_list') }}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-briefcase"></i> Job Postings
+                        <span class="badge bg-info float-end">{{ open_positions }}</span>
+                    </a>
+                    <a href="{{ url_for('hr.onboarding') }}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-person-workspace"></i> Onboarding
+                    </a>
+                    <a href="{{ url_for('hr.employees') }}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-people"></i> Employees
+                        <span class="badge bg-primary float-end">{{ total_employees }}</span>
+                    </a>
+                    <a href="{{ url_for('hr.time_off') }}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-calendar-check"></i> Time Off
+                        {% if pending_pto > 0 %}
+                        <span class="badge bg-warning text-dark float-end">{{ pending_pto }}</span>
+                        {% endif %}
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

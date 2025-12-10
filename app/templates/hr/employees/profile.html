@@ -1,0 +1,326 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="mb-4">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-2">
+                <li class="breadcrumb-item"><a href="{{ url_for('hr.index') }}">HR</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('hr.employees') }}">Employees</a></li>
+                <li class="breadcrumb-item active">{{ employee.full_name }}</li>
+            </ol>
+        </nav>
+
+        <div class="d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-3">
+                <div class="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center"
+                     style="width: 80px; height: 80px;">
+                    <h2 class="text-primary mb-0">{{ employee.first_name[0] }}{{ employee.last_name[0] }}</h2>
+                </div>
+                <div>
+                    <h2 class="mb-1">{{ employee.full_name }}</h2>
+                    <p class="text-muted mb-0">{{ employee.role or 'Employee' }}</p>
+                    <p class="text-muted small mb-0">{{ employee.employee_number }} · {{ employee.department_name or 'No Department' }}</p>
+                </div>
+            </div>
+            <div>
+                {% if employee.status == 'active' %}
+                <span class="badge bg-success fs-6">Active</span>
+                {% elif employee.status == 'on_leave' %}
+                <span class="badge bg-warning text-dark fs-6">On Leave</span>
+                {% elif employee.status == 'terminated' %}
+                <span class="badge bg-danger fs-6">Terminated</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Left Column: Quick Info -->
+        <div class="col-lg-4">
+            <!-- Contact Information -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="mb-0">Contact Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-2">
+                        <small class="text-muted d-block">Email</small>
+                        <a href="mailto:{{ employee.email }}">{{ employee.email }}</a>
+                    </div>
+                    {% if employee.phone %}
+                    <div class="mb-2">
+                        <small class="text-muted d-block">Phone</small>
+                        <a href="tel:{{ employee.phone }}">{{ employee.phone }}</a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Employment Details -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="mb-0">Employment Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-2">
+                        <small class="text-muted d-block">Hire Date</small>
+                        <strong>{{ employee.hire_date.strftime('%B %d, %Y') }}</strong>
+                    </div>
+                    {% if employee.manager_name %}
+                    <div class="mb-2">
+                        <small class="text-muted d-block">Manager</small>
+                        <strong>{{ employee.manager_name }}</strong>
+                    </div>
+                    {% endif %}
+                    {% if employee.termination_date %}
+                    <div class="mb-2">
+                        <small class="text-muted d-block">Termination Date</small>
+                        <strong>{{ employee.termination_date.strftime('%B %d, %Y') }}</strong>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- PTO Balance -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Time Off</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center mb-2">
+                        <div class="col-6">
+                            <div class="display-6 fw-bold text-primary">{{ employee.pto_balance or 0 }}</div>
+                            <small class="text-muted">PTO Balance</small>
+                        </div>
+                        <div class="col-6">
+                            <div class="display-6 fw-bold text-info">{{ employee.pto_used_this_year or 0 }}</div>
+                            <small class="text-muted">Used This Year</small>
+                        </div>
+                    </div>
+                    {% if employee.sick_days_balance %}
+                    <div class="text-center border-top pt-2">
+                        <div class="fs-4 fw-bold">{{ employee.sick_days_balance }}</div>
+                        <small class="text-muted">Sick Days Available</small>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Tabbed Content -->
+        <div class="col-lg-8">
+            <!-- Tabs -->
+            <ul class="nav nav-tabs mb-3" id="employeeTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="overview-tab" data-bs-toggle="tab"
+                            data-bs-target="#overview" type="button" role="tab">
+                        Overview
+                    </button>
+                </li>
+                {% if onboarding_plan %}
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="onboarding-tab" data-bs-toggle="tab"
+                            data-bs-target="#onboarding" type="button" role="tab">
+                        Onboarding
+                        {% set overdue = onboarding_plan.get_overdue_tasks() %}
+                        {% if overdue %}
+                        <span class="badge bg-danger">{{ overdue|length }}</span>
+                        {% endif %}
+                    </button>
+                </li>
+                {% endif %}
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="pto-tab" data-bs-toggle="tab"
+                            data-bs-target="#pto" type="button" role="tab">
+                        Time Off Requests
+                    </button>
+                </li>
+            </ul>
+
+            <!-- Tab Content -->
+            <div class="tab-content">
+                <!-- Overview Tab -->
+                <div class="tab-pane fade show active" id="overview" role="tabpanel">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title mb-3">Employment Summary</h5>
+
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <h6 class="text-muted mb-2">Basic Information</h6>
+                                    <p class="mb-1"><strong>Employee ID:</strong> {{ employee.employee_number }}</p>
+                                    <p class="mb-1"><strong>Department:</strong> {{ employee.department_name or 'Not assigned' }}</p>
+                                    <p class="mb-1"><strong>Role:</strong> {{ employee.role or 'Not specified' }}</p>
+                                    <p class="mb-1"><strong>Manager:</strong> {{ employee.manager_name or 'Not assigned' }}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6 class="text-muted mb-2">Employment Dates</h6>
+                                    <p class="mb-1"><strong>Hire Date:</strong> {{ employee.hire_date.strftime('%B %d, %Y') }}</p>
+                                    {% if employee.termination_date %}
+                                    <p class="mb-1"><strong>Termination:</strong> {{ employee.termination_date.strftime('%B %d, %Y') }}</p>
+                                    {% else %}
+                                    <p class="mb-1"><strong>Tenure:</strong>
+                                        {% set tenure_days = (now() - employee.hire_date).days %}
+                                        {% if tenure_days < 365 %}
+                                        {{ tenure_days }} days
+                                        {% else %}
+                                        {{ (tenure_days / 365)|round(1) }} years
+                                        {% endif %}
+                                    </p>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            {% if employee.salary %}
+                            <div class="mb-4">
+                                <h6 class="text-muted mb-2">Compensation</h6>
+                                <p class="mb-1">
+                                    <strong>Salary:</strong>
+                                    {{ employee.salary_currency or 'USD' }} ${{ "{:,.2f}".format(employee.salary) }}
+                                    {% if employee.bonus_target_percentage %}
+                                    · Bonus Target: {{ employee.bonus_target_percentage }}%
+                                    {% endif %}
+                                </p>
+                            </div>
+                            {% endif %}
+
+                            {% if employee.get_hr_notes() %}
+                            <div>
+                                <h6 class="text-muted mb-2">HR Notes</h6>
+                                {% for note in employee.get_hr_notes()[:3] %}
+                                <div class="card mb-2 bg-light">
+                                    <div class="card-body small py-2">
+                                        <p class="mb-1">{{ note.note }}</p>
+                                        <small class="text-muted">
+                                            {{ note.note_type|title }} · {{ note.created_by }} · {{ note.created_at.strftime('%b %d, %Y') }}
+                                        </small>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Onboarding Tab -->
+                {% if onboarding_plan %}
+                <div class="tab-pane fade" id="onboarding" role="tabpanel">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h5 class="card-title mb-0">Onboarding Progress</h5>
+                                <a href="{{ url_for('hr.onboarding_detail', plan_id=onboarding_plan.id) }}" class="btn btn-sm btn-primary">
+                                    <i class="bi bi-eye"></i> View Full Plan
+                                </a>
+                            </div>
+
+                            <div class="mb-4">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span>Overall Progress</span>
+                                    <strong>{{ "%.0f"|format(onboarding_plan.completion_percentage) }}%</strong>
+                                </div>
+                                <div class="progress" style="height: 12px;">
+                                    <div class="progress-bar bg-success" role="progressbar"
+                                         style="width: {{ onboarding_plan.completion_percentage }}%">
+                                    </div>
+                                </div>
+                            </div>
+
+                            {% set summary = onboarding_plan.get_tasks_summary() %}
+                            <div class="row text-center mb-4">
+                                <div class="col-4">
+                                    <div class="fs-4 fw-bold text-success">{{ summary.completed }}</div>
+                                    <small class="text-muted">Completed</small>
+                                </div>
+                                <div class="col-4">
+                                    <div class="fs-4 fw-bold text-primary">{{ summary.pending }}</div>
+                                    <small class="text-muted">Pending</small>
+                                </div>
+                                <div class="col-4">
+                                    <div class="fs-4 fw-bold text-danger">{{ onboarding_plan.get_overdue_tasks()|length }}</div>
+                                    <small class="text-muted">Overdue</small>
+                                </div>
+                            </div>
+
+                            <h6 class="mb-2">Recent Tasks</h6>
+                            {% set recent_tasks = onboarding_plan.tasks.order_by('due_date').limit(5).all() %}
+                            {% for task in recent_tasks %}
+                            <div class="d-flex gap-2 align-items-start mb-2 pb-2 border-bottom">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" {% if task.is_completed %}checked{% endif %} disabled>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <div class="{% if task.is_completed %}text-muted text-decoration-line-through{% endif %}">
+                                        {{ task.title }}
+                                    </div>
+                                    <small class="text-muted">
+                                        Due: {{ task.due_date.strftime('%b %d') }}
+                                        {% if task.is_overdue %}<span class="badge bg-danger">Overdue</span>{% endif %}
+                                    </small>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- PTO Tab -->
+                <div class="tab-pane fade" id="pto" role="tabpanel">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title mb-3">Time Off Requests</h5>
+
+                            {% if pto_requests %}
+                            <div class="list-group">
+                                {% for request in pto_requests %}
+                                <div class="list-group-item">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <div>
+                                            <strong>{{ request.start_date.strftime('%b %d, %Y') }} - {{ request.end_date.strftime('%b %d, %Y') }}</strong>
+                                            <span class="badge bg-secondary ms-2">{{ request.total_days }} day{% if request.total_days != 1 %}s{% endif %}</span>
+                                        </div>
+                                        {% if request.status == 'pending' %}
+                                        <span class="badge bg-warning text-dark">Pending</span>
+                                        {% elif request.status == 'approved' %}
+                                        <span class="badge bg-success">Approved</span>
+                                        {% elif request.status == 'denied' %}
+                                        <span class="badge bg-danger">Denied</span>
+                                        {% endif %}
+                                    </div>
+
+                                    <div class="small text-muted">
+                                        <div><strong>Type:</strong> {{ request.request_type|title }}</div>
+                                        {% if request.request_reason %}
+                                        <div><strong>Reason:</strong> {{ request.request_reason }}</div>
+                                        {% endif %}
+                                        {% if request.approved_by %}
+                                        <div><strong>Approved by:</strong> {{ request.approved_by }} on {{ request.approved_at.strftime('%b %d, %Y') }}</div>
+                                        {% endif %}
+                                        {% if request.denied_by %}
+                                        <div><strong>Denied by:</strong> {{ request.denied_by }} on {{ request.denied_at.strftime('%b %d, %Y') }}</div>
+                                        {% if request.denial_reason %}
+                                        <div><strong>Denial reason:</strong> {{ request.denial_reason }}</div>
+                                        {% endif %}
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <div class="text-center py-5 text-muted">
+                                <i class="bi bi-calendar-x fs-1 d-block mb-2"></i>
+                                <p class="mb-0">No time off requests</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
