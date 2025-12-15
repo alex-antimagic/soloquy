@@ -35,6 +35,7 @@ class Agent(db.Model):
     enable_file_generation = db.Column(db.Boolean, default=True, nullable=False)  # Allow AI to generate files (PDF, CSV, Excel)
     enable_competitive_analysis = db.Column(db.Boolean, default=False, nullable=False)  # Allow AI to perform competitive analysis
     enable_hr_management = db.Column(db.Boolean, default=False, nullable=False)  # Allow access to HR data and operations
+    enable_similar_lead_discovery = db.Column(db.Boolean, default=False, nullable=False)  # Allow AI to discover similar leads
     enable_cross_applet_data_access = db.Column(db.Boolean, default=True, nullable=False)  # Allow read-only queries across all applets (CRM, HR, Support, Projects)
 
     # User access control (who can chat with this agent)
@@ -600,6 +601,7 @@ class Agent(db.Model):
                 'enable_file_generation': self.enable_file_generation,
                 'enable_competitive_analysis': self.enable_competitive_analysis,
                 'enable_hr_management': self.enable_hr_management,
+                'enable_similar_lead_discovery': self.enable_similar_lead_discovery,
                 'enable_cross_applet_data_access': self.enable_cross_applet_data_access,
                 'access_control': self.access_control,
                 'allowed_roles': self.allowed_roles,
@@ -715,6 +717,7 @@ class Agent(db.Model):
             enable_file_generation=agent_data.get('enable_file_generation', False),
             enable_competitive_analysis=agent_data.get('enable_competitive_analysis', False),
             enable_hr_management=agent_data.get('enable_hr_management', False),
+            enable_similar_lead_discovery=agent_data.get('enable_similar_lead_discovery', False),
             enable_cross_applet_data_access=agent_data.get('enable_cross_applet_data_access', True),
             access_control=agent_data.get('access_control', 'all'),
             allowed_roles=agent_data.get('allowed_roles'),

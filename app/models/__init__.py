@@ -20,6 +20,7 @@ from app.models.company import Company
 from app.models.company_enrichment_cache import CompanyEnrichmentCache
 from app.models.contact import Contact
 from app.models.lead import Lead
+from app.models.similar_lead_discovery import SimilarLeadDiscovery
 from app.models.deal_pipeline import DealPipeline
 from app.models.deal_stage import DealStage
 from app.models.deal import Deal

@@ -359,6 +359,75 @@ class AIService:
             }
         ]
 
+    def _get_similar_lead_discovery_tools(self) -> List[Dict]:
+        """
+        Get similar lead discovery tool definitions for AI agents
+
+        Returns:
+            List of similar lead discovery tool definitions
+        """
+        return [
+            {
+                "name": "similar_leads_discover",
+                "description": "Find potential leads similar to an existing customer company. Returns similar companies that match the customer's profile and can be added as leads.",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "reference_company_id": {
+                            "type": "number",
+                            "description": "ID of the reference customer company to find similar leads for"
+                        },
+                        "reference_company_name": {
+                            "type": "string",
+                            "description": "Name of the reference company (for lookup if ID not known)"
+                        },
+                        "criteria": {
+                            "type": "object",
+                            "description": "Similarity criteria to match",
+                            "properties": {
+                                "industry": {"type": "boolean", "default": True},
+                                "business_model": {"type": "boolean", "default": True},
+                                "tech_stack": {"type": "boolean", "default": True},
+                                "company_size": {"type": "boolean", "default": True}
+                            }
+                        },
+                        "max_results": {
+                            "type": "number",
+                            "description": "Maximum number of similar leads to discover (default: 20)",
+                            "default": 20
+                        }
+                    }
+                }
+            },
+            {
+                "name": "similar_leads_get_status",
+                "description": "Get the status and results of a similar lead discovery job",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "discovery_id": {
+                            "type": "number",
+                            "description": "ID of the discovery job to check. If not provided, returns most recent discovery."
+                        }
+                    }
+                }
+            },
+            {
+                "name": "similar_leads_list_discoveries",
+                "description": "List recent similar lead discovery jobs for this workspace",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "limit": {
+                            "type": "number",
+                            "description": "Number of recent discoveries to return (default: 10)",
+                            "default": 10
+                        }
+                    }
+                }
+            }
+        ]
+
     def _get_file_generation_tools(self) -> List[Dict]:
         """
         Get file generation tool definitions for AI agents
@@ -1172,6 +1241,12 @@ class AIService:
                     print(f"[COMPETITIVE] Got {len(competitive_tools)} Competitive Analysis tools")
                     tools.extend(competitive_tools)
 
+                if agent.enable_similar_lead_discovery:
+                    print(f"[SIMILAR_LEADS] Getting Similar Lead Discovery tools for agent {agent.id}")
+                    similar_lead_tools = self._get_similar_lead_discovery_tools()
+                    print(f"[SIMILAR_LEADS] Got {len(similar_lead_tools)} Similar Lead Discovery tools")
+                    tools.extend(similar_lead_tools)
+
                 if agent.enable_hr_management:
                     print(f"[HR] Getting HR tools for agent {agent.id}")
                     hr_tools = self._get_hr_tools()
@@ -1236,6 +1311,13 @@ class AIService:
                             )
                         elif tool_use.name.startswith('competitive_analysis_'):
                             result = self._execute_competitive_analysis_tool(
+                                tool_name=tool_use.name,
+                                tool_input=tool_use.input,
+                                agent=agent,
+                                user=user
+                            )
+                        elif tool_use.name.startswith('similar_leads_'):
+                            result = self._execute_similar_lead_discovery_tool(
                                 tool_name=tool_use.name,
                                 tool_input=tool_use.input,
                                 agent=agent,
@@ -2104,6 +2186,165 @@ Return ONLY valid JSON in this format:
         except Exception as e:
             error_msg = f"Error executing competitive analysis tool {tool_name}: {str(e)}"
             print(f"[COMPETITIVE] ERROR: {error_msg}")
+            current_app.logger.error(error_msg)
+            import traceback
+            traceback.print_exc()
+            return {"error": str(e)}
+
+    def _execute_similar_lead_discovery_tool(self, tool_name: str, tool_input: Dict, agent, user) -> Any:
+        """
+        Execute similar lead discovery tool
+
+        Args:
+            tool_name: Name of the tool (similar_leads_discover, similar_leads_get_status, similar_leads_list_discoveries)
+            tool_input: Tool input parameters
+            agent: Agent model
+            user: User model
+
+        Returns:
+            Result dictionary with discovery data or error
+        """
+        from app.services.similar_lead_discovery_service import SimilarLeadDiscoveryService
+        from app.models.similar_lead_discovery import SimilarLeadDiscovery
+        from app.models.company import Company
+        from app import db
+
+        print(f"[SIMILAR_LEADS] Executing tool: {tool_name}")
+        print(f"[SIMILAR_LEADS] Input: {tool_input}")
+
+        try:
+            # Get tenant from agent's department
+            if not agent or not agent.department:
+                return {"error": "No workspace context available"}
+
+            tenant = agent.department.tenant
+            service = SimilarLeadDiscoveryService()
+
+            if tool_name == "similar_leads_discover":
+                # Start discovery process
+                reference_company_id = tool_input.get('reference_company_id')
+                reference_company_name = tool_input.get('reference_company_name')
+
+                # Look up company by ID or name
+                if reference_company_id:
+                    reference_company = Company.query.filter_by(
+                        id=reference_company_id,
+                        tenant_id=tenant.id
+                    ).first()
+                elif reference_company_name:
+                    reference_company = Company.query.filter_by(
+                        tenant_id=tenant.id
+                    ).filter(Company.name.ilike(f'%{reference_company_name}%')).first()
+                else:
+                    return {"error": "Please provide either reference_company_id or reference_company_name"}
+
+                if not reference_company:
+                    return {"error": f"Reference company not found in your CRM"}
+
+                # Parse criteria
+                criteria = tool_input.get('criteria', {
+                    'industry': True,
+                    'business_model': True,
+                    'tech_stack': True,
+                    'company_size': True
+                })
+
+                max_results = tool_input.get('max_results', 20)
+
+                # Create and start discovery
+                discovery = service.create_discovery(
+                    tenant_id=tenant.id,
+                    reference_company_id=reference_company.id,
+                    criteria=criteria,
+                    max_results=max_results,
+                    initiated_by='agent',
+                    user_id=user.id if user else None,
+                    agent_id=agent.id
+                )
+
+                return {
+                    "success": True,
+                    "discovery_id": discovery.id,
+                    "reference_company": reference_company.name,
+                    "status": "processing",
+                    "message": f"Started discovering leads similar to {reference_company.name}. This may take 5-10 minutes.",
+                    "estimated_time": "5-10 minutes"
+                }
+
+            elif tool_name == "similar_leads_get_status":
+                # Get discovery status
+                discovery_id = tool_input.get('discovery_id')
+
+                if not discovery_id:
+                    # Get most recent discovery for this tenant
+                    discovery = SimilarLeadDiscovery.query.filter_by(
+                        tenant_id=tenant.id
+                    ).order_by(SimilarLeadDiscovery.created_at.desc()).first()
+                else:
+                    discovery = SimilarLeadDiscovery.query.filter_by(
+                        id=discovery_id,
+                        tenant_id=tenant.id
+                    ).first()
+
+                if not discovery:
+                    return {
+                        "success": True,
+                        "status": "not_found",
+                        "message": "No similar lead discovery found"
+                    }
+
+                response = {
+                    "success": True,
+                    "discovery_id": discovery.id,
+                    "reference_company": discovery.reference_company_name,
+                    "status": discovery.status,
+                    "progress_percentage": discovery.progress_percentage,
+                    "progress_message": discovery.progress_message
+                }
+
+                if discovery.status == 'completed':
+                    response.update({
+                        "discovered_count": discovery.discovered_count,
+                        "leads_created": discovery.leads_created,
+                        "summary": discovery.discovery_summary,
+                        "completed_at": discovery.completed_at.isoformat() if discovery.completed_at else None
+                    })
+                elif discovery.status == 'failed':
+                    response.update({
+                        "error": discovery.error_message
+                    })
+
+                return response
+
+            elif tool_name == "similar_leads_list_discoveries":
+                # List recent discoveries
+                limit = tool_input.get('limit', 10)
+
+                discoveries = SimilarLeadDiscovery.query.filter_by(
+                    tenant_id=tenant.id
+                ).order_by(SimilarLeadDiscovery.created_at.desc()).limit(limit).all()
+
+                return {
+                    "success": True,
+                    "discoveries": [
+                        {
+                            "id": d.id,
+                            "reference_company": d.reference_company_name,
+                            "status": d.status,
+                            "discovered_count": d.discovered_count,
+                            "leads_created": d.leads_created,
+                            "created_at": d.created_at.isoformat()
+                        }
+                        for d in discoveries
+                    ]
+                }
+
+            else:
+                return {"error": f"Unknown similar lead discovery tool: {tool_name}"}
+
+        except Exception as e:
+            error_msg = f"Error executing similar lead discovery tool {tool_name}: {str(e)}"
+            print(f"[SIMILAR_LEADS] ERROR: {error_msg}")
             current_app.logger.error(error_msg)
             import traceback
             traceback.print_exc()

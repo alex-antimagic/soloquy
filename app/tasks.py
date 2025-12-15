@@ -54,3 +54,47 @@ def run_competitive_analysis(analysis_id):
                 db.session.commit()
 
             raise
+
+
+@job('default', connection=redis_conn, timeout='30m')
+def run_similar_lead_discovery(discovery_id):
+    """
+    Background job to discover similar leads
+
+    Args:
+        discovery_id: ID of the SimilarLeadDiscovery to process
+
+    This job:
+    1. Analyzes reference company profile
+    2. Searches enrichment cache, uses AI, and Google search
+    3. Scores and ranks similar companies
+    4. Auto-creates Lead records with AI Suggested status
+    5. Updates discovery status to completed/failed
+    """
+    from app import create_app, db
+    from app.services.similar_lead_discovery_service import SimilarLeadDiscoveryService
+
+    app = create_app()
+
+    with app.app_context():
+        try:
+            print(f"[SIMILAR_LEADS] Starting discovery {discovery_id}")
+            service = SimilarLeadDiscoveryService()
+            service.run_discovery(discovery_id)
+            print(f"[SIMILAR_LEADS] Completed discovery {discovery_id}")
+            return {"status": "completed", "discovery_id": discovery_id}
+
+        except Exception as e:
+            print(f"[SIMILAR_LEADS] Error in discovery {discovery_id}: {type(e).__name__}: {e}")
+            import traceback
+            traceback.print_exc()
+
+            # Mark discovery as failed
+            from app.models.similar_lead_discovery import SimilarLeadDiscovery
+            discovery = SimilarLeadDiscovery.query.get(discovery_id)
+            if discovery:
+                discovery.status = 'failed'
+                discovery.error_message = str(e)
+                db.session.commit()
+
+            raise

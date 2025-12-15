@@ -47,6 +47,12 @@ class Lead(db.Model):
     owner_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     assigned_to_agent_id = db.Column(db.Integer, db.ForeignKey('agents.id'))  # AI agent can handle lead
 
+    # Similar lead tracking
+    similar_to_company_id = db.Column(db.Integer, db.ForeignKey('companies.id'))  # Reference company
+    similarity_score = db.Column(db.Float)  # 0.0-1.0 similarity rating
+    similarity_rationale = db.Column(db.Text)  # AI explanation of similarity
+    discovery_id = db.Column(db.Integer, db.ForeignKey('similar_lead_discoveries.id'))  # Parent discovery job
+
     # Timestamps
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -56,6 +62,8 @@ class Lead(db.Model):
     tenant = db.relationship('Tenant', backref='leads')
     owner = db.relationship('User', foreign_keys=[owner_id], backref='owned_leads')
     assigned_agent = db.relationship('Agent', foreign_keys=[assigned_to_agent_id], backref='assigned_leads')
+    similar_to_company = db.relationship('Company', foreign_keys=[similar_to_company_id])
+    discovery = db.relationship('SimilarLeadDiscovery', foreign_keys=[discovery_id])
 
     def __repr__(self):
         return f'<Lead {self.first_name} {self.last_name}>'
@@ -101,6 +109,10 @@ class Lead(db.Model):
             'converted_at': self.converted_at.isoformat() if self.converted_at else None,
             'owner_id': self.owner_id,
             'assigned_to_agent_id': self.assigned_to_agent_id,
+            'similar_to_company_id': self.similar_to_company_id,
+            'similarity_score': self.similarity_score,
+            'similarity_rationale': self.similarity_rationale,
+            'discovery_id': self.discovery_id,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
             'last_contacted_at': self.last_contacted_at.isoformat() if self.last_contacted_at else None

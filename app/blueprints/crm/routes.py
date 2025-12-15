@@ -750,3 +750,114 @@ def create_activity():
     db.session.commit()
 
     return jsonify(activity.to_dict()), 201
+
+
+# ========== SIMILAR LEAD DISCOVERY ROUTES ==========
+
+@crm_bp.route('/companies/<int:company_id>/find-similar', methods=['POST'])
+@login_required
+def find_similar_leads(company_id):
+    """Trigger similar lead discovery for a company"""
+    from flask import flash, redirect, url_for
+    from app.services.similar_lead_discovery_service import SimilarLeadDiscoveryService
+
+    company = Company.query.filter_by(
+        id=company_id,
+        tenant_id=g.current_tenant.id
+    ).first_or_404()
+
+    try:
+        # Parse criteria from form
+        criteria = {
+            'industry': request.form.get('criteria_industry') == 'on',
+            'business_model': request.form.get('criteria_business_model') == 'on',
+            'tech_stack': request.form.get('criteria_tech_stack') == 'on',
+            'company_size': request.form.get('criteria_company_size') == 'on'
+        }
+
+        max_results = int(request.form.get('max_results', 20))
+
+        # Create discovery
+        service = SimilarLeadDiscoveryService()
+        discovery = service.create_discovery(
+            tenant_id=g.current_tenant.id,
+            reference_company_id=company.id,
+            criteria=criteria,
+            max_results=max_results,
+            initiated_by='ui',
+            user_id=current_user.id
+        )
+
+        flash(f'Started discovering leads similar to {company.name}. This may take 5-10 minutes.', 'success')
+        return redirect(url_for('crm.similar_lead_discovery_status', discovery_id=discovery.id))
+
+    except Exception as e:
+        flash(f'Error starting discovery: {str(e)}', 'danger')
+        return redirect(url_for('crm.company_detail', company_id=company.id))
+
+
+@crm_bp.route('/discoveries/<int:discovery_id>')
+@login_required
+def similar_lead_discovery_status(discovery_id):
+    """View status and results of similar lead discovery"""
+    from app.models.similar_lead_discovery import SimilarLeadDiscovery
+
+    discovery = SimilarLeadDiscovery.query.filter_by(
+        id=discovery_id,
+        tenant_id=g.current_tenant.id
+    ).first_or_404()
+
+    # Get created leads if completed
+    discovered_leads = []
+    if discovery.status == 'completed':
+        discovered_leads = Lead.query.filter_by(
+            tenant_id=g.current_tenant.id,
+            discovery_id=discovery.id
+        ).order_by(Lead.similarity_score.desc()).all()
+
+    return render_template('crm/similar_lead_discovery_status.html',
+                          title=f'Similar Lead Discovery - {discovery.reference_company_name}',
+                          discovery=discovery,
+                          discovered_leads=discovered_leads)
+
+
+@crm_bp.route('/discoveries')
+@login_required
+def similar_lead_discoveries():
+    """List all similar lead discovery jobs"""
+    from app.models.similar_lead_discovery import SimilarLeadDiscovery
+
+    page = request.args.get('page', 1, type=int)
+    per_page = 20
+
+    discoveries = SimilarLeadDiscovery.query.filter_by(
+        tenant_id=g.current_tenant.id
+    ).order_by(SimilarLeadDiscovery.created_at.desc()).paginate(
+        page=page, per_page=per_page, error_out=False
+    )
+
+    return render_template('crm/similar_lead_discoveries.html',
+                          title='Similar Lead Discoveries',
+                          discoveries=discoveries)
+
+
+@crm_bp.route('/api/discoveries/<int:discovery_id>/status')
+@login_required
+def api_discovery_status(discovery_id):
+    """API endpoint for polling discovery status"""
+    from app.models.similar_lead_discovery import SimilarLeadDiscovery
+
+    discovery = SimilarLeadDiscovery.query.filter_by(
+        id=discovery_id,
+        tenant_id=g.current_tenant.id
+    ).first_or_404()
+
+    return jsonify({
+        'id': discovery.id,
+        'status': discovery.status,
+        'progress_percentage': discovery.progress_percentage,
+        'progress_message': discovery.progress_message,
+        'discovered_count': discovery.discovered_count,
+        'leads_created': discovery.leads_created,
+        'error_message': discovery.error_message
+    })
