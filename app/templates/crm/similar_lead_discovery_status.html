@@ -1,0 +1,261 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <!-- Header -->
+            <div class="mb-4">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="{{ url_for('crm.index') }}">CRM</a></li>
+                        <li class="breadcrumb-item"><a href="{{ url_for('crm.companies') }}">Companies</a></li>
+                        <li class="breadcrumb-item"><a href="{{ url_for('crm.company_detail', company_id=discovery.reference_company_id) }}">{{ discovery.reference_company_name }}</a></li>
+                        <li class="breadcrumb-item active">Competitor Discovery</li>
+                    </ol>
+                </nav>
+            </div>
+
+            {% if discovery.status in ['pending', 'processing'] %}
+            <!-- Progress Card -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center py-5">
+                    <div class="mb-4">
+                        <div class="spinner-border text-primary" role="status" style="width: 4rem; height: 4rem;">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+
+                    <h3 class="mb-3">Finding Competitors for {{ discovery.reference_company_name }}...</h3>
+                    <p class="text-muted mb-4">
+                        Searching for similar companies using AI analysis, web search, and cached data.
+                        <br>This typically takes 5-10 minutes.
+                    </p>
+
+                    <!-- Progress Bar -->
+                    <div class="mb-4">
+                        <div class="progress" style="height: 30px;">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated"
+                                 role="progressbar"
+                                 style="width: {{ discovery.progress_percentage or 0 }}%"
+                                 id="progressBar">
+                                <span id="progressPercentage">{{ discovery.progress_percentage or 0 }}%</span>
+                            </div>
+                        </div>
+                        <p class="text-muted mt-2" id="progressMessage">
+                            {{ discovery.progress_message or 'Initializing...' }}
+                        </p>
+                    </div>
+
+                    <!-- Status -->
+                    <div class="alert alert-info mb-4" role="alert">
+                        <div class="d-flex align-items-center justify-content-center">
+                            <i class="bi bi-info-circle me-2 fs-5"></i>
+                            <div>
+                                <strong>Status:</strong> <span id="statusText">{{ discovery.status|title }}</span>
+                                <br>
+                                <small>Started {{ discovery.created_at.strftime('%I:%M %p') }}</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="d-flex gap-2 justify-content-center">
+                        <a href="{{ url_for('crm.company_detail', company_id=discovery.reference_company_id) }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-1"></i>Back to Company
+                        </a>
+                        <a href="{{ url_for('crm.similar_lead_discoveries') }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-list me-1"></i>View All Discoveries
+                        </a>
+                    </div>
+
+                    <!-- Auto-refresh notice -->
+                    <p class="text-muted small mt-3 mb-0">
+                        <i class="bi bi-clock me-1"></i>This page auto-updates every 3 seconds
+                    </p>
+                </div>
+            </div>
+
+            <!-- Helpful Tips -->
+            <div class="card border-0 mt-4">
+                <div class="card-body">
+                    <h6 class="mb-3"><i class="bi bi-lightbulb me-2"></i>While You Wait...</h6>
+                    <ul class="small mb-0">
+                        <li>The system searches multiple sources: enrichment cache, AI analysis, and Google search</li>
+                        <li>Discovered companies are scored for similarity using AI</li>
+                        <li>High-scoring companies will be auto-created as leads in your CRM</li>
+                        <li>Feel free to close this page - the discovery continues in the background</li>
+                    </ul>
+                </div>
+            </div>
+
+            {% elif discovery.status == 'completed' %}
+            <!-- Results Card -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-4">
+                        <div>
+                            <h3 class="mb-2">Discovery Complete!</h3>
+                            <p class="text-muted mb-0">
+                                Found <strong>{{ discovery.discovered_count }}</strong> similar companies,
+                                created <strong>{{ discovery.leads_created }}</strong> new leads
+                            </p>
+                        </div>
+                        <span class="badge bg-success fs-6">Completed</span>
+                    </div>
+
+                    {% if discovery.discovery_summary %}
+                    <div class="alert alert-info mb-4">
+                        <i class="bi bi-info-circle me-2"></i>
+                        {{ discovery.discovery_summary }}
+                    </div>
+                    {% endif %}
+
+                    {% if discovered_leads %}
+                    <h5 class="mb-3">Discovered Competitors</h5>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Company</th>
+                                    <th>Similarity Score</th>
+                                    <th>Rationale</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for lead in discovered_leads %}
+                                <tr>
+                                    <td>
+                                        <div>
+                                            <strong>{{ lead.company_name }}</strong>
+                                            {% if lead.website %}
+                                            <br><small class="text-muted">{{ lead.website }}</small>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        {% if lead.similarity_score %}
+                                        <span class="badge bg-{{ 'success' if lead.similarity_score >= 0.8 else 'primary' if lead.similarity_score >= 0.6 else 'secondary' }}">
+                                            {{ (lead.similarity_score * 100)|int }}%
+                                        </span>
+                                        {% else %}
+                                        <span class="text-muted">N/A</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <small>{{ lead.similarity_rationale[:100] }}{% if lead.similarity_rationale and lead.similarity_rationale|length > 100 %}...{% endif %}</small>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{{ 'info' if lead.lifecycle_stage == 'lead' else 'success' }}">
+                                            {{ lead.lifecycle_stage|default('lead')|title }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <a href="{{ url_for('crm.lead_detail', lead_id=lead.id) }}" class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-eye"></i> View
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-inbox fs-1"></i>
+                        <p class="mb-0">No similar companies found matching the criteria</p>
+                    </div>
+                    {% endif %}
+
+                    <div class="mt-4">
+                        <a href="{{ url_for('crm.company_detail', company_id=discovery.reference_company_id) }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-1"></i>Back to Company
+                        </a>
+                        <a href="{{ url_for('crm.similar_lead_discoveries') }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-list me-1"></i>View All Discoveries
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            {% elif discovery.status == 'failed' %}
+            <!-- Error Card -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center py-5">
+                    <div class="mb-4">
+                        <i class="bi bi-exclamation-triangle text-danger" style="font-size: 4rem;"></i>
+                    </div>
+
+                    <h3 class="mb-3 text-danger">Discovery Failed</h3>
+                    <p class="text-muted mb-4">
+                        An error occurred while searching for similar companies.
+                    </p>
+
+                    {% if discovery.error_message %}
+                    <div class="alert alert-danger mb-4">
+                        <strong>Error:</strong> {{ discovery.error_message }}
+                    </div>
+                    {% endif %}
+
+                    <div class="d-flex gap-2 justify-content-center">
+                        <a href="{{ url_for('crm.company_detail', company_id=discovery.reference_company_id) }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-1"></i>Back to Company
+                        </a>
+                        <button onclick="window.location.reload()" class="btn btn-primary">
+                            <i class="bi bi-arrow-clockwise me-1"></i>Try Again
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% if discovery.status in ['pending', 'processing'] %}
+<script>
+// Poll for status updates every 3 seconds
+function updateStatus() {
+    fetch('{{ url_for("crm.similar_lead_discovery_status_api", discovery_id=discovery.id) }}')
+        .then(response => response.json())
+        .then(data => {
+            // Update progress bar
+            if (data.progress_percentage !== undefined) {
+                const progressBar = document.getElementById('progressBar');
+                const progressPercentage = document.getElementById('progressPercentage');
+                progressBar.style.width = data.progress_percentage + '%';
+                progressPercentage.textContent = data.progress_percentage + '%';
+            }
+
+            // Update progress message
+            if (data.progress_message) {
+                document.getElementById('progressMessage').textContent = data.progress_message;
+            }
+
+            // Update status text
+            if (data.status) {
+                const statusText = document.getElementById('statusText');
+                statusText.textContent = data.status.charAt(0).toUpperCase() + data.status.slice(1);
+            }
+
+            // Redirect if completed or failed
+            if (data.status === 'completed' || data.status === 'failed') {
+                window.location.reload();
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching status:', error);
+        });
+}
+
+// Poll every 3 seconds
+setInterval(updateStatus, 3000);
+
+// Initial update after 1 second
+setTimeout(updateStatus, 1000);
+</script>
+{% endif %}
+
+{% endblock %}

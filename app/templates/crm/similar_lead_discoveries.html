@@ -1,0 +1,160 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-2">
+                    <li class="breadcrumb-item"><a href="{{ url_for('crm.index') }}">CRM</a></li>
+                    <li class="breadcrumb-item active">Competitor Discoveries</li>
+                </ol>
+            </nav>
+            <h2 class="mb-0">Competitor Discoveries</h2>
+            <p class="text-muted">History of similar company searches</p>
+        </div>
+    </div>
+
+    <!-- Discoveries List -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            {% if discoveries.items %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Reference Company</th>
+                            <th>Status</th>
+                            <th>Discovered</th>
+                            <th>Leads Created</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for discovery in discoveries.items %}
+                        <tr>
+                            <td>
+                                <a href="{{ url_for('crm.company_detail', company_id=discovery.reference_company_id) }}" class="text-decoration-none">
+                                    <strong>{{ discovery.reference_company_name }}</strong>
+                                </a>
+                                {% if discovery.similarity_criteria %}
+                                <br>
+                                <small class="text-muted">
+                                    {% set criteria = discovery.similarity_criteria | from_json %}
+                                    {% if criteria %}
+                                        Criteria:
+                                        {% if criteria.industry %}<span class="badge bg-secondary badge-sm">Industry</span>{% endif %}
+                                        {% if criteria.business_model %}<span class="badge bg-secondary badge-sm">Business Model</span>{% endif %}
+                                        {% if criteria.tech_stack %}<span class="badge bg-secondary badge-sm">Tech Stack</span>{% endif %}
+                                        {% if criteria.company_size %}<span class="badge bg-secondary badge-sm">Company Size</span>{% endif %}
+                                    {% endif %}
+                                </small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-{{ 'success' if discovery.status == 'completed' else 'warning' if discovery.status == 'processing' else 'secondary' if discovery.status == 'pending' else 'danger' }}">
+                                    {{ discovery.status|title }}
+                                </span>
+                                {% if discovery.status == 'processing' and discovery.progress_percentage %}
+                                <br><small class="text-muted">{{ discovery.progress_percentage }}%</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <strong>{{ discovery.discovered_count or 0 }}</strong>
+                                {% if discovery.discovered_count %}
+                                <small class="text-muted">companies</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <strong>{{ discovery.leads_created or 0 }}</strong>
+                                {% if discovery.leads_created %}
+                                <small class="text-muted">leads</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <small>{{ discovery.created_at.strftime('%b %d, %Y %I:%M %p') }}</small>
+                                {% if discovery.initiated_by == 'agent' and discovery.initiated_by_agent %}
+                                <br><small class="text-muted">
+                                    <i class="bi bi-robot"></i> {{ discovery.initiated_by_agent.name }}
+                                </small>
+                                {% elif discovery.initiated_by == 'ui' and discovery.initiated_by_user %}
+                                <br><small class="text-muted">
+                                    <i class="bi bi-person"></i> {{ discovery.initiated_by_user.full_name }}
+                                </small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{{ url_for('crm.similar_lead_discovery_status', discovery_id=discovery.id) }}"
+                                   class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye"></i> View
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if discoveries.pages > 1 %}
+            <nav aria-label="Page navigation" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    <li class="page-item {% if not discoveries.has_prev %}disabled{% endif %}">
+                        <a class="page-link" href="{{ url_for('crm.similar_lead_discoveries', page=discoveries.prev_num) if discoveries.has_prev else '#' }}">
+                            Previous
+                        </a>
+                    </li>
+
+                    {% for page_num in discoveries.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+                        {% if page_num %}
+                            <li class="page-item {% if page_num == discoveries.page %}active{% endif %}">
+                                <a class="page-link" href="{{ url_for('crm.similar_lead_discoveries', page=page_num) }}">
+                                    {{ page_num }}
+                                </a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link">...</span>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+
+                    <li class="page-item {% if not discoveries.has_next %}disabled{% endif %}">
+                        <a class="page-link" href="{{ url_for('crm.similar_lead_discoveries', page=discoveries.next_num) if discoveries.has_next else '#' }}">
+                            Next
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+            {% endif %}
+
+            {% else %}
+            <!-- Empty State -->
+            <div class="text-center text-muted py-5">
+                <i class="bi bi-search fs-1"></i>
+                <h5 class="mt-3">No Discoveries Yet</h5>
+                <p class="mb-4">Start finding competitors for your leads from any company detail page.</p>
+                <a href="{{ url_for('crm.companies') }}" class="btn btn-primary">
+                    <i class="bi bi-building me-1"></i>Browse Companies
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Info Card -->
+    <div class="card border-0 mt-4">
+        <div class="card-body">
+            <h6 class="mb-3"><i class="bi bi-info-circle me-2"></i>About Competitor Discovery</h6>
+            <ul class="small mb-0">
+                <li>Find companies similar to your leads to expand your prospecting efforts</li>
+                <li>Discoveries use AI analysis, Google search, and cached company data</li>
+                <li>High-scoring similar companies are automatically added as leads in your CRM</li>
+                <li>Each discovery tracks which criteria were used for the search</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}

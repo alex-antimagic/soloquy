@@ -531,6 +531,75 @@
     </div>
 </div>
 
+<!-- Find Competitors Modal -->
+<div class="modal fade" id="findCompetitorsModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Find Competitors for {{ company.name }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('crm.find_similar_leads', company_id=company.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <div class="modal-body">
+                    <p class="text-muted mb-3">
+                        Select criteria to find companies similar to {{ company.name }}.
+                        These will become potential leads for you to pursue.
+                    </p>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Similarity Criteria</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="criteria_industry"
+                                   id="criteriaIndustry" checked>
+                            <label class="form-check-label" for="criteriaIndustry">
+                                Industry / Market Focus
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="criteria_business_model"
+                                   id="criteriaBusinessModel" checked>
+                            <label class="form-check-label" for="criteriaBusinessModel">
+                                Business Model / Products
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="criteria_tech_stack"
+                                   id="criteriaTechStack">
+                            <label class="form-check-label" for="criteriaTechStack">
+                                Tech Stack / Digital Presence
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="criteria_company_size"
+                                   id="criteriaCompanySize" checked>
+                            <label class="form-check-label" for="criteriaCompanySize">
+                                Company Size / Revenue
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="maxResults" class="form-label fw-bold">
+                            Maximum Results
+                            <span class="text-muted fw-normal" id="maxResultsValue">20</span>
+                        </label>
+                        <input type="range" class="form-range" id="maxResults" name="max_results"
+                               min="5" max="50" value="20"
+                               oninput="document.getElementById('maxResultsValue').textContent = this.value">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-search"></i> Start Discovery
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
@@ -591,18 +660,8 @@ function addContact() {
 }
 
 function findCompetitors() {
-    // Redirect to website competitors page or trigger agent-based discovery
-    const companyName = '{{ company.name }}';
-    const companyId = {{ company.id }};
-
-    // Option 1: Redirect to website competitors page
-    // window.location.href = '{{ url_for("website.competitors") }}';
-
-    // Option 2: Show modal or trigger agent conversation
-    // For now, show guidance on using the feature
-    if (confirm(`Find competitors for ${companyName}?\n\nYou can:\n1. Use the Website > Competitors page to analyze competitors\n2. Ask an agent: "Find competitors for ${companyName}"\n3. Use Find Similar Leads to discover similar companies\n\nWould you like to go to the Competitors page?`)) {
-        window.location.href = '{{ url_for("website.competitors") }}';
-    }
+    const modal = new bootstrap.Modal(document.getElementById('findCompetitorsModal'));
+    modal.show();
 }
 </script>
 {% endblock %}
