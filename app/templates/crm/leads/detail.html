@@ -247,10 +247,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <form method="POST" action="{{ url_for('crm.lead_delete', lead_id=lead.id) }}" style="display: inline;">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn btn-danger">Delete Lead</button>
-                </form>
+                <button type="button" class="btn btn-danger" onclick="confirmDelete()">Delete Lead</button>
             </div>
         </div>
     </div>
@@ -279,6 +276,26 @@
 function deleteLead() {
     const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
     modal.show();
+}
+
+function confirmDelete() {
+    fetch('{{ url_for("crm.delete_lead", lead_id=lead.id) }}', {
+        method: 'DELETE',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token() }}'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            window.location.href = '{{ url_for("crm.leads") }}';
+        } else {
+            alert('Error: ' + (data.error || 'Failed to delete lead'));
+        }
+    })
+    .catch(error => {
+        alert('Error deleting lead: ' + error);
+    });
 }
 
 function convertToCustomer() {
