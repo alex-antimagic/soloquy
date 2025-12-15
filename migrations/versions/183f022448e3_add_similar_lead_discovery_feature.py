@@ -52,7 +52,7 @@ def upgrade():
         batch_op.create_index(batch_op.f('ix_similar_lead_discoveries_tenant_id'), ['tenant_id'], unique=False)
 
     with op.batch_alter_table('agents', schema=None) as batch_op:
-        batch_op.add_column(sa.Column('enable_similar_lead_discovery', sa.Boolean(), nullable=False))
+        batch_op.add_column(sa.Column('enable_similar_lead_discovery', sa.Boolean(), nullable=False, server_default='false'))
 
     with op.batch_alter_table('leads', schema=None) as batch_op:
         batch_op.add_column(sa.Column('similar_to_company_id', sa.Integer(), nullable=True))
