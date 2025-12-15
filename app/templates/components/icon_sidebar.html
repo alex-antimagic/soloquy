@@ -62,7 +62,7 @@
         <!-- Tasks/Projects -->
         {% if 'projects' in enabled_applets or 'tasks' in enabled_applets %}
         <a href="{{ url_for('projects.index') }}"
-           class="icon-sidebar-item {% if 'projects' in request.endpoint %}active{% endif %}"
+           class="icon-sidebar-item {% if request.endpoint and 'projects' in request.endpoint %}active{% endif %}"
            data-view="projects">
             <i class="bi bi-kanban"></i>
             <span class="icon-label">Tasks</span>
@@ -72,7 +72,7 @@
         <!-- CRM -->
         {% if 'crm' in enabled_applets %}
         <a href="{{ url_for('crm.index') }}"
-           class="icon-sidebar-item {% if 'crm' in request.endpoint %}active{% endif %}">
+           class="icon-sidebar-item {% if request.endpoint and 'crm' in request.endpoint %}active{% endif %}">
             <i class="bi bi-people"></i>
             <span class="icon-label">CRM</span>
         </a>
@@ -81,7 +81,7 @@
         <!-- Support -->
         {% if 'support' in enabled_applets %}
         <a href="{{ url_for('support.index') }}"
-           class="icon-sidebar-item {% if 'support' in request.endpoint %}active{% endif %}"
+           class="icon-sidebar-item {% if request.endpoint and 'support' in request.endpoint %}active{% endif %}"
            data-view="support">
             <i class="bi bi-headset"></i>
             <span class="icon-label">Support</span>
@@ -91,7 +91,7 @@
         <!-- CMS (Content Management System) -->
         {% if 'website' in enabled_applets %}
         <a href="{{ url_for('website.dashboard') }}"
-           class="icon-sidebar-item {% if 'website' in request.endpoint %}active{% endif %}"
+           class="icon-sidebar-item {% if request.endpoint and 'website' in request.endpoint %}active{% endif %}"
            data-view="website">
             <i class="bi bi-globe"></i>
             <span class="icon-label">CMS</span>
@@ -101,7 +101,7 @@
         <!-- HR/People -->
         {% if 'hr' in enabled_applets %}
         <a href="{{ url_for('hr.index') }}"
-           class="icon-sidebar-item {% if 'hr' in request.endpoint %}active{% endif %}"
+           class="icon-sidebar-item {% if request.endpoint and 'hr' in request.endpoint %}active{% endif %}"
            data-view="hr">
             <i class="bi bi-people-fill"></i>
             <span class="icon-label">HR</span>
@@ -111,7 +111,7 @@
         <!-- Files -->
         {% if 'files' in enabled_applets %}
         <a href="{{ url_for('files.index') }}"
-           class="icon-sidebar-item {% if 'files' in request.endpoint %}active{% endif %}"
+           class="icon-sidebar-item {% if request.endpoint and 'files' in request.endpoint %}active{% endif %}"
            data-view="files">
             <i class="bi bi-folder"></i>
             <span class="icon-label">Files</span>
@@ -121,7 +121,7 @@
         <!-- Integrations -->
         {% if 'integrations' in enabled_applets %}
         <a href="{{ url_for('integrations.index') }}"
-           class="icon-sidebar-item {% if 'integrations' in request.endpoint %}active{% endif %}"
+           class="icon-sidebar-item {% if request.endpoint and 'integrations' in request.endpoint %}active{% endif %}"
            data-view="integrations">
             <i class="bi bi-plug"></i>
             <span class="icon-label">Apps</span>
@@ -136,7 +136,7 @@
         <!-- System Admin (Superadmin only) -->
         {% if current_user.is_superadmin %}
         <a href="{{ url_for('admin.dashboard') }}"
-           class="icon-sidebar-item {% if 'admin' in request.endpoint %}active{% endif %}"
+           class="icon-sidebar-item {% if request.endpoint and 'admin' in request.endpoint %}active{% endif %}"
            title="System Administration">
             <i class="bi bi-shield-lock text-danger"></i>
             <span class="icon-label">Admin</span>
