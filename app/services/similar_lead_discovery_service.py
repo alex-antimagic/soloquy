@@ -450,11 +450,8 @@ Return ONLY a JSON array with this exact structure (no additional text):
         # Limit to 2 search queries to avoid rate limits
         for query in search_queries[:2]:
             try:
-                # Use LeadEnrichmentService's Google search capability
-                from app.services.lead_enrichment_service import lead_enrichment_service
-
-                # This would need to be implemented in LeadEnrichmentService
-                # For now, return empty to avoid errors
+                # Google search integration would go here
+                # For now, we rely on cache and AI discovery
                 pass
 
             except Exception as e:
