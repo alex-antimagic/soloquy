@@ -74,18 +74,13 @@ class LeadEnrichmentService:
         if not domain:
             return None
 
-        # Clearbit Logo API - free, no API key required
-        logo_url = f"https://logo.clearbit.com/{domain}"
+        # Google's Favicon Service - free, reliable alternative to Clearbit
+        # Uses Google's S2 service which provides high-quality favicons
+        logo_url = f"https://www.google.com/s2/favicons?domain={domain}&sz=128"
 
-        try:
-            # Verify the logo exists by making a HEAD request
-            response = requests.head(logo_url, timeout=5, allow_redirects=True)
-            if response.status_code == 200:
-                return logo_url
-        except Exception as e:
-            print(f"Error fetching logo for {domain}: {str(e)}")
-
-        return None
+        # Google's favicon service is highly reliable, so we return it directly
+        # If the domain doesn't have a favicon, Google returns a default globe icon
+        return logo_url
 
     def fetch_website_html(self, url, timeout=10):
         """Fetch HTML content from a website"""

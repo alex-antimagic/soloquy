@@ -108,6 +108,9 @@
             <button class="btn btn-outline-secondary" onclick="editCompany()">
                 <i class="bi bi-pencil"></i> Edit
             </button>
+            <button class="btn btn-outline-info" onclick="findCompetitors()">
+                <i class="bi bi-search"></i> Find Competitors
+            </button>
             <button class="btn btn-outline-primary" onclick="createActivity()">
                 <i class="bi bi-plus-circle"></i> Add Note
             </button>
@@ -585,6 +588,21 @@ function createDeal() {
 
 function addContact() {
     alert('Add contact functionality coming soon!');
+}
+
+function findCompetitors() {
+    // Redirect to website competitors page or trigger agent-based discovery
+    const companyName = '{{ company.name }}';
+    const companyId = {{ company.id }};
+
+    // Option 1: Redirect to website competitors page
+    // window.location.href = '{{ url_for("website.competitors") }}';
+
+    // Option 2: Show modal or trigger agent conversation
+    // For now, show guidance on using the feature
+    if (confirm(`Find competitors for ${companyName}?\n\nYou can:\n1. Use the Website > Competitors page to analyze competitors\n2. Ask an agent: "Find competitors for ${companyName}"\n3. Use Find Similar Leads to discover similar companies\n\nWould you like to go to the Competitors page?`)) {
+        window.location.href = '{{ url_for("website.competitors") }}';
+    }
 }
 </script>
 {% endblock %}

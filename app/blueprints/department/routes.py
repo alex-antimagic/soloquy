@@ -240,6 +240,12 @@ def edit_agent(agent_id):
         agent.enable_gmail = form.enable_gmail.data if hasattr(form, 'enable_gmail') else agent.enable_gmail
         agent.enable_outlook = form.enable_outlook.data if hasattr(form, 'enable_outlook') else agent.enable_outlook
         agent.enable_google_drive = form.enable_google_drive.data if hasattr(form, 'enable_google_drive') else agent.enable_google_drive
+        agent.enable_website_builder = form.enable_website_builder.data if hasattr(form, 'enable_website_builder') else agent.enable_website_builder
+        agent.enable_file_generation = form.enable_file_generation.data if hasattr(form, 'enable_file_generation') else agent.enable_file_generation
+        agent.enable_competitive_analysis = form.enable_competitive_analysis.data if hasattr(form, 'enable_competitive_analysis') else agent.enable_competitive_analysis
+        agent.enable_hr_management = form.enable_hr_management.data if hasattr(form, 'enable_hr_management') else agent.enable_hr_management
+        agent.enable_cross_applet_data_access = form.enable_cross_applet_data_access.data if hasattr(form, 'enable_cross_applet_data_access') else agent.enable_cross_applet_data_access
+        agent.enable_similar_lead_discovery = form.enable_similar_lead_discovery.data if hasattr(form, 'enable_similar_lead_discovery') else agent.enable_similar_lead_discovery
 
         # Update access control
         agent.access_control = form.access_control.data

@@ -86,6 +86,7 @@ class AgentForm(FlaskForm):
     enable_website_builder = BooleanField('Enable Website Builder', default=False)
     enable_file_generation = BooleanField('Enable File Generation', default=True)
     enable_competitive_analysis = BooleanField('Enable Competitive Analysis', default=False)
+    enable_similar_lead_discovery = BooleanField('Enable Similar Lead Discovery', default=False)
     enable_hr_management = BooleanField('Enable HR Management', default=False)
     enable_cross_applet_data_access = BooleanField('Enable Cross-Applet Data Access', default=True)
 
