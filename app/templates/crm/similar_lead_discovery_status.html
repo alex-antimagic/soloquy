@@ -218,7 +218,7 @@
 <script>
 // Poll for status updates every 3 seconds
 function updateStatus() {
-    fetch('{{ url_for("crm.similar_lead_discovery_status_api", discovery_id=discovery.id) }}')
+    fetch('{{ url_for("crm.api_discovery_status", discovery_id=discovery.id) }}')
         .then(response => response.json())
         .then(data => {
             // Update progress bar
