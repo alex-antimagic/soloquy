@@ -18,28 +18,69 @@
             <table class="table table-hover mb-0">
                 <thead>
                     <tr>
-                        <th>Name</th>
                         <th>Company</th>
+                        <th>Job Title</th>
                         <th>Email</th>
-                        <th>Phone</th>
+                        <th>Similarity</th>
                         <th>Status</th>
-                        <th>Score</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for lead in leads %}
                     <tr>
-                        <td><strong>{{ lead.first_name }} {{ lead.last_name }}</strong></td>
-                        <td>{{ lead.company_name or '-' }}</td>
-                        <td><a href="mailto:{{ lead.email }}">{{ lead.email or '-' }}</a></td>
-                        <td>{{ lead.phone or '-' }}</td>
-                        <td><span class="badge bg-info">{{ lead.status }}</span></td>
-                        <td><span class="badge bg-warning">{{ lead.lead_score }}</span></td>
                         <td>
-                            <button class="btn btn-sm btn-danger" onclick="deleteLead({{ lead.id }})">
-                                <i class="bi bi-trash"></i>
-                            </button>
+                            <div>
+                                <strong>{{ lead.company_name or (lead.first_name ~ ' ' ~ lead.last_name) }}</strong>
+                                {% if lead.company_website %}
+                                <br><small class="text-muted">{{ lead.company_website }}</small>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td>{{ lead.job_title or '-' }}</td>
+                        <td>
+                            {% if lead.email %}
+                            <a href="mailto:{{ lead.email }}">{{ lead.email }}</a>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if lead.similarity_score %}
+                            <span class="badge bg-{{ 'success' if lead.similarity_score >= 0.8 else 'primary' if lead.similarity_score >= 0.6 else 'secondary' }}">
+                                {{ (lead.similarity_score * 100)|int }}%
+                            </span>
+                            {% if lead.similar_to_company_id %}
+                            <br><small class="text-muted">Similar to:
+                                <a href="{{ url_for('crm.company_detail', company_id=lead.similar_to_company_id) }}">
+                                    {{ lead.similar_to_company.name if lead.similar_to_company else 'Unknown' }}
+                                </a>
+                            </small>
+                            {% endif %}
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge bg-{{ 'success' if lead.status == 'converted' else 'info' if lead.status == 'new' else 'warning' }}">
+                                {{ lead.status|default('new')|title }}
+                            </span>
+                            {% if lead.lead_source == 'ai_suggested_similar' %}
+                            <br><small class="badge bg-secondary mt-1">AI Discovery</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <a href="{{ url_for('crm.lead_detail', lead_id=lead.id) }}" class="btn btn-outline-primary">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="{{ url_for('crm.lead_edit', lead_id=lead.id) }}" class="btn btn-outline-secondary">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <button class="btn btn-outline-danger" onclick="deleteLead({{ lead.id }})">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
                         </td>
                     </tr>
                     {% endfor %}
@@ -118,7 +159,7 @@ function createLead() {
 }
 function deleteLead(id) {
     if (confirm('Delete this lead?')) {
-        fetch(`/crm/leads/${id}`, { method: 'DELETE' })
+        fetch(`/crm/leads/${id}/delete`, { method: 'DELETE' })
         .then(r => r.json()).then(() => location.reload());
     }
 }

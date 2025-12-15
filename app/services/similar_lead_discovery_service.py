@@ -548,12 +548,15 @@ Return ONLY a JSON object (no additional text):
     def _create_leads_from_discoveries(self, discovery: SimilarLeadDiscovery,
                                       discoveries: List[Dict]):
         """
-        Auto-create leads with AI Suggested status
+        Auto-create leads with AI Suggested status and enrich them
 
         Args:
             discovery: SimilarLeadDiscovery instance
             discoveries: List of discovered company dictionaries
         """
+        from app.services.lead_enrichment_service import LeadEnrichmentService
+
+        enrichment_service = LeadEnrichmentService()
         leads_created = 0
 
         for candidate in discoveries:
@@ -579,6 +582,36 @@ Return ONLY a JSON object (no additional text):
                 )
 
                 db.session.add(lead)
+                db.session.flush()  # Get lead ID for enrichment
+
+                # AUTO-ENRICH THE LEAD: Quick enrichment to populate description
+                try:
+                    print(f"[SIMILAR_LEADS] Auto-enriching lead: {lead.company_name}")
+
+                    # Get basic company info from website
+                    domain = candidate['domain']
+                    cache, needs_scraping = enrichment_service.get_or_create_cache(domain)
+
+                    # Only do basic enrichment to avoid slow discovery process
+                    if needs_scraping and domain:
+                        # Quick website scrape
+                        html = enrichment_service.fetch_website_html(domain)
+                        if html:
+                            cache.raw_html = html[:100000]  # Store first 100KB
+                            website_data = enrichment_service.parse_website_content(html)
+
+                            # Update lead description with what we found
+                            if website_data.get('meta_description'):
+                                lead.description = f"{website_data['meta_description']}\n\n{lead.description}"
+
+                            db.session.commit()
+
+                    print(f"[SIMILAR_LEADS] Enrichment completed for: {lead.company_name}")
+
+                except Exception as e:
+                    print(f"[SIMILAR_LEADS] Enrichment failed for {lead.company_name}: {e}")
+                    # Continue anyway - lead is still created
+
                 leads_created += 1
                 print(f"[SIMILAR_LEADS] Created lead: {candidate['name']}")
 

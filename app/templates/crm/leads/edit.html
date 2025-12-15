@@ -1,0 +1,203 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Breadcrumb -->
+            <nav aria-label="breadcrumb" class="mb-4">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('crm.index') }}">CRM</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('crm.leads') }}">Leads</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('crm.lead_detail', lead_id=lead.id) }}">{{ lead.company_name }}</a></li>
+                    <li class="breadcrumb-item active">Edit</li>
+                </ol>
+            </nav>
+
+            <!-- Header -->
+            <div class="mb-4">
+                <h2 class="mb-2">Edit Lead</h2>
+                <p class="text-muted">Update information for {{ lead.company_name }}</p>
+            </div>
+
+            <!-- Edit Form -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('crm.lead_update', lead_id=lead.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                        <!-- Company Information Section -->
+                        <h5 class="mb-3">
+                            <i class="bi bi-building me-2"></i>Company Information
+                        </h5>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="company_name" class="form-label">
+                                    Company Name <span class="text-danger">*</span>
+                                </label>
+                                <input type="text"
+                                       class="form-control"
+                                       id="company_name"
+                                       name="company_name"
+                                       value="{{ lead.company_name }}"
+                                       required>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label for="company_website" class="form-label">Website</label>
+                                <input type="url"
+                                       class="form-control"
+                                       id="company_website"
+                                       name="company_website"
+                                       value="{{ lead.company_website or '' }}"
+                                       placeholder="https://example.com">
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="job_title" class="form-label">Job Title</label>
+                                <input type="text"
+                                       class="form-control"
+                                       id="job_title"
+                                       name="job_title"
+                                       value="{{ lead.job_title or '' }}"
+                                       placeholder="e.g., CEO, VP Sales">
+                            </div>
+
+                            <div class="col-md-6">
+                                <label for="status" class="form-label">Status</label>
+                                <select class="form-select" id="status" name="status">
+                                    <option value="new" {% if lead.status == 'new' %}selected{% endif %}>New</option>
+                                    <option value="contacted" {% if lead.status == 'contacted' %}selected{% endif %}>Contacted</option>
+                                    <option value="qualified" {% if lead.status == 'qualified' %}selected{% endif %}>Qualified</option>
+                                    <option value="unqualified" {% if lead.status == 'unqualified' %}selected{% endif %}>Unqualified</option>
+                                    <option value="converted" {% if lead.status == 'converted' %}selected{% endif %}>Converted</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <!-- Contact Information Section -->
+                        <h5 class="mb-3">
+                            <i class="bi bi-person me-2"></i>Contact Information
+                        </h5>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="email" class="form-label">Email</label>
+                                <input type="email"
+                                       class="form-control"
+                                       id="email"
+                                       name="email"
+                                       value="{{ lead.email or '' }}"
+                                       placeholder="contact@example.com">
+                            </div>
+
+                            <div class="col-md-6">
+                                <label for="phone" class="form-label">Phone</label>
+                                <input type="tel"
+                                       class="form-control"
+                                       id="phone"
+                                       name="phone"
+                                       value="{{ lead.phone or '' }}"
+                                       placeholder="+1 (555) 123-4567">
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <!-- Notes Section -->
+                        <h5 class="mb-3">
+                            <i class="bi bi-journal-text me-2"></i>Notes
+                        </h5>
+
+                        <div class="mb-3">
+                            <label for="notes" class="form-label">Internal Notes</label>
+                            <textarea class="form-control"
+                                      id="notes"
+                                      name="notes"
+                                      rows="4"
+                                      placeholder="Add any additional notes about this lead...">{{ lead.notes or '' }}</textarea>
+                            <small class="form-text text-muted">
+                                These notes are internal and not visible to the customer.
+                            </small>
+                        </div>
+
+                        <!-- Similarity Information (Read-only) -->
+                        {% if lead.similarity_score %}
+                        <hr class="my-4">
+                        <h5 class="mb-3">
+                            <i class="bi bi-diagram-3 me-2"></i>Similarity Analysis (Read-only)
+                        </h5>
+
+                        <div class="alert alert-info">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <strong>Similarity Score:</strong>
+                                    <span class="badge bg-{{ 'success' if lead.similarity_score >= 0.8 else 'primary' if lead.similarity_score >= 0.6 else 'secondary' }}">
+                                        {{ (lead.similarity_score * 100)|int }}%
+                                    </span>
+                                </div>
+                                <div class="col-md-8">
+                                    {% if lead.similarity_rationale %}
+                                    <strong>Rationale:</strong> {{ lead.similarity_rationale }}
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Form Actions -->
+                        <hr class="my-4">
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('crm.lead_detail', lead_id=lead.id) }}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-lg me-1"></i>Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-lg me-1"></i>Save Changes
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Additional Info -->
+            <div class="card border-0 mt-4">
+                <div class="card-body">
+                    <h6 class="mb-3"><i class="bi bi-info-circle me-2"></i>Lead Information</h6>
+                    <dl class="row mb-0 small">
+                        <dt class="col-sm-3">Created:</dt>
+                        <dd class="col-sm-9">{{ lead.created_at.strftime('%B %d, %Y at %I:%M %p') if lead.created_at else 'N/A' }}</dd>
+
+                        {% if lead.updated_at %}
+                        <dt class="col-sm-3">Last Updated:</dt>
+                        <dd class="col-sm-9">{{ lead.updated_at.strftime('%B %d, %Y at %I:%M %p') }}</dd>
+                        {% endif %}
+
+                        {% if lead.source %}
+                        <dt class="col-sm-3">Source:</dt>
+                        <dd class="col-sm-9">
+                            <span class="badge bg-secondary">
+                                {{ 'AI Discovery' if lead.source == 'ai_discovery' else lead.source|title }}
+                            </span>
+                        </dd>
+                        {% endif %}
+
+                        {% if lead.discovery_id %}
+                        <dt class="col-sm-3">Discovery:</dt>
+                        <dd class="col-sm-9">
+                            <a href="{{ url_for('crm.similar_lead_discovery_status', discovery_id=lead.discovery_id) }}">
+                                View discovery details <i class="bi bi-box-arrow-up-right small"></i>
+                            </a>
+                        </dd>
+                        {% endif %}
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

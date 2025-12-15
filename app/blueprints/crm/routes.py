@@ -696,7 +696,65 @@ def create_lead():
     return jsonify(lead.to_dict()), 201
 
 
-@crm_bp.route('/leads/<int:lead_id>', methods=['DELETE'])
+@crm_bp.route('/leads/<int:lead_id>')
+@login_required
+def lead_detail(lead_id):
+    """View lead detail"""
+    lead = Lead.query.filter_by(
+        id=lead_id,
+        tenant_id=g.current_tenant.id
+    ).first_or_404()
+
+    # Get reference company if this is a similar lead
+    reference_company = None
+    if lead.similar_to_company_id:
+        reference_company = Company.query.get(lead.similar_to_company_id)
+
+    return render_template('crm/leads/detail.html',
+                          title=f'Lead: {lead.company_name}',
+                          lead=lead,
+                          reference_company=reference_company)
+
+
+@crm_bp.route('/leads/<int:lead_id>/edit', methods=['GET'])
+@login_required
+def lead_edit(lead_id):
+    """Edit lead form"""
+    lead = Lead.query.filter_by(
+        id=lead_id,
+        tenant_id=g.current_tenant.id
+    ).first_or_404()
+
+    return render_template('crm/leads/edit.html',
+                          title=f'Edit Lead: {lead.company_name}',
+                          lead=lead)
+
+
+@crm_bp.route('/leads/<int:lead_id>/update', methods=['POST'])
+@login_required
+def lead_update(lead_id):
+    """Update lead"""
+    lead = Lead.query.filter_by(
+        id=lead_id,
+        tenant_id=g.current_tenant.id
+    ).first_or_404()
+
+    # Update fields from form
+    lead.company_name = request.form.get('company_name')
+    lead.company_website = request.form.get('company_website')
+    lead.job_title = request.form.get('job_title')
+    lead.email = request.form.get('email')
+    lead.phone = request.form.get('phone')
+    lead.status = request.form.get('status')
+    lead.notes = request.form.get('notes')
+    lead.updated_at = datetime.utcnow()
+
+    db.session.commit()
+    flash('Lead updated successfully', 'success')
+    return redirect(url_for('crm.lead_detail', lead_id=lead.id))
+
+
+@crm_bp.route('/leads/<int:lead_id>/delete', methods=['DELETE'])
 @login_required
 def delete_lead(lead_id):
     """Delete a lead"""
