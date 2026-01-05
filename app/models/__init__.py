@@ -11,6 +11,7 @@ from app.models.message import Message
 from app.models.generated_file import GeneratedFile
 from app.models.task import Task
 from app.models.task_comment import TaskComment
+from app.models.task_attachment import TaskAttachment
 from app.models.project import Project, ProjectMember
 from app.models.status_column import StatusColumn
 from app.models.audit_log import AuditLog

@@ -67,6 +67,8 @@ class Task(db.Model):
     # project relationship defined in project.py
     # status_column relationship defined in status_column.py
     parent_task = db.relationship('Task', remote_side=[id], backref='subtasks')
+    attachments = db.relationship('TaskAttachment', back_populates='task',
+                                  cascade='all, delete-orphan', lazy='dynamic')
 
     def __repr__(self):
         return f'<Task {self.id}: {self.title}>'

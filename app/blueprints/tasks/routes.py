@@ -1,9 +1,12 @@
-from flask import render_template, request, jsonify, g
+from flask import render_template, request, jsonify, g, current_app
 from flask_login import login_required, current_user
 from app.blueprints.tasks import tasks_bp
 from app.models.task import Task
+from app.models.task_attachment import TaskAttachment
 from app import db
 from datetime import datetime
+from werkzeug.utils import secure_filename
+import os
 
 
 @tasks_bp.route('/')
@@ -221,10 +224,26 @@ def delete(task_id):
     if task.created_by_id != current_user.id and task.assigned_to_id != current_user.id:
         return jsonify({'error': 'Permission denied'}), 403
 
-    db.session.delete(task)
-    db.session.commit()
+    try:
+        # Delete all attachments from Cloudinary before deleting task
+        from app.services.cloudinary_service import delete_image
+        for attachment in task.attachments:
+            if attachment.cloudinary_public_id:
+                try:
+                    delete_image(attachment.cloudinary_public_id)
+                except Exception as e:
+                    print(f"[TASK DELETE] Error deleting attachment {attachment.id} from Cloudinary: {e}")
 
-    return jsonify({'success': True})
+        # Delete task (cascade will delete attachments from database)
+        db.session.delete(task)
+        db.session.commit()
+
+        return jsonify({'success': True})
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"[TASK DELETE] Error: {e}")
+        return jsonify({'error': f'Failed to delete task: {str(e)}'}), 500
 
 
 @tasks_bp.route('/<int:task_id>/update', methods=['POST'])
@@ -538,6 +557,242 @@ def task_comments(task_id):
             'success': True,
             'comment': comment.to_dict()
         }), 201
+
+
+@tasks_bp.route('/<int:task_id>/attachments/upload', methods=['POST'])
+@login_required
+def upload_attachment(task_id):
+    """Upload file attachment to task"""
+    task = Task.query.get_or_404(task_id)
+
+    # Verify tenant access
+    if task.tenant_id != g.current_tenant.id:
+        return jsonify({'error': 'Access denied'}), 403
+
+    # Check if file was uploaded
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file provided'}), 400
+
+    file = request.files['file']
+
+    if file.filename == '':
+        return jsonify({'error': 'No file selected'}), 400
+
+    try:
+        # Get file info
+        filename = secure_filename(file.filename)
+        file_content = file.read()
+        file_size = len(file_content)
+        content_type = file.content_type or 'application/octet-stream'
+
+        # Validate file size (10MB max)
+        max_size = current_app.config.get('MAX_FILE_SIZE', 10 * 1024 * 1024)
+        if file_size > max_size:
+            return jsonify({'error': f'File too large. Maximum size is {max_size / 1024 / 1024}MB'}), 400
+
+        # Validate file extension
+        allowed_extensions = current_app.config.get('ALLOWED_FILE_EXTENSIONS', set())
+        if allowed_extensions:
+            file_ext = os.path.splitext(filename)[1].lower()
+            if file_ext not in allowed_extensions:
+                return jsonify({'error': 'File type not allowed'}), 400
+
+        # Upload to Cloudinary
+        from app.services.cloudinary_service import upload_file, upload_image
+
+        # Determine if it's an image
+        is_image = content_type.startswith('image/')
+        folder = f"tasks/{task_id}"
+
+        if is_image:
+            result = upload_image(file_content, folder=folder)
+        else:
+            result = upload_file(file_content, folder=folder, filename=filename)
+
+        if not result:
+            return jsonify({'error': 'Failed to upload file to cloud storage'}), 500
+
+        # Create TaskAttachment record
+        attachment = TaskAttachment(
+            task_id=task.id,
+            filename=filename,
+            file_path=result['secure_url'],
+            file_size=file_size,
+            content_type=content_type,
+            cloudinary_public_id=result['public_id'],
+            uploaded_by_id=current_user.id
+        )
+
+        db.session.add(attachment)
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'attachment': attachment.to_dict()
+        }), 201
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ATTACHMENT UPLOAD] Error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': f'Failed to upload attachment: {str(e)}'}), 500
+
+
+@tasks_bp.route('/<int:task_id>/comments/<int:comment_id>/attachments/upload', methods=['POST'])
+@login_required
+def upload_comment_attachment(task_id, comment_id):
+    """Upload file attachment to task comment"""
+    from app.models.task_comment import TaskComment
+
+    task = Task.query.get_or_404(task_id)
+    comment = TaskComment.query.get_or_404(comment_id)
+
+    # Verify tenant access and comment belongs to task
+    if task.tenant_id != g.current_tenant.id:
+        return jsonify({'error': 'Access denied'}), 403
+
+    if comment.task_id != task.id:
+        return jsonify({'error': 'Comment does not belong to this task'}), 400
+
+    # Check if file was uploaded
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file provided'}), 400
+
+    file = request.files['file']
+
+    if file.filename == '':
+        return jsonify({'error': 'No file selected'}), 400
+
+    try:
+        # Get file info
+        filename = secure_filename(file.filename)
+        file_content = file.read()
+        file_size = len(file_content)
+        content_type = file.content_type or 'application/octet-stream'
+
+        # Validate file size (10MB max)
+        max_size = current_app.config.get('MAX_FILE_SIZE', 10 * 1024 * 1024)
+        if file_size > max_size:
+            return jsonify({'error': f'File too large. Maximum size is {max_size / 1024 / 1024}MB'}), 400
+
+        # Validate file extension
+        allowed_extensions = current_app.config.get('ALLOWED_FILE_EXTENSIONS', set())
+        if allowed_extensions:
+            file_ext = os.path.splitext(filename)[1].lower()
+            if file_ext not in allowed_extensions:
+                return jsonify({'error': 'File type not allowed'}), 400
+
+        # Upload to Cloudinary
+        from app.services.cloudinary_service import upload_file, upload_image
+
+        # Determine if it's an image
+        is_image = content_type.startswith('image/')
+        folder = f"tasks/{task_id}"
+
+        if is_image:
+            result = upload_image(file_content, folder=folder)
+        else:
+            result = upload_file(file_content, folder=folder, filename=filename)
+
+        if not result:
+            return jsonify({'error': 'Failed to upload file to cloud storage'}), 500
+
+        # Create TaskAttachment record with comment_id
+        attachment = TaskAttachment(
+            task_id=task.id,
+            comment_id=comment.id,
+            filename=filename,
+            file_path=result['secure_url'],
+            file_size=file_size,
+            content_type=content_type,
+            cloudinary_public_id=result['public_id'],
+            uploaded_by_id=current_user.id
+        )
+
+        db.session.add(attachment)
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'attachment': attachment.to_dict()
+        }), 201
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"[COMMENT ATTACHMENT UPLOAD] Error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': f'Failed to upload attachment: {str(e)}'}), 500
+
+
+@tasks_bp.route('/<int:task_id>/attachments', methods=['GET'])
+@login_required
+def list_attachments(task_id):
+    """List all attachments for a task"""
+    task = Task.query.get_or_404(task_id)
+
+    # Verify tenant access
+    if task.tenant_id != g.current_tenant.id:
+        return jsonify({'error': 'Access denied'}), 403
+
+    # Get task-level attachments (comment_id is NULL)
+    task_attachments = TaskAttachment.query.filter_by(
+        task_id=task.id,
+        comment_id=None
+    ).order_by(TaskAttachment.created_at.desc()).all()
+
+    # Get comment-level attachments
+    comment_attachments = TaskAttachment.query.filter(
+        TaskAttachment.task_id == task.id,
+        TaskAttachment.comment_id.isnot(None)
+    ).order_by(TaskAttachment.created_at.desc()).all()
+
+    return jsonify({
+        'task_id': task.id,
+        'task_attachments': [att.to_dict() for att in task_attachments],
+        'comment_attachments': [att.to_dict() for att in comment_attachments],
+        'total_count': len(task_attachments) + len(comment_attachments)
+    })
+
+
+@tasks_bp.route('/<int:task_id>/attachments/<int:attachment_id>', methods=['DELETE'])
+@login_required
+def delete_attachment(task_id, attachment_id):
+    """Delete an attachment"""
+    task = Task.query.get_or_404(task_id)
+    attachment = TaskAttachment.query.get_or_404(attachment_id)
+
+    # Verify tenant access
+    if task.tenant_id != g.current_tenant.id:
+        return jsonify({'error': 'Access denied'}), 403
+
+    # Verify attachment belongs to this task
+    if attachment.task_id != task.id:
+        return jsonify({'error': 'Attachment does not belong to this task'}), 400
+
+    # Verify permission: only uploader or task creator can delete
+    if attachment.uploaded_by_id != current_user.id and task.created_by_id != current_user.id:
+        return jsonify({'error': 'Permission denied'}), 403
+
+    try:
+        # Delete from Cloudinary
+        if attachment.cloudinary_public_id:
+            from app.services.cloudinary_service import delete_image
+            delete_image(attachment.cloudinary_public_id)
+
+        # Delete from database
+        db.session.delete(attachment)
+        db.session.commit()
+
+        return jsonify({'success': True})
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ATTACHMENT DELETE] Error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': f'Failed to delete attachment: {str(e)}'}), 500
 
 
 @tasks_bp.route('/<int:task_id>/execution-plan', methods=['GET'])
