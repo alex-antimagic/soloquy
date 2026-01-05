@@ -39,12 +39,13 @@
         border-radius: 6px;
         padding: 0.875rem;
         margin-bottom: 0.75rem;
-        cursor: grab;
+        cursor: pointer;
         transition: box-shadow 0.2s;
     }
 
     .kanban-task-card:hover {
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        border-color: var(--bs-primary);
     }
 
     .kanban-task-card.dragging {
@@ -370,6 +371,7 @@
 // Drag and Drop functionality
 const columns = document.querySelectorAll('.kanban-column-body');
 let draggedTask = null;
+let isDragging = false;
 
 columns.forEach(column => {
     new Sortable(column, {
@@ -377,6 +379,9 @@ columns.forEach(column => {
         animation: 150,
         ghostClass: 'bg-primary-subtle',
         dragClass: 'dragging',
+        onStart: function(evt) {
+            isDragging = true;
+        },
         onEnd: function(evt) {
             const taskId = evt.item.dataset.taskId;
             const newColumnId = evt.to.dataset.columnId;
@@ -403,8 +408,25 @@ columns.forEach(column => {
             .catch(error => {
                 console.error('Error:', error);
                 window.location.reload();
+            })
+            .finally(() => {
+                // Reset dragging flag after a short delay
+                setTimeout(() => {
+                    isDragging = false;
+                }, 100);
             });
         }
+    });
+});
+
+// Add click handlers to task cards to open task detail view
+document.querySelectorAll('.kanban-task-card').forEach(card => {
+    card.addEventListener('click', function(e) {
+        // Don't navigate if we're dragging
+        if (isDragging) return;
+
+        const taskId = this.dataset.taskId;
+        window.location.href = `/tasks/${taskId}`;
     });
 });
 
