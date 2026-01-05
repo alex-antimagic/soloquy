@@ -277,7 +277,7 @@
             <input class="form-check-input task-checkbox" type="checkbox"
                    {% if task.status == 'completed' %}checked{% endif %}
                    data-task-id="{{ task.id }}">
-            <input type="text" class="task-title-input" value="{{ task.title }}" id="task-title-input" readonly>
+            <input type="text" class="task-title-input" value="{{ task.title }}" id="task-title-input">
             <div class="ms-auto d-flex gap-2">
                 <button class="btn btn-sm btn-outline-secondary" onclick="deleteTask()">
                     <i class="bi bi-trash"></i>
@@ -293,7 +293,7 @@
             <!-- Description -->
             <div class="task-section">
                 <div class="task-section-title">Description</div>
-                <div class="task-description" contenteditable="false" id="task-description">{{ task.description or '' }}</div>
+                <div class="task-description" contenteditable="true" id="task-description">{{ task.description or '' }}</div>
             </div>
 
             <!-- Attachments -->
@@ -508,7 +508,7 @@ async function loadAttachments() {
             taskAttachments.forEach(att => {
                 if (att.is_image) {
                     html += `
-                        <div class="attachment-card">
+                        <div class="attachment-card" ondblclick="window.open('${att.file_path}', '_blank')" style="cursor: pointer;">
                             <img src="${att.file_path}" class="attachment-image" alt="${escapeHtml(att.filename)}">
                             <div class="attachment-info">
                                 <div class="text-truncate fw-semibold">${escapeHtml(att.filename)}</div>
@@ -518,7 +518,7 @@ async function loadAttachments() {
                     `;
                 } else {
                     html += `
-                        <div class="attachment-card p-3">
+                        <div class="attachment-card p-3" ondblclick="window.open('${att.file_path}', '_blank')" style="cursor: pointer;">
                             <i class="bi ${att.icon_class} fs-1 text-primary d-block mb-2"></i>
                             <div class="text-truncate fw-semibold small">${escapeHtml(att.filename)}</div>
                             <div class="text-muted small">${att.file_size_display}</div>
@@ -696,5 +696,100 @@ document.querySelector('.task-checkbox').addEventListener('change', async functi
         this.checked = !isChecked;
     }
 });
+
+// Inline editing for title
+const titleInput = document.getElementById('task-title-input');
+let originalTitle = titleInput.value;
+
+titleInput.addEventListener('focus', function() {
+    originalTitle = this.value;
+});
+
+titleInput.addEventListener('blur', async function() {
+    await saveTitle();
+});
+
+titleInput.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        this.blur();
+    } else if (e.key === 'Escape') {
+        this.value = originalTitle;
+        this.blur();
+    }
+});
+
+async function saveTitle() {
+    const newTitle = titleInput.value.trim();
+
+    if (!newTitle) {
+        titleInput.value = originalTitle;
+        return;
+    }
+
+    if (newTitle === originalTitle) return;
+
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+    try {
+        const response = await fetch(`/tasks/${taskId}/update`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({ title: newTitle })
+        });
+
+        if (response.ok) {
+            originalTitle = newTitle;
+        } else {
+            titleInput.value = originalTitle;
+        }
+    } catch (error) {
+        console.error('Error updating title:', error);
+        titleInput.value = originalTitle;
+    }
+}
+
+// Inline editing for description
+const descriptionDiv = document.getElementById('task-description');
+let originalDescription = descriptionDiv.textContent;
+
+descriptionDiv.addEventListener('focus', function() {
+    originalDescription = this.textContent;
+});
+
+descriptionDiv.addEventListener('blur', async function() {
+    await saveDescription();
+});
+
+async function saveDescription() {
+    const newDescription = descriptionDiv.textContent.trim();
+
+    if (newDescription === originalDescription) return;
+
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+    try {
+        const response = await fetch(`/tasks/${taskId}/update`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({ description: newDescription })
+        });
+
+        if (response.ok) {
+            originalDescription = newDescription;
+        } else {
+            descriptionDiv.textContent = originalDescription;
+        }
+    } catch (error) {
+        console.error('Error updating description:', error);
+        descriptionDiv.textContent = originalDescription;
+    }
+}
 </script>
 {% endblock %}
