@@ -164,6 +164,10 @@
         width: 32px;
         height: 32px;
         border-radius: 50%;
+        flex-shrink: 0;
+    }
+
+    .comment-avatar:not(img) {
         background: var(--bs-primary);
         color: white;
         display: flex;
@@ -171,7 +175,11 @@
         justify-content: center;
         font-weight: 600;
         font-size: 0.75rem;
-        flex-shrink: 0;
+    }
+
+    .comment-avatar img,
+    img.comment-avatar {
+        object-fit: cover;
     }
 
     .comment-content {
@@ -317,7 +325,11 @@
 
                 <!-- Add Comment -->
                 <div class="comment-input">
+                    {% if current_user.avatar_url %}
+                    <img src="{{ current_user.avatar_url }}" class="comment-avatar" alt="{{ current_user.full_name }}">
+                    {% else %}
                     <div class="comment-avatar">{{ current_user.full_name[0].upper() if current_user.full_name else 'U' }}</div>
+                    {% endif %}
                     <div class="flex-grow-1">
                         <textarea class="form-control" id="new-comment-text" placeholder="Add a comment..."></textarea>
                         <button class="btn btn-sm btn-primary mt-2" onclick="addComment()">
@@ -539,15 +551,23 @@ async function loadComments() {
 
             let html = '';
             comments.forEach(comment => {
-                const initials = comment.user_name ? comment.user_name[0].toUpperCase() : 'U';
+                const initials = comment.author_name ? comment.author_name[0].toUpperCase() : 'U';
                 const timeAgo = new Date(comment.created_at).toLocaleString();
+
+                // Use avatar URL if available, otherwise show initials
+                let avatarHtml = '';
+                if (comment.author_avatar) {
+                    avatarHtml = `<img src="${escapeHtml(comment.author_avatar)}" class="comment-avatar" alt="${escapeHtml(comment.author_name || 'User')}">`;
+                } else {
+                    avatarHtml = `<div class="comment-avatar">${initials}</div>`;
+                }
 
                 html += `
                     <div class="comment-item">
-                        <div class="comment-avatar">${initials}</div>
+                        ${avatarHtml}
                         <div class="comment-content">
                             <div class="comment-header">
-                                <span class="comment-author">${escapeHtml(comment.user_name || 'Unknown')}</span>
+                                <span class="comment-author">${escapeHtml(comment.author_name || 'Unknown')}</span>
                                 <span class="comment-time">${timeAgo}</span>
                             </div>
                             <div class="comment-text">${escapeHtml(comment.comment_text)}</div>
