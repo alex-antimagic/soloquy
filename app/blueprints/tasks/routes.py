@@ -594,6 +594,9 @@ def upload_attachment(task_id):
         allowed_extensions = current_app.config.get('ALLOWED_FILE_EXTENSIONS', set())
         if allowed_extensions:
             file_ext = os.path.splitext(filename)[1].lower()
+            # Strip the leading dot to match config format
+            if file_ext and file_ext[0] == '.':
+                file_ext = file_ext[1:]
             if file_ext not in allowed_extensions:
                 return jsonify({'error': 'File type not allowed'}), 400
 
@@ -680,6 +683,9 @@ def upload_comment_attachment(task_id, comment_id):
         allowed_extensions = current_app.config.get('ALLOWED_FILE_EXTENSIONS', set())
         if allowed_extensions:
             file_ext = os.path.splitext(filename)[1].lower()
+            # Strip the leading dot to match config format
+            if file_ext and file_ext[0] == '.':
+                file_ext = file_ext[1:]
             if file_ext not in allowed_extensions:
                 return jsonify({'error': 'File type not allowed'}), 400
 

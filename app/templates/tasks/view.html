@@ -217,6 +217,7 @@
                 </div>
                 {% endif %}
             </div>
+            {% endif %}
 
             <!-- Comments Section -->
             <div class="detail-section">
@@ -245,7 +246,6 @@
                     </div>
                 </div>
             </div>
-            {% endif %}
 
             <!-- Project/Section Info -->
             {% if task.project or task.section %}
@@ -1167,9 +1167,6 @@ if (isLongRunning) {
         });
     }
 
-    // Load comments immediately
-    loadComments();
-
     // Poll for progress updates every 5 seconds if task is in progress
     {% if task.status == 'in_progress' %}
     setInterval(async () => {
@@ -1210,5 +1207,8 @@ if (isLongRunning) {
 
 // Load attachments on page load
 loadAttachments();
+
+// Load comments on page load (all tasks)
+loadComments();
 </script>
 {% endblock %}
