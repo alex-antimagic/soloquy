@@ -297,14 +297,22 @@
                         <h5 class="mb-0">Quick Actions</h5>
                     </div>
                     <div class="list-group list-group-flush">
+                        <!-- Quick Task Creation -->
+                        {% if 'tasks' in enabled_applets or 'projects' in enabled_applets %}
+                        <button class="list-group-item list-group-item-action" onclick="showQuickTaskModal()">
+                            <i class="bi bi-plus-circle me-2 text-success"></i> Quick Add Task
+                        </button>
+                        <div class="dropdown-divider"></div>
+                        {% endif %}
+
                         <!-- Core Actions -->
                         <a href="{{ url_for('department.create') }}" class="list-group-item list-group-item-action">
                             <i class="bi bi-diagram-3 me-2 text-primary"></i> Create Department
                         </a>
-                        <a href="{{ url_for('department.create') }}" class="list-group-item list-group-item-action">
+                        <a href="{{ url_for('tenant.create_agent') }}" class="list-group-item list-group-item-action">
                             <i class="bi bi-robot me-2 text-info"></i> Create AI Agent
                         </a>
-                        <a href="{{ url_for('tenant.settings') }}" class="list-group-item list-group-item-action">
+                        <a href="{{ url_for('tenant.invite') }}" class="list-group-item list-group-item-action">
                             <i class="bi bi-person-plus me-2 text-success"></i> Invite Team Member
                         </a>
 
@@ -356,6 +364,46 @@
         </div>
     {% endif %}
 </div>
+
+<!-- Quick Task Creation Modal -->
+<div class="modal fade" id="quickTaskModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Quick Add Task</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="quick-task-form">
+                    <div class="mb-3">
+                        <label for="quick-task-title" class="form-label">Task Title *</label>
+                        <input type="text" class="form-control" id="quick-task-title" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="quick-task-due-date" class="form-label">Due Date</label>
+                        <input type="date" class="form-control" id="quick-task-due-date">
+                    </div>
+                    <div class="mb-3">
+                        <label for="quick-task-priority" class="form-label">Priority</label>
+                        <select class="form-select" id="quick-task-priority">
+                            <option value="medium" selected>Medium</option>
+                            <option value="low">Low</option>
+                            <option value="high">High</option>
+                        </select>
+                    </div>
+                    <div id="quick-task-error" class="alert alert-danger d-none"></div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="createQuickTask()">
+                    <i class="bi bi-plus-circle"></i> Create Task
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
@@ -477,5 +525,68 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     {% endif %}
 });
+
+// Quick Task Creation Functions
+function showQuickTaskModal() {
+    const modal = new bootstrap.Modal(document.getElementById('quickTaskModal'));
+    // Reset form
+    document.getElementById('quick-task-form').reset();
+    document.getElementById('quick-task-error').classList.add('d-none');
+    modal.show();
+}
+
+async function createQuickTask() {
+    const title = document.getElementById('quick-task-title').value.trim();
+    const dueDate = document.getElementById('quick-task-due-date').value;
+    const priority = document.getElementById('quick-task-priority').value;
+    const errorDiv = document.getElementById('quick-task-error');
+
+    // Validation
+    if (!title) {
+        errorDiv.textContent = 'Task title is required';
+        errorDiv.classList.remove('d-none');
+        return;
+    }
+
+    errorDiv.classList.add('d-none');
+
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+    try {
+        const response = await fetch('/tasks/create', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({
+                title: title,
+                due_date: dueDate || null,
+                priority: priority,
+                status: 'pending'
+            })
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            // Close modal
+            bootstrap.Modal.getInstance(document.getElementById('quickTaskModal')).hide();
+            // Redirect to the new task
+            if (data.id) {
+                window.location.href = `/tasks/${data.id}`;
+            } else {
+                window.location.reload();
+            }
+        } else {
+            const data = await response.json();
+            errorDiv.textContent = data.error || 'Failed to create task';
+            errorDiv.classList.remove('d-none');
+        }
+    } catch (error) {
+        console.error('Error creating task:', error);
+        errorDiv.textContent = 'An error occurred. Please try again.';
+        errorDiv.classList.remove('d-none');
+    }
+}
 </script>
 {% endblock %}

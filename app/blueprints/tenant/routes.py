@@ -177,6 +177,12 @@ def home():
             print(f"Error fetching recent activity: {e}")
             recent_activity = []
 
+    # Get enabled applets for quick actions
+    enabled_applets = []
+    if g.current_tenant:
+        from app.services.applet_manager import get_enabled_applets
+        enabled_applets = get_enabled_applets(g.current_tenant.id)
+
     return render_template('tenant/dashboard.html',
                            title='Dashboard',
                            tenants=tenants,
@@ -188,7 +194,8 @@ def home():
                            recent_activity=recent_activity,
                            user_tasks=user_tasks,
                            overdue_count=overdue_count,
-                           tasks_by_date=tasks_by_date)
+                           tasks_by_date=tasks_by_date,
+                           enabled_applets=enabled_applets)
 
 
 @tenant_bp.route('/switch/<int:tenant_id>')
