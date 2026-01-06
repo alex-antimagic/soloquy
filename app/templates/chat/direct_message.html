@@ -48,7 +48,7 @@
                             <div class="message-bubble">
                                 <div class="message-header">
                                     <span class="message-author">{{ message.get_sender_name() }}</span>
-                                    <span class="message-time">{{ message.created_at.strftime('%I:%M %p') }}</span>
+                                    <span class="message-time">{{ message.created_at|user_timezone }}</span>
                                 </div>
                                 <div class="message-content">
                                     {% set clean_content = message.get_content_without_task_suggestions() if message.is_from_agent() else message.content %}
@@ -460,7 +460,9 @@
         }
         {% endif %}
 
-        const time = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+        const now = new Date();
+        const time = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ', ' +
+                     now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) + ' UTC';
 
         // Build attachment HTML if attachment present
         let imageHtml = '';

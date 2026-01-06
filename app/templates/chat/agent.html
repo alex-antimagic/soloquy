@@ -30,7 +30,7 @@
                     <div class="message-content">
                         <div class="message-header">
                             <span class="message-author">{{ message.get_sender_name() }}</span>
-                            <span class="message-time">{{ message.created_at|user_timezone('%I:%M %p %Z') }}</span>
+                            <span class="message-time">{{ message.created_at|user_timezone }}</span>
                         </div>
                         <div class="message-body">{{ message.content | format_message }}</div>
                     </div>
@@ -264,7 +264,9 @@
             avatar = `<img src="${agentAvatarUrl}" alt="{{ agent.name }}" class="rounded" width="36" height="36">`;
             statusHtml = '<span class="avatar-status online"></span>';
         }
-        const time = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+        const now = new Date();
+        const time = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ', ' +
+                     now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) + ' UTC';
 
         // Build task cards if agent mentioned any tasks
         let taskCardsHtml = '';
@@ -403,7 +405,9 @@
             ? `<img src="${agentAvatarUrl}" alt="{{ agent.name }}" class="rounded" width="36" height="36">`
             : '<i class="bi bi-person-square fs-2"></i>';
         const statusHtml = agentAvatarUrl ? '<span class="avatar-status online"></span>' : '';
-        const time = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+        const now = new Date();
+        const time = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ', ' +
+                     now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) + ' UTC';
 
         // Build task cards if agent mentioned any tasks
         let taskCardsHtml = '';
