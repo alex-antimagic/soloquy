@@ -1214,6 +1214,35 @@ main:has(.chat-container) {
     border-color: var(--soloquy-channel-active);
 }
 
+/* Conversation Info Container */
+.conversation-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    flex: 1;
+    min-width: 0; /* Allow text to shrink */
+}
+
+.conversation-name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.conversation-time {
+    font-size: 0.75rem;
+    color: var(--soloquy-text-muted);
+    white-space: nowrap;
+}
+
+.conversation-item.active .conversation-time {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.conversation-item:hover .conversation-time {
+    color: var(--soloquy-text);
+}
+
 /* Member Items */
 .members-list {
     padding: 0.5rem 0;

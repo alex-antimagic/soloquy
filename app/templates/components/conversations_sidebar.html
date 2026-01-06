@@ -32,7 +32,13 @@
                                 <!-- Public custom channel -->
                                 <span class="channel-icon">#</span>
                             {% endif %}
-                            <span class="conversation-name" data-key="channel_{{ channel.slug }}">{{ channel.name }}</span>
+                            <div class="conversation-info">
+                                <span class="conversation-name" data-key="channel_{{ channel.slug }}">{{ channel.name }}</span>
+                                {% set last_msg_time = channel.get_last_message_time() %}
+                                {% if last_msg_time %}
+                                    <span class="conversation-time">{{ last_msg_time|conversation_time }}</span>
+                                {% endif %}
+                            </div>
                             <span class="unread-badge" data-key="channel_{{ channel.slug }}" style="display: none;"></span>
                         </a>
                     {% endfor %}
@@ -74,7 +80,13 @@
                                     {% endif %}
                                     <span class="avatar-status online"></span>
                                 </div>
-                                <span class="conversation-name" data-key="agent_{{ agent.id }}">{{ agent.name }} ({{ department.name }})</span>
+                                <div class="conversation-info">
+                                    <span class="conversation-name" data-key="agent_{{ agent.id }}">{{ agent.name }} ({{ department.name }})</span>
+                                    {% set last_msg_time = agent.get_last_message_time() %}
+                                    {% if last_msg_time %}
+                                        <span class="conversation-time">{{ last_msg_time|conversation_time }}</span>
+                                    {% endif %}
+                                </div>
                                 <span class="unread-badge" data-key="agent_{{ agent.id }}" style="display: none;"></span>
                             </a>
                             {% endif %}
@@ -100,7 +112,13 @@
                                     {% endif %}
                                     <span class="avatar-status {{ 'online' if member.is_online_now() else 'offline' }}"></span>
                                 </div>
-                                <span class="conversation-name" data-key="user_{{ member.id }}">{{ member.full_name }}</span>
+                                <div class="conversation-info">
+                                    <span class="conversation-name" data-key="user_{{ member.id }}">{{ member.full_name }}</span>
+                                    {% set last_msg_time = current_user.get_last_dm_time_with(member.id) %}
+                                    {% if last_msg_time %}
+                                        <span class="conversation-time">{{ last_msg_time|conversation_time }}</span>
+                                    {% endif %}
+                                </div>
                                 <span class="unread-badge" data-key="user_{{ member.id }}" style="display: none;"></span>
                             </a>
                         {% endif %}

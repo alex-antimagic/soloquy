@@ -140,3 +140,11 @@ class Channel(db.Model):
             return self.tenant.get_members()
         # Private channels: return explicit members
         return self.members
+
+    def get_last_message_time(self):
+        """Get timestamp of the last message in this channel"""
+        from app.models.message import Message
+        last_message = Message.query.filter_by(
+            channel_id=self.id
+        ).order_by(Message.created_at.desc()).first()
+        return last_message.created_at if last_message else None

@@ -191,6 +191,14 @@ class Agent(db.Model):
 
         return query.order_by(Message.created_at.asc()).limit(limit).all()
 
+    def get_last_message_time(self):
+        """Get timestamp of the last message from this agent"""
+        from app.models.message import Message
+        last_message = Message.query.filter_by(
+            agent_id=self.id
+        ).order_by(Message.created_at.desc()).first()
+        return last_message.created_at if last_message else None
+
     def build_system_prompt_with_context(self, tenant=None, user=None, tasks=None, generated_files=None):
         """
         Build the complete system prompt including tenant and user context.

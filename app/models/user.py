@@ -136,6 +136,18 @@ class User(UserMixin, db.Model):
         """Check if user has pro plan"""
         return self.plan == 'pro'
 
+    def get_last_dm_time_with(self, other_user_id):
+        """Get timestamp of the last DM with another user"""
+        from app.models.message import Message
+        last_message = Message.query.filter(
+            Message.is_direct_message == True,
+            db.or_(
+                db.and_(Message.sender_id == self.id, Message.recipient_id == other_user_id),
+                db.and_(Message.sender_id == other_user_id, Message.recipient_id == self.id)
+            )
+        ).order_by(Message.created_at.desc()).first()
+        return last_message.created_at if last_message else None
+
     # Security methods
 
     def is_account_locked(self):

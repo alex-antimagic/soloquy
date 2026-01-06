@@ -265,6 +265,26 @@ def create_app(config_name='default'):
 
     app.jinja_env.filters['timestamp_to_date'] = timestamp_to_date_filter
 
+    # Register conversation timestamp filter (shows date + time)
+    @app.template_filter('conversation_time')
+    def conversation_time_filter(dt):
+        """Format datetime for conversation list - always shows date and time"""
+        if not dt:
+            return ''
+
+        from datetime import datetime
+        now = datetime.utcnow()
+
+        # Always show date and time
+        # This year: show month/day + time (e.g., "Jan 5, 2:43 PM")
+        if dt.year == now.year:
+            return dt.strftime('%b %d, %I:%M %p')
+        # Previous years: show full date + time (e.g., "Dec 25, 2024 2:43 PM")
+        else:
+            return dt.strftime('%b %d, %Y %I:%M %p')
+
+    app.jinja_env.filters['conversation_time'] = conversation_time_filter
+
     # Context processor for templates
     @app.context_processor
     def inject_tenant():
