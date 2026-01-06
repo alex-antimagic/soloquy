@@ -2939,7 +2939,9 @@ Return ONLY valid JSON in this format:
 
     def _execute_crm_query(self, tool_name: str, tool_input: Dict, tenant) -> Any:
         """Execute CRM query tools"""
-        from app.models.crm import Company, Contact, Deal
+        from app.models.company import Company
+        from app.models.contact import Contact
+        from app.models.deal import Deal
 
         if tool_name == 'query_crm_companies':
             companies = Company.query.filter_by(tenant_id=tenant.id)
