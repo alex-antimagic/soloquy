@@ -362,7 +362,8 @@
                 <div class="sidebar-label">
                     <i class="bi bi-calendar3"></i> Due Date
                 </div>
-                <div class="sidebar-value {% if not task.due_date %}empty{% endif %} {% if task.is_overdue() %}text-danger{% endif %}">
+                <div class="sidebar-value {% if not task.due_date %}empty{% endif %} {% if task.is_overdue() %}text-danger{% endif %}"
+                     id="due-date-display" onclick="showDatePicker()">
                     {% if task.due_date %}
                         {{ task.due_date.strftime('%b %d, %Y') }}
                         {% if task.is_overdue() %}<i class="bi bi-exclamation-circle ms-1"></i>{% endif %}
@@ -370,6 +371,8 @@
                         No due date
                     {% endif %}
                 </div>
+                <input type="date" class="form-control d-none" id="due-date-input"
+                       value="{% if task.due_date %}{{ task.due_date.strftime('%Y-%m-%d') }}{% endif %}">
             </div>
 
             <!-- Priority -->
@@ -789,6 +792,82 @@ async function saveDescription() {
     } catch (error) {
         console.error('Error updating description:', error);
         descriptionDiv.textContent = originalDescription;
+    }
+}
+
+// Inline editing for due date
+function showDatePicker() {
+    const display = document.getElementById('due-date-display');
+    const input = document.getElementById('due-date-input');
+
+    // Show the date input
+    display.classList.add('d-none');
+    input.classList.remove('d-none');
+    input.focus();
+}
+
+document.getElementById('due-date-input').addEventListener('change', async function() {
+    await saveDueDate();
+});
+
+document.getElementById('due-date-input').addEventListener('blur', function() {
+    // Hide the input and show the display
+    const display = document.getElementById('due-date-display');
+    const input = document.getElementById('due-date-input');
+
+    display.classList.remove('d-none');
+    input.classList.add('d-none');
+});
+
+async function saveDueDate() {
+    const dateInput = document.getElementById('due-date-input');
+    const newDate = dateInput.value; // Format: YYYY-MM-DD
+
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+    try {
+        const response = await fetch(`/tasks/${taskId}/update`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({ due_date: newDate })
+        });
+
+        if (response.ok) {
+            // Update the display with formatted date
+            const display = document.getElementById('due-date-display');
+
+            if (newDate) {
+                const date = new Date(newDate + 'T00:00:00');
+                const formatted = date.toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
+                });
+
+                // Check if overdue
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const isOverdue = date < today;
+
+                display.className = 'sidebar-value';
+                if (isOverdue) {
+                    display.classList.add('text-danger');
+                    display.innerHTML = formatted + ' <i class="bi bi-exclamation-circle ms-1"></i>';
+                } else {
+                    display.textContent = formatted;
+                }
+            } else {
+                display.className = 'sidebar-value empty';
+                display.textContent = 'No due date';
+            }
+        } else {
+            console.error('Failed to update due date');
+        }
+    } catch (error) {
+        console.error('Error updating due date:', error);
     }
 }
 </script>
