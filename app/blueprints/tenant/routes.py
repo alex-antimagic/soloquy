@@ -75,6 +75,49 @@ def home():
                 if status in task_stats:
                     task_stats[status] = count
 
+        # Get current user's tasks for "My Tasks" widget
+        user_tasks = []
+        overdue_count = 0
+        tasks_by_date = {'today': [], 'tomorrow': [], 'this_week': []}
+
+        if is_applet_enabled(g.current_tenant.id, 'tasks') or is_applet_enabled(g.current_tenant.id, 'projects'):
+            # Get user's assigned tasks (next 10, ordered by due date)
+            user_tasks = Task.get_user_tasks(
+                user_id=current_user.id,
+                tenant_id=g.current_tenant.id,
+                limit=10,
+                include_completed=False
+            )
+
+            # Calculate overdue count
+            today = datetime.utcnow().date()
+            overdue_count = db.session.query(Task).filter(
+                Task.tenant_id == g.current_tenant.id,
+                Task.assigned_to_id == current_user.id,
+                Task.due_date < today,
+                Task.status.in_(['pending', 'in_progress'])
+            ).count()
+
+            # Get tasks due this week
+            week_end = today + timedelta(days=7)
+            upcoming_tasks = db.session.query(Task).filter(
+                Task.tenant_id == g.current_tenant.id,
+                Task.assigned_to_id == current_user.id,
+                Task.due_date >= today,
+                Task.due_date <= week_end,
+                Task.status.in_(['pending', 'in_progress'])
+            ).order_by(Task.due_date.asc()).all()
+
+            # Group upcoming tasks by date
+            tomorrow = today + timedelta(days=1)
+            for task in upcoming_tasks:
+                if task.due_date == today:
+                    tasks_by_date['today'].append(task)
+                elif task.due_date == tomorrow:
+                    tasks_by_date['tomorrow'].append(task)
+                else:
+                    tasks_by_date['this_week'].append(task)
+
         # Get deal pipeline (if CRM applet enabled)
         if is_applet_enabled(g.current_tenant.id, 'crm'):
             from app.models.deal import Deal
@@ -142,7 +185,10 @@ def home():
                            active_tasks_count=active_tasks_count,
                            task_stats=task_stats,
                            deal_pipeline=deal_pipeline,
-                           recent_activity=recent_activity)
+                           recent_activity=recent_activity,
+                           user_tasks=user_tasks,
+                           overdue_count=overdue_count,
+                           tasks_by_date=tasks_by_date)
 
 
 @tenant_bp.route('/switch/<int:tenant_id>')

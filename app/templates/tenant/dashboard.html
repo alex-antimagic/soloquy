@@ -23,6 +23,18 @@
             </div>
         </div>
     {% else %}
+        <!-- Overdue Tasks Alert -->
+        {% if overdue_count > 0 %}
+        <div class="alert alert-warning alert-dismissible fade show mb-4" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            <strong>{{ overdue_count }} overdue task{{ 's' if overdue_count != 1 }}</strong>
+            <a href="{{ url_for('tasks.index') }}" class="alert-link ms-2">
+                View overdue tasks →
+            </a>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endif %}
+
         <!-- Dashboard Overview -->
         <div class="row g-3 mb-4">
             <div class="col-md-3">
@@ -127,6 +139,59 @@
                     </div>
                 </div>
 
+                <!-- My Tasks Widget -->
+                {% if user_tasks is defined %}
+                <div class="card mb-3">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="bi bi-list-check me-2"></i>My Tasks</h5>
+                        <a href="{{ url_for('tasks.index') }}" class="btn btn-sm btn-outline-primary">
+                            View All
+                        </a>
+                    </div>
+                    <div class="card-body p-0">
+                        {% if user_tasks %}
+                        <div class="list-group list-group-flush">
+                            {% for task in user_tasks %}
+                            <a href="{{ url_for('tasks.view', task_id=task.id) }}"
+                               class="list-group-item list-group-item-action {% if task.is_overdue() %}border-start border-danger border-3{% endif %}">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-1 {% if task.is_overdue() %}text-danger fw-bold{% endif %}">
+                                            {{ task.title }}
+                                        </h6>
+                                        {% if task.project %}
+                                        <small class="text-muted">
+                                            <i class="bi bi-folder me-1"></i>{{ task.project.name }}
+                                        </small>
+                                        {% endif %}
+                                    </div>
+                                    <div class="text-end ms-3" style="min-width: 120px;">
+                                        <span class="badge {{ task.get_priority_badge_class() }} mb-1 d-block">
+                                            {{ task.priority|capitalize }}
+                                        </span>
+                                        <span class="badge {{ task.get_status_badge_class() }} d-block">
+                                            {{ task.status|replace('_', ' ')|title }}
+                                        </span>
+                                        {% if task.due_date %}
+                                        <div class="small {% if task.is_overdue() %}text-danger fw-bold{% else %}text-muted{% endif %} mt-1">
+                                            <i class="bi bi-calendar-event me-1"></i>{{ task.due_date.strftime('%b %d, %Y') }}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </a>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="p-4 text-center text-muted">
+                            <i class="bi bi-check-circle fs-1 mb-2 d-block"></i>
+                            <p class="mb-0">No tasks assigned to you</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+
                 <!-- Recent Activity -->
                 <div class="card">
                     <div class="card-header">
@@ -162,6 +227,71 @@
             </div>
 
             <div class="col-md-4">
+                <!-- This Week Summary -->
+                {% if tasks_by_date is defined and (tasks_by_date.today or tasks_by_date.tomorrow or tasks_by_date.this_week) %}
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="bi bi-calendar-week me-2"></i>This Week</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if tasks_by_date.today %}
+                        <div class="mb-3">
+                            <h6 class="text-danger mb-2">
+                                <i class="bi bi-circle-fill me-2" style="font-size: 0.5rem;"></i>Today
+                            </h6>
+                            <ul class="list-unstyled ms-3 mb-0">
+                                {% for task in tasks_by_date.today %}
+                                <li class="mb-2">
+                                    <a href="{{ url_for('tasks.view', task_id=task.id) }}" class="text-decoration-none">
+                                        {{ task.title }}
+                                    </a>
+                                    <span class="badge {{ task.get_priority_badge_class() }} badge-sm ms-2">{{ task.priority }}</span>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+
+                        {% if tasks_by_date.tomorrow %}
+                        <div class="mb-3">
+                            <h6 class="text-warning mb-2">
+                                <i class="bi bi-circle-fill me-2" style="font-size: 0.5rem;"></i>Tomorrow
+                            </h6>
+                            <ul class="list-unstyled ms-3 mb-0">
+                                {% for task in tasks_by_date.tomorrow %}
+                                <li class="mb-2">
+                                    <a href="{{ url_for('tasks.view', task_id=task.id) }}" class="text-decoration-none">
+                                        {{ task.title }}
+                                    </a>
+                                    <span class="badge {{ task.get_priority_badge_class() }} badge-sm ms-2">{{ task.priority }}</span>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+
+                        {% if tasks_by_date.this_week %}
+                        <div>
+                            <h6 class="text-info mb-2">
+                                <i class="bi bi-circle-fill me-2" style="font-size: 0.5rem;"></i>This Week
+                            </h6>
+                            <ul class="list-unstyled ms-3 mb-0">
+                                {% for task in tasks_by_date.this_week %}
+                                <li class="mb-2">
+                                    <a href="{{ url_for('tasks.view', task_id=task.id) }}" class="text-decoration-none">
+                                        {{ task.title }}
+                                    </a>
+                                    <span class="badge {{ task.get_priority_badge_class() }} badge-sm ms-2">{{ task.priority }}</span>
+                                    <small class="text-muted ms-2">{{ task.due_date.strftime('%b %d') }}</small>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+
                 <div class="card">
                     <div class="card-header">
                         <h5 class="mb-0">Quick Actions</h5>

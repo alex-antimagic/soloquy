@@ -1306,3 +1306,27 @@ main:has(.chat-container) {
     border: 5px solid transparent;
     border-top-color: #000;
 }
+
+/* Dashboard Widgets - My Tasks & This Week */
+
+/* Task list item hover effect */
+.list-group-item-action:hover {
+    background-color: var(--soloquy-hover);
+    transition: background-color 0.15s ease;
+}
+
+/* Overdue task left border emphasis */
+.border-start.border-danger.border-3 {
+    border-left-width: 4px !important;
+}
+
+/* Badge sizing for inline use in "This Week" widget */
+.badge-sm {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.4rem;
+}
+
+/* Week summary date circle indicators */
+.bi-circle-fill {
+    vertical-align: middle;
+}
