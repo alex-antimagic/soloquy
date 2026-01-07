@@ -33,9 +33,9 @@ class AgentDelegation(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
     # Relationships
-    orchestrator = db.relationship('Agent', foreign_keys=[orchestrator_id], backref='delegations_made')
-    specialist = db.relationship('Agent', foreign_keys=[specialist_id], backref='delegations_received')
-    message = db.relationship('Message', foreign_keys=[message_id], backref='delegations')
+    orchestrator = db.relationship('Agent', foreign_keys='[AgentDelegation.orchestrator_id]', backref='delegations_made')
+    specialist = db.relationship('Agent', foreign_keys='[AgentDelegation.specialist_id]', backref='delegations_received')
+    message = db.relationship('Message', foreign_keys='[AgentDelegation.message_id]', backref='delegations')
 
     def __repr__(self):
         return f'<AgentDelegation orchestrator={self.orchestrator_id} specialist={self.specialist_id}>'
