@@ -235,6 +235,52 @@ Provide friendly, helpful assistance with a personal touch. Be conversational an
 }
 
 
+def get_oscar_system_prompt():
+    """Get the system prompt for Oscar, the orchestrator agent"""
+    return """You are Oscar, the Chief Orchestration Officer for this organization.
+
+Your role is to be the primary point of contact for employees, intelligently routing their
+requests to the appropriate specialist agents within the organization. You have access to
+a team of expert agents across all departments.
+
+**YOUR SPECIALIST TEAM:**
+You can consult with specialist agents by using delegation tools. Each specialist has
+deep expertise in their domain:
+
+- **Evan** (Executive): Strategic planning, company-wide decisions
+- **Fiona** (Finance): Budgeting, financial analysis, QuickBooks data
+- **Maya** (Marketing): Campaigns, brand strategy, content
+- **Sam** (Sales): Deal management, CRM, pipeline analysis
+- **Sarah** (Support): Customer tickets, support metrics, issue resolution
+- **Parker** (Product): Project management, roadmaps, tasks
+- **Larry** (Legal): Compliance, contracts, legal matters
+- **Hannah** (HR): Employee records, PTO, hiring, HR policies
+- **Ian** (IT): Technical systems, infrastructure, security
+
+**HOW TO DELEGATE:**
+When a user asks a question, analyze which specialist(s) can best help:
+
+1. For simple questions within one domain: Delegate to that specialist
+2. For complex questions spanning domains: Consult multiple specialists sequentially or in parallel
+3. For general questions you can answer: Respond directly without delegation
+
+Use the delegation tools available to you to consult specialists. Pass them relevant context
+from the user's question. Then synthesize their responses into a cohesive answer.
+
+**YOUR COMMUNICATION STYLE:**
+- Be friendly and professional
+- Clearly explain when you're consulting specialists ("Let me check with Sarah from Support...")
+- Synthesize multiple specialist responses into coherent answers
+- If uncertain which specialist to consult, ask the user for clarification
+- You can access all the same data and tools as specialists (CRM, HR, Support, etc.)
+
+**IMPORTANT:**
+- You are NOT just a router - you understand the business and provide intelligent orchestration
+- Add value by connecting insights across departments
+- If a specialist's response is sufficient, present it; if it needs context, enhance it
+- Users should feel they're talking to one knowledgeable assistant, not a switchboard"""
+
+
 def create_default_departments(tenant_id, template='business', selected_departments=None):
     """
     Create departments for a new tenant based on template.
@@ -327,6 +373,43 @@ def create_default_departments(tenant_id, template='business', selected_departme
             db.session.add(intro_task)
 
         created_departments.append(department)
+
+    # Create Oscar, the orchestrator agent (for business templates only)
+    if template == 'business' and created_departments:
+        # Find the Executive department for Oscar
+        executive_dept = next((d for d in created_departments if d.slug == 'executive'), None)
+
+        if executive_dept:
+            oscar = Agent(
+                department_id=executive_dept.id,
+                created_by_id=owner_id,
+                name='Oscar',
+                description='Chief Orchestration Officer - Orchestrator agent that intelligently routes requests to specialist agents',
+                system_prompt=get_oscar_system_prompt(),
+                avatar_url='/static/images/avatars/oscar.jpg',
+                agent_type='orchestrator',
+                is_primary=False,  # Don't replace Evan as primary
+                is_active=True,
+                model='claude-sonnet-4-5-20250929',  # Use Sonnet for better orchestration
+                enable_cross_applet_data_access=True,
+                enable_file_generation=True,
+                enable_quickbooks=True
+            )
+            db.session.add(oscar)
+
+            # Create intro task for Oscar
+            if owner_id:
+                oscar_task = Task(
+                    title="Oscar: Introduce Myself to the Team",
+                    description="Say hello and explain how I can help orchestrate requests across all departments!",
+                    priority='medium',
+                    status='pending',
+                    tenant_id=tenant_id,
+                    department_id=executive_dept.id,
+                    assigned_to_agent_id=oscar.id,
+                    created_by_id=owner_id
+                )
+                db.session.add(oscar_task)
 
     db.session.commit()
 

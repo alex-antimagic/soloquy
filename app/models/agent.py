@@ -26,6 +26,9 @@ class Agent(db.Model):
     is_active = db.Column(db.Boolean, default=True, nullable=False)
     is_primary = db.Column(db.Boolean, default=False, nullable=False)  # Primary agent for department
 
+    # Agent type: 'specialist' or 'orchestrator'
+    agent_type = db.Column(db.String(20), nullable=False, default='specialist')
+
     # Integration access control (secure by default - admin must explicitly enable)
     enable_quickbooks = db.Column(db.Boolean, default=False, nullable=False)  # Allow access to QuickBooks data
     enable_gmail = db.Column(db.Boolean, default=False, nullable=False)  # Allow access to Gmail (MCP)
@@ -748,3 +751,59 @@ class Agent(db.Model):
         db.session.commit()
 
         return new_agent, 1, True
+
+    def is_orchestrator(self):
+        """Check if this agent is an orchestrator type"""
+        return self.agent_type == 'orchestrator'
+
+    def is_visible_to_user(self, user):
+        """
+        Check if this agent should be visible in the sidebar for a given user.
+
+        Args:
+            user: User object to check visibility for
+
+        Returns:
+            Boolean indicating whether the agent should be visible
+        """
+        from app.models.agent_user_preferences import AgentUserPreferences
+
+        # First check if user has access at all
+        if not self.can_user_access(user):
+            return False
+
+        # Check user preferences
+        pref = AgentUserPreferences.query.filter_by(
+            user_id=user.id,
+            agent_id=self.id
+        ).first()
+
+        if pref:
+            return pref.visible_in_sidebar
+
+        # Default behavior based on user's mode preference
+        user_mode = self.get_user_preferred_mode(user)
+
+        # In orchestrator mode: only show orchestrator agents
+        if user_mode == 'orchestrator':
+            return self.is_orchestrator()
+
+        # In direct mode: show all specialist agents
+        return True
+
+    def get_user_preferred_mode(self, user):
+        """
+        Get user's preferred interaction mode (orchestrator vs direct).
+
+        Args:
+            user: User object
+
+        Returns:
+            String: 'orchestrator' or 'direct' (defaults to 'orchestrator')
+        """
+        from app.models.agent_user_preferences import AgentUserPreferences
+
+        # Get user's global preference (any preference record will have the mode)
+        pref = AgentUserPreferences.query.filter_by(user_id=user.id).first()
+
+        return pref.preferred_mode if pref else 'orchestrator'

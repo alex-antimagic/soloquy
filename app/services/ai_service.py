@@ -1219,6 +1219,155 @@ class AIService:
             }
         ]
 
+    def _get_agent_delegation_tools(self, orchestrator_agent, user) -> List[Dict]:
+        """
+        Generate delegation tools for orchestrator agents.
+        Each specialist agent becomes a callable tool for Oscar.
+        """
+        from app.models.agent import Agent
+
+        specialist_agents = Agent.query.filter(
+            Agent.tenant_id == orchestrator_agent.tenant_id,
+            Agent.agent_type == 'specialist',
+            Agent.is_active == True
+        ).all()
+
+        tools = []
+        for specialist in specialist_agents:
+            # Check if user has access to this specialist
+            if not specialist.can_user_access(user):
+                continue
+
+            tool = {
+                "name": f"consult_{specialist.name.lower()}",
+                "description": (
+                    f"Consult with {specialist.name}, specialist in {specialist.department.name}. "
+                    f"{specialist.description or ''}"
+                    f"Use this when the user's question relates to {specialist.department.name.lower()} matters."
+                ),
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "The specific question or task to ask this specialist"
+                        },
+                        "context": {
+                            "type": "string",
+                            "description": "Additional context from the user's original question (optional)"
+                        }
+                    },
+                    "required": ["query"]
+                }
+            }
+            tools.append(tool)
+
+        return tools
+
+    def _execute_agent_delegation_tool(self, tool_name, tool_input, orchestrator_agent, user, db_message):
+        """
+        Execute a delegation to a specialist agent.
+
+        Args:
+            tool_name: Name of the tool (e.g., "consult_maya")
+            tool_input: The tool input parameters
+            orchestrator_agent: The orchestrator agent making the delegation
+            user: The user asking the question
+            db_message: The database message object
+
+        Returns:
+            Dictionary with specialist response or error
+        """
+        from app.models.agent import Agent
+        from app.models.agent_delegation import AgentDelegation
+
+        # Extract specialist name from tool name: "consult_maya" -> "maya"
+        specialist_name = tool_name.replace('consult_', '')
+
+        # Find the specialist agent
+        specialist = Agent.query.filter(
+            Agent.tenant_id == orchestrator_agent.tenant_id,
+            db.func.lower(Agent.name) == specialist_name.lower(),
+            Agent.agent_type == 'specialist',
+            Agent.is_active == True
+        ).first()
+
+        if not specialist:
+            return {"error": f"Specialist agent '{specialist_name}' not found or not available"}
+
+        # Build the query for the specialist
+        specialist_query = tool_input.get('query', '')
+        context = tool_input.get('context', '')
+
+        # Construct specialist prompt with context
+        full_query = specialist_query
+        if context:
+            full_query = f"Context: {context}\n\nQuestion: {specialist_query}"
+
+        # Get business context for specialist
+        business_context = specialist.build_system_prompt_with_context(
+            tenant=orchestrator_agent.department.tenant,
+            user=user
+        )
+
+        # Call specialist agent
+        try:
+            # Create messages list for specialist
+            specialist_messages = [{
+                "role": "user",
+                "content": full_query
+            }]
+
+            # Get tools for specialist
+            specialist_tools = []
+            if specialist.enable_cross_applet_data_access:
+                specialist_tools.extend(self._get_cross_applet_query_tools())
+            if specialist.enable_file_generation:
+                specialist_tools.extend(self._get_file_generation_tools())
+            if specialist.enable_quickbooks:
+                specialist_tools.extend(self._get_quickbooks_tools())
+            if specialist.enable_hr_management:
+                specialist_tools.extend(self._get_hr_tools())
+
+            # Call the specialist's chat method
+            response = self._call_claude_with_tools(
+                messages=specialist_messages,
+                system_prompt=business_context,
+                tools=specialist_tools,
+                model=specialist.model,
+                agent=specialist,
+                user=user,
+                db_message=db_message
+            )
+
+            # Log delegation for analytics
+            delegation = AgentDelegation(
+                orchestrator_id=orchestrator_agent.id,
+                specialist_id=specialist.id,
+                message_id=db_message.id if db_message else None,
+                user_query=specialist_query,
+                delegation_reasoning=f"Orchestrator delegated {specialist.department.name} query"
+            )
+            db.session.add(delegation)
+            db.session.commit()
+
+            # Extract text response
+            if isinstance(response, dict) and 'content' in response:
+                response_text = response['content'][0]['text'] if response['content'] else str(response)
+            else:
+                response_text = str(response)
+
+            return {
+                "specialist": specialist.name,
+                "department": specialist.department.name,
+                "response": response_text
+            }
+
+        except Exception as e:
+            return {
+                "error": f"Failed to consult {specialist.name}: {str(e)}"
+            }
+
     def chat(
         self,
         messages: List[Dict[str, str]],
@@ -1303,6 +1452,13 @@ class AIService:
                     print(f"[CROSS_APPLET] Got {len(cross_applet_tools)} cross-applet query tools")
                     tools.extend(cross_applet_tools)
 
+                # Add delegation tools for orchestrator agents
+                if agent.is_orchestrator():
+                    print(f"[DELEGATION] Getting agent delegation tools for orchestrator {agent.name}")
+                    delegation_tools = self._get_agent_delegation_tools(agent, user)
+                    print(f"[DELEGATION] Got {len(delegation_tools)} delegation tools")
+                    tools.extend(delegation_tools)
+
                 if tools:
                     api_params['tools'] = tools
                     current_app.logger.info(f"Agent {agent.name} has {len(tools)} tools available")
@@ -1380,6 +1536,15 @@ class AIService:
                                 tool_input=tool_use.input,
                                 agent=agent,
                                 user=user
+                            )
+                        elif tool_use.name.startswith('consult_'):
+                            # Handle agent delegation (Oscar consulting specialists)
+                            result = self._execute_agent_delegation_tool(
+                                tool_name=tool_use.name,
+                                tool_input=tool_use.input,
+                                orchestrator_agent=agent,
+                                user=user,
+                                db_message=None  # We don't have db_message in this context
                             )
                         else:
                             result = {"error": f"Unknown tool: {tool_use.name}"}

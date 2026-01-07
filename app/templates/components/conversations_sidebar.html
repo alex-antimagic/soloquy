@@ -60,13 +60,31 @@
             </div>
             <div class="collapse show" id="dmSection">
                 {% if current_tenant %}
-                    <!-- AI Agents sub-section -->
-                    <div class="dm-subsection-title">
-                        <i class="bi bi-robot"></i> AI Agents
+                    <!-- AI Agents sub-section with mode toggle -->
+                    <div class="dm-subsection-title d-flex justify-content-between align-items-center" style="padding-right: 8px;">
+                        <div>
+                            <i class="bi bi-robot"></i> AI Agents
+                        </div>
+                        <div class="btn-group btn-group-sm" role="group" style="margin-left: auto;">
+                            <button type="button"
+                                    class="btn btn-sm btn-outline-secondary mode-toggle"
+                                    data-mode="orchestrator"
+                                    onclick="setAgentMode('orchestrator')"
+                                    style="font-size: 11px; padding: 2px 8px;">
+                                <i class="bi bi-person-circle"></i> Oscar
+                            </button>
+                            <button type="button"
+                                    class="btn btn-sm btn-outline-secondary mode-toggle"
+                                    data-mode="direct"
+                                    onclick="setAgentMode('direct')"
+                                    style="font-size: 11px; padding: 2px 8px;">
+                                <i class="bi bi-people"></i> All
+                            </button>
+                        </div>
                     </div>
                     {% for department in current_tenant.get_departments() %}
                         {% for agent in department.get_agents() %}
-                            {% if agent.can_user_access(current_user) %}
+                            {% if agent.is_visible_to_user(current_user) %}
                             <a href="{{ url_for('chat.agent_chat', agent_id=agent.id) }}"
                                class="conversation-item {% if request.endpoint == 'chat.agent_chat' and request.view_args.get('agent_id') == agent.id %}active{% endif %}"
                                data-conversation-type="agent"
@@ -297,4 +315,57 @@ if (typeof socket !== 'undefined') {
         fetchUnreadCounts();
     });
 }
+
+// Agent mode management
+async function setAgentMode(mode) {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+    try {
+        const response = await fetch('/chat/set-agent-mode', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({ mode: mode })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            // Update UI
+            document.querySelectorAll('.mode-toggle').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.querySelector(`.mode-toggle[data-mode="${mode}"]`).classList.add('active');
+
+            // Reload to show/hide agents
+            window.location.reload();
+        } else {
+            console.error('Failed to set agent mode:', data.error);
+        }
+    } catch (error) {
+        console.error('Error setting agent mode:', error);
+    }
+}
+
+// Set active mode button on page load
+async function loadAgentMode() {
+    try {
+        const response = await fetch('/chat/get-agent-mode');
+        const data = await response.json();
+
+        if (data.mode) {
+            const button = document.querySelector(`.mode-toggle[data-mode="${data.mode}"]`);
+            if (button) {
+                button.classList.add('active');
+            }
+        }
+    } catch (error) {
+        console.error('Error loading agent mode:', error);
+    }
+}
+
+// Load agent mode on page load
+loadAgentMode();
 </script>

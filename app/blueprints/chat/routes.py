@@ -1512,3 +1512,56 @@ Respond in JSON format:
         import traceback
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
+
+
+@chat_bp.route('/set-agent-mode', methods=['POST'])
+@login_required
+def set_agent_mode():
+    """Set user's preferred agent interaction mode"""
+    from app.models.agent_user_preferences import AgentUserPreferences
+
+    data = request.get_json()
+    mode = data.get('mode', 'orchestrator')
+
+    # Validate mode
+    if mode not in ['orchestrator', 'direct']:
+        return jsonify({'success': False, 'error': 'Invalid mode'}), 400
+
+    try:
+        # Find or create global preference for this user
+        pref = AgentUserPreferences.query.filter_by(
+            user_id=current_user.id,
+            agent_id=None  # Global preference
+        ).first()
+
+        if not pref:
+            pref = AgentUserPreferences(
+                user_id=current_user.id,
+                agent_id=None,
+                preferred_mode=mode
+            )
+            db.session.add(pref)
+        else:
+            pref.preferred_mode = mode
+
+        db.session.commit()
+        return jsonify({'success': True})
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@chat_bp.route('/get-agent-mode')
+@login_required
+def get_agent_mode():
+    """Get current user's agent mode"""
+    from app.models.agent_user_preferences import AgentUserPreferences
+
+    pref = AgentUserPreferences.query.filter_by(
+        user_id=current_user.id,
+        agent_id=None
+    ).first()
+
+    mode = pref.preferred_mode if pref else 'orchestrator'
+    return jsonify({'mode': mode})
