@@ -637,6 +637,19 @@ main {
     overflow-wrap: break-word;
 }
 
+/* Error message styling - red outline */
+.message-bubble-error .message-content {
+    border: 2px solid #dc3545 !important;
+    border-left: 4px solid #dc3545 !important;
+    background-color: #fff5f5 !important;
+}
+
+/* Dark mode error styling */
+[data-bs-theme="dark"] .message-bubble-error .message-content {
+    background-color: #2d1a1a !important;
+    border-color: #ff6b6b !important;
+}
+
 .message-header {
     display: flex;
     align-items: baseline;

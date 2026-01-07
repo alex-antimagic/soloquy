@@ -572,7 +572,26 @@ Return ONLY the task numbers (1, 2, 3, etc.) that the agent mentioned or address
                 print(f"[SEND_MESSAGE] ERROR generating AI response: {e}")
                 import traceback
                 traceback.print_exc()
-                # Continue without agent response
+
+                # Create an error message to display to the user
+                error_content = f"⚠️ I encountered an error while processing your message:\n\n{str(e)}\n\nPlease try again or contact support if the issue persists."
+
+                agent_message = Message(
+                    content=error_content,
+                    agent_id=agent.id,
+                    department_id=department_id,
+                    message_type='error'  # Mark as error message
+                )
+                db.session.add(agent_message)
+                db.session.commit()
+
+                agent_response = {
+                    'id': agent_message.id,
+                    'content': agent_message.content,
+                    'sender': agent.name,
+                    'created_at': agent_message.created_at.isoformat(),
+                    'is_error': True  # Flag for frontend styling
+                }
 
     response_data = {
         'id': message.id,

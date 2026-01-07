@@ -570,9 +570,12 @@
         let filesHtml = '';
         {% endif %}
 
+        // Add error styling if this is an error message
+        const errorClass = message.is_error ? ' message-bubble-error' : '';
+
         messageDiv.innerHTML = `
             <div class="message-avatar">${avatar}${statusHtml}</div>
-            <div class="message-bubble">
+            <div class="message-bubble${errorClass}">
                 <div class="message-header">
                     <span class="message-author">${escapeHtml(message.sender)}</span>
                     <span class="message-time">${time}</span>
