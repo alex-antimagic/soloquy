@@ -16,13 +16,13 @@ class AgentDelegation(db.Model):
     id = db.Column(db.Integer, primary_key=True)
 
     # Which orchestrator agent made the delegation
-    orchestrator_id = db.Column(db.Integer, db.ForeignKey('agent.id'), nullable=False)
+    orchestrator_id = db.Column(db.Integer, db.ForeignKey('agents.id'), nullable=False)
 
     # Which specialist agent was consulted
-    specialist_id = db.Column(db.Integer, db.ForeignKey('agent.id'), nullable=False)
+    specialist_id = db.Column(db.Integer, db.ForeignKey('agents.id'), nullable=False)
 
     # Optional: Link to the message that triggered this delegation
-    message_id = db.Column(db.Integer, db.ForeignKey('message.id'), nullable=True)
+    message_id = db.Column(db.Integer, db.ForeignKey('messages.id'), nullable=True)
 
     # The query passed to the specialist
     user_query = db.Column(db.Text, nullable=True)

@@ -13,8 +13,8 @@ class AgentUserPreferences(db.Model):
     __tablename__ = 'agent_user_preferences'
 
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    agent_id = db.Column(db.Integer, db.ForeignKey('agent.id'), nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    agent_id = db.Column(db.Integer, db.ForeignKey('agents.id'), nullable=True)
 
     # Agent visibility in sidebar
     visible_in_sidebar = db.Column(db.Boolean, default=True, nullable=False)
