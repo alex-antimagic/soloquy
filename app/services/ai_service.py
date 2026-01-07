@@ -1225,9 +1225,11 @@ class AIService:
         Each specialist agent becomes a callable tool for Oscar.
         """
         from app.models.agent import Agent
+        from app.models.department import Department
 
-        specialist_agents = Agent.query.filter(
-            Agent.tenant_id == orchestrator_agent.tenant_id,
+        # Get all specialist agents in the same tenant as the orchestrator
+        specialist_agents = Agent.query.join(Department).filter(
+            Department.tenant_id == orchestrator_agent.department.tenant_id,
             Agent.agent_type == 'specialist',
             Agent.is_active == True
         ).all()
@@ -1280,13 +1282,14 @@ class AIService:
         """
         from app.models.agent import Agent
         from app.models.agent_delegation import AgentDelegation
+        from app.models.department import Department
 
         # Extract specialist name from tool name: "consult_maya" -> "maya"
         specialist_name = tool_name.replace('consult_', '')
 
-        # Find the specialist agent
-        specialist = Agent.query.filter(
-            Agent.tenant_id == orchestrator_agent.tenant_id,
+        # Find the specialist agent in the same tenant
+        specialist = Agent.query.join(Department).filter(
+            Department.tenant_id == orchestrator_agent.department.tenant_id,
             db.func.lower(Agent.name) == specialist_name.lower(),
             Agent.agent_type == 'specialist',
             Agent.is_active == True
