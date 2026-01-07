@@ -35,7 +35,7 @@ class AgentDelegation(db.Model):
     # Relationships
     orchestrator = db.relationship('Agent', foreign_keys=[orchestrator_id], backref='delegations_made')
     specialist = db.relationship('Agent', foreign_keys=[specialist_id], backref='delegations_received')
-    message = db.relationship('Message', backref='delegations')
+    message = db.relationship('Message', foreign_keys=[message_id], backref='delegations')
 
     def __repr__(self):
         return f'<AgentDelegation orchestrator={self.orchestrator_id} specialist={self.specialist_id}>'

@@ -26,8 +26,8 @@ class AgentUserPreferences(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
     # Relationships
-    user = db.relationship('User', backref='agent_preferences')
-    agent = db.relationship('Agent', backref='user_preferences')
+    user = db.relationship('User', foreign_keys=[user_id], backref='agent_preferences')
+    agent = db.relationship('Agent', foreign_keys=[agent_id], backref='user_preferences')
 
     __table_args__ = (
         db.UniqueConstraint('user_id', 'agent_id', name='unique_user_agent_pref'),
