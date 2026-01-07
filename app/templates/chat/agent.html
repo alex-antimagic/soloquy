@@ -18,7 +18,8 @@
             <div class="flex-grow-1 overflow-auto mb-3" id="messages-container">
         {% if messages %}
             {% for message in messages %}
-                <div class="message">
+                {% set task_suggestions_list = message.parse_task_suggestions() %}
+                <div class="message" {% if task_suggestions_list %}data-task-suggestions='{{ task_suggestions_list | tojson }}'{% endif %}>
                     <div class="message-avatar">
                         {% if message.is_from_agent() and message.agent and message.agent.avatar_url %}
                             <img src="{{ message.agent.avatar_url }}" alt="{{ message.agent.name }}" class="rounded" width="36" height="36">
@@ -32,7 +33,40 @@
                             <span class="message-author">{{ message.get_sender_name() }}</span>
                             <span class="message-time">{{ message.created_at|user_timezone }}</span>
                         </div>
-                        <div class="message-body">{{ message.content | format_message }}</div>
+                        <div class="message-body">{{ message.get_content_without_task_suggestions() | format_message }}</div>
+                        {% if message.is_from_agent() %}
+                            {% set task_suggestions = message.parse_task_suggestions() %}
+                            {% if task_suggestions %}
+                                <div class="mt-2">
+                                    {% for task in task_suggestions %}
+                                        {% set priority_class = 'danger' if task.priority == 'urgent' else 'warning' if task.priority == 'high' else 'primary' if task.priority == 'medium' else 'secondary' %}
+                                        {% set priority_icon = 'bi-exclamation-triangle-fill' if task.priority == 'urgent' else 'bi-arrow-up-circle' if task.priority == 'high' else 'bi-dash-circle' %}
+                                        <div class="card border-{{ priority_class }} mb-2">
+                                            <div class="card-body p-2">
+                                                <div class="d-flex align-items-start">
+                                                    <i class="bi {{ priority_icon }} text-{{ priority_class }} me-2 mt-1"></i>
+                                                    <div class="flex-grow-1">
+                                                        <strong class="d-block">{{ task.title }}</strong>
+                                                        {% if task.description %}
+                                                            <small class="text-muted">{{ task.description }}</small>
+                                                        {% endif %}
+                                                        <div class="mt-1">
+                                                            <span class="badge bg-{{ priority_class }} badge-sm">{{ task.priority.capitalize() }}</span>
+                                                            {% if task.due_date %}
+                                                                <span class="badge bg-secondary badge-sm"><i class="bi bi-calendar"></i> {{ task.due_date.strftime('%Y-%m-%d') }}</span>
+                                                            {% endif %}
+                                                        </div>
+                                                    </div>
+                                                    <button class="btn btn-sm btn-outline-primary ms-2" onclick="createTaskFromSuggestion({{ loop.index0 }}, this)">
+                                                        <i class="bi bi-plus-circle"></i> Create
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        {% endif %}
                     </div>
                 </div>
             {% endfor %}
