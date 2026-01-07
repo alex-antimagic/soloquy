@@ -3323,8 +3323,12 @@ Priority guidelines:
 
     def detect_long_running_task(self, task_description: str, task_context: Optional[Dict] = None) -> Dict[str, Any]:
         """
-        Quickly detect if a task will take more than 20 seconds to complete.
-        Uses Haiku for fast, cost-effective detection.
+        Detect if a task requires special long-running orchestration.
+
+        DISABLED: All tasks for AI agents execute immediately through normal chat.
+        AI agents complete tasks in seconds/minutes, not hours. The multi-step
+        worker system is only needed for truly long-running operations that
+        require pausing/resuming (e.g., processing 10,000+ records with rate limits).
 
         Args:
             task_description: The task description to analyze
@@ -3332,93 +3336,20 @@ Priority guidelines:
 
         Returns:
             Dictionary with:
-                - is_long_running: bool
+                - is_long_running: bool (always False)
                 - estimated_duration_seconds: int
                 - reasoning: str
                 - complexity_score: int (1-10)
         """
-        context_str = ""
-        if task_context:
-            context_parts = []
-            if task_context.get('assigned_to'):
-                context_parts.append(f"Assigned to: {task_context['assigned_to']}")
-            if task_context.get('due_date'):
-                context_parts.append(f"Due date: {task_context['due_date']}")
-            if task_context.get('project'):
-                context_parts.append(f"Project: {task_context['project']}")
-            context_str = "\n".join(context_parts)
-
-        system_prompt = """You are a task complexity analyzer. Your job is to quickly determine if a task will take more than 20 seconds for an AI agent to complete.
-
-Consider these factors:
-- Multi-step processes (research, analysis, code generation, testing)
-- External API calls or data retrieval
-- Complex calculations or transformations
-- File generation (reports, documents, spreadsheets)
-- Multiple related tasks that must be done together
-
-Respond ONLY with valid JSON in this format:
-{
-  "is_long_running": true/false,
-  "estimated_duration_seconds": <number>,
-  "reasoning": "Brief explanation of your assessment",
-  "complexity_score": <1-10>
-}
-
-Examples:
-- "Send an email": ~5 seconds (simple API call)
-- "Generate quarterly sales report": ~45 seconds (data aggregation + document generation)
-- "Research competitors and create comparison matrix": ~120 seconds (web research + analysis + spreadsheet)
-- "Update task status": ~3 seconds (simple database update)"""
-
-        prompt = f"""Analyze this task and determine if it will take more than 20 seconds:
-
-Task: {task_description}
-
-{context_str}
-
-Provide your assessment in the requested JSON format."""
-
-        try:
-            response = self.client.messages.create(
-                model=self.DEFAULT_MODEL,  # Use Haiku for fast detection
-                max_tokens=500,
-                temperature=0.2,  # Low temperature for consistent analysis
-                system=system_prompt,
-                messages=[{"role": "user", "content": prompt}]
-            )
-
-            # Extract and parse JSON response
-            response_text = response.content[0].text.strip()
-
-            # Handle markdown code blocks
-            if "```json" in response_text:
-                json_start = response_text.find("```json") + 7
-                json_end = response_text.find("```", json_start)
-                response_text = response_text[json_start:json_end].strip()
-            elif "```" in response_text:
-                json_start = response_text.find("```") + 3
-                json_end = response_text.find("```", json_start)
-                response_text = response_text[json_start:json_end].strip()
-
-            result = json.loads(response_text)
-
-            # Validate required fields
-            required_fields = ['is_long_running', 'estimated_duration_seconds', 'reasoning', 'complexity_score']
-            if not all(field in result for field in required_fields):
-                raise ValueError("AI response missing required fields")
-
-            return result
-
-        except Exception as e:
-            print(f"Error detecting long-running task: {e}")
-            # Conservative fallback - assume it might be long-running
-            return {
-                'is_long_running': False,
-                'estimated_duration_seconds': 15,
-                'reasoning': 'Error during detection, defaulting to short task',
-                'complexity_score': 5
-            }
+        # DISABLED: All tasks execute immediately for AI agents
+        # AI agents complete work in seconds/minutes, not hours
+        # The complex multi-step worker system was over-engineering
+        return {
+            'is_long_running': False,
+            'estimated_duration_seconds': 30,  # Typical AI response time
+            'reasoning': 'AI agents execute tasks immediately through chat (disabled long-running detection)',
+            'complexity_score': 5
+        }
 
     def generate_execution_plan(
         self,
