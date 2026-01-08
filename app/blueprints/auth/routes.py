@@ -1,7 +1,7 @@
 from flask import render_template, redirect, url_for, flash, request, session, current_app
 from flask_login import login_user, logout_user, current_user
 from urllib.parse import urlparse
-from datetime import datetime
+from datetime import datetime, timedelta
 from app import db, limiter
 from app.blueprints.auth import auth_bp
 from app.blueprints.auth.forms import LoginForm, RegistrationForm, ForgotPasswordForm, ResetPasswordForm
@@ -119,8 +119,11 @@ def register():
             email=form.email.data.lower(),
             first_name=form.first_name.data,
             last_name=form.last_name.data,
-            plan='free',  # Default to free plan
-            email_confirmed=False  # Require email confirmation
+            plan='pro',  # Start with Pro plan (14-day trial)
+            email_confirmed=False,  # Require email confirmation
+            trial_activated=True,  # Activate trial immediately
+            trial_start_date=datetime.utcnow(),
+            trial_end_date=datetime.utcnow() + timedelta(days=14)
         )
         user.set_password(form.password.data)
 
@@ -170,11 +173,11 @@ def register():
                 # Set current tenant
                 session['current_tenant_id'] = invitation.tenant_id
 
-                flash(f'Welcome to Soloquy, {user.full_name}! Please check your email to confirm your account.', 'success')
+                flash(f'Welcome to Soloquy, {user.full_name}! Your 14-day Pro trial is now active. Please check your email to confirm your account.', 'success')
                 return redirect(url_for('tenant.home'))
 
         # No invitation - redirect to workspace creation wizard
-        flash(f'Welcome to Soloquy, {user.full_name}! Please check your email to confirm your account.', 'success')
+        flash(f'Welcome to Soloquy, {user.full_name}! Your 14-day Pro trial is now active. Please check your email to confirm your account.', 'success')
         return redirect(url_for('tenant.wizard'))
 
     return render_template('auth/register.html', form=form, title='Register')

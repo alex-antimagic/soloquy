@@ -115,7 +115,7 @@
 
             <div id="tasksList">
                 {% for task in tasks %}
-                <div class="card task-card priority-{{ task.priority }}" data-task-id="{{ task.id }}" data-priority="{{ task.priority }}" data-status="{{ task.status }}" data-project="{{ task.project_id or '' }}">
+                <div class="card task-card priority-{{ task.priority }}" data-task-id="{{ task.id }}" data-priority="{{ task.priority }}" data-status="{{ task.status }}" data-project="{{ task.project_id or '' }}" data-assigned-to-id="{{ task.assigned_to_id or '' }}" data-assigned-to-agent-id="{{ task.assigned_to_agent_id or '' }}">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-start">
                             <div class="flex-grow-1">
@@ -302,6 +302,12 @@
                     </div>
                     <div class="mb-3">
                         <label for="taskDescription" class="form-label">Description</label>
+                        <div class="d-flex gap-2 mb-2">
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="generateTaskDescription('create')">
+                                <i class="bi bi-magic"></i> Generate User Story
+                            </button>
+                            <small class="text-muted align-self-center">AI-powered by Parker (Product)</small>
+                        </div>
                         <textarea class="form-control" id="taskDescription" rows="3"></textarea>
                     </div>
                     <div class="row">
@@ -328,6 +334,24 @@
                                 {% endfor %}
                             </select>
                         </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="taskAssignedTo" class="form-label">Assign To</label>
+                            <select class="form-select" id="taskAssignedTo">
+                                <option value="">Unassigned</option>
+                                <optgroup label="Team Members">
+                                    {% for member in team_members %}
+                                    <option value="user_{{ member.id }}">{{ member.full_name }}</option>
+                                    {% endfor %}
+                                </optgroup>
+                                <optgroup label="AI Agents">
+                                    {% for agent in agents %}
+                                    <option value="agent_{{ agent.id }}">{{ agent.name }} ({{ agent.department.name }})</option>
+                                    {% endfor %}
+                                </optgroup>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
                         <div class="col-md-6 mb-3">
                             <label for="taskStoryPoints" class="form-label">Story Points</label>
                             <input type="number" class="form-control" id="taskStoryPoints" min="1" max="100">
@@ -360,6 +384,12 @@
                     </div>
                     <div class="mb-3">
                         <label for="editTaskDescription" class="form-label">Description</label>
+                        <div class="d-flex gap-2 mb-2">
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="generateTaskDescription('edit')">
+                                <i class="bi bi-magic"></i> Generate User Story
+                            </button>
+                            <small class="text-muted align-self-center">AI-powered by Parker (Product)</small>
+                        </div>
                         <textarea class="form-control" id="editTaskDescription" rows="3"></textarea>
                     </div>
                     <div class="row">
@@ -386,6 +416,24 @@
                                 {% endfor %}
                             </select>
                         </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="editTaskAssignedTo" class="form-label">Assign To</label>
+                            <select class="form-select" id="editTaskAssignedTo">
+                                <option value="">Unassigned</option>
+                                <optgroup label="Team Members">
+                                    {% for member in team_members %}
+                                    <option value="user_{{ member.id }}">{{ member.full_name }}</option>
+                                    {% endfor %}
+                                </optgroup>
+                                <optgroup label="AI Agents">
+                                    {% for agent in agents %}
+                                    <option value="agent_{{ agent.id }}">{{ agent.name }} ({{ agent.department.name }})</option>
+                                    {% endfor %}
+                                </optgroup>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
                         <div class="col-md-6 mb-3">
                             <label for="editTaskStoryPoints" class="form-label">Story Points</label>
                             <input type="number" class="form-control" id="editTaskStoryPoints" min="1" max="100">
@@ -486,10 +534,22 @@ function createTask() {
     const dueDate = document.getElementById('taskDueDate').value;
     const projectId = document.getElementById('taskProject').value;
     const storyPoints = document.getElementById('taskStoryPoints').value;
+    const assignedTo = document.getElementById('taskAssignedTo').value;
 
     if (!title) {
         alert('Please enter a task title');
         return;
+    }
+
+    // Parse assigned_to value (format: "user_123" or "agent_456")
+    let assignedToId = null;
+    let assignedToAgentId = null;
+    if (assignedTo) {
+        if (assignedTo.startsWith('user_')) {
+            assignedToId = parseInt(assignedTo.replace('user_', ''));
+        } else if (assignedTo.startsWith('agent_')) {
+            assignedToAgentId = parseInt(assignedTo.replace('agent_', ''));
+        }
     }
 
     fetch('/tasks/create', {
@@ -503,7 +563,9 @@ function createTask() {
             priority: priority,
             due_date: dueDate,
             project_id: projectId || null,
-            story_points: storyPoints || null
+            story_points: storyPoints || null,
+            assigned_to_id: assignedToId,
+            assigned_to_agent_id: assignedToAgentId
         })
     })
     .then(response => response.json())
@@ -562,6 +624,16 @@ function editTask(taskId) {
         }
     }
 
+    // Get assigned to (user or agent)
+    const assignedToUserId = taskCard.dataset.assignedToId;
+    const assignedToAgentId = taskCard.dataset.assignedToAgentId;
+    let assignedToValue = '';
+    if (assignedToUserId) {
+        assignedToValue = `user_${assignedToUserId}`;
+    } else if (assignedToAgentId) {
+        assignedToValue = `agent_${assignedToAgentId}`;
+    }
+
     // Populate edit modal
     document.getElementById('editTaskId').value = taskId;
     document.getElementById('editTaskTitle').value = title;
@@ -570,6 +642,7 @@ function editTask(taskId) {
     document.getElementById('editTaskDueDate').value = dueDate;
     document.getElementById('editTaskProject').value = projectId;
     document.getElementById('editTaskStoryPoints').value = storyPoints;
+    document.getElementById('editTaskAssignedTo').value = assignedToValue;
 
     // Show modal
     const modal = new bootstrap.Modal(document.getElementById('editTaskModal'));
@@ -584,10 +657,22 @@ function saveTaskEdit() {
     const dueDate = document.getElementById('editTaskDueDate').value;
     const projectId = document.getElementById('editTaskProject').value;
     const storyPoints = document.getElementById('editTaskStoryPoints').value;
+    const assignedTo = document.getElementById('editTaskAssignedTo').value;
 
     if (!title) {
         alert('Please enter a task title');
         return;
+    }
+
+    // Parse assigned_to value (format: "user_123" or "agent_456")
+    let assignedToId = null;
+    let assignedToAgentId = null;
+    if (assignedTo) {
+        if (assignedTo.startsWith('user_')) {
+            assignedToId = parseInt(assignedTo.replace('user_', ''));
+        } else if (assignedTo.startsWith('agent_')) {
+            assignedToAgentId = parseInt(assignedTo.replace('agent_', ''));
+        }
     }
 
     fetch(`/tasks/${taskId}/update`, {
@@ -601,7 +686,9 @@ function saveTaskEdit() {
             priority: priority,
             due_date: dueDate || null,
             project_id: projectId || null,
-            story_points: storyPoints || null
+            story_points: storyPoints || null,
+            assigned_to_id: assignedToId,
+            assigned_to_agent_id: assignedToAgentId
         })
     })
     .then(response => response.json())
@@ -639,6 +726,50 @@ function toggleComplete(taskId) {
         console.error('Error:', error);
         alert('Failed to toggle task completion');
     });
+}
+
+async function generateTaskDescription(mode) {
+    // Get the title from the appropriate form
+    const titleId = mode === 'create' ? 'taskTitle' : 'editTaskTitle';
+    const descriptionId = mode === 'create' ? 'taskDescription' : 'editTaskDescription';
+
+    const title = document.getElementById(titleId).value.trim();
+
+    if (!title) {
+        alert('Please enter a task title first');
+        return;
+    }
+
+    // Get the button and disable it
+    const button = event.target.closest('button');
+    const originalButtonContent = button.innerHTML;
+    button.disabled = true;
+    button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Generating...';
+
+    try {
+        const response = await fetch('/tasks/generate-description', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ title: title })
+        });
+
+        const data = await response.json();
+
+        if (data.error) {
+            alert('Error: ' + data.error);
+        } else {
+            document.getElementById(descriptionId).value = data.description;
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Failed to generate description');
+    } finally {
+        // Re-enable button
+        button.disabled = false;
+        button.innerHTML = originalButtonContent;
+    }
 }
 
 function deleteTask(taskId) {

@@ -41,6 +41,9 @@ class User(UserMixin, db.Model):
     plan = db.Column(db.String(20), default='free', nullable=False)  # 'free' or 'pro'
     stripe_customer_id = db.Column(db.String(255))  # For Stripe integration
     stripe_subscription_id = db.Column(db.String(255))  # For Stripe subscriptions
+    trial_start_date = db.Column(db.DateTime, nullable=True)  # When trial started
+    trial_end_date = db.Column(db.DateTime, nullable=True)  # When trial ends
+    trial_activated = db.Column(db.Boolean, default=False, nullable=False)  # Has trial been used
 
     # Preferences
     theme_preference = db.Column(db.String(10), default='dark', nullable=False)  # 'dark' or 'light'
@@ -135,6 +138,26 @@ class User(UserMixin, db.Model):
     def is_pro(self):
         """Check if user has pro plan"""
         return self.plan == 'pro'
+
+    def is_trial_active(self):
+        """Check if user's trial is currently active"""
+        if not self.trial_activated or not self.trial_end_date:
+            return False
+        return datetime.utcnow() < self.trial_end_date
+
+    def days_remaining_in_trial(self):
+        """Calculate days left in trial"""
+        if not self.is_trial_active():
+            return 0
+        delta = self.trial_end_date - datetime.utcnow()
+        return max(0, delta.days)
+
+    @property
+    def effective_plan(self):
+        """Return active plan considering trial"""
+        if self.is_trial_active():
+            return 'pro'
+        return self.plan
 
     def get_last_dm_time_with(self, other_user_id):
         """Get timestamp of the last DM with another user"""

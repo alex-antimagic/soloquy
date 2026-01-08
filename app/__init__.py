@@ -179,6 +179,7 @@ def create_app(config_name='default'):
     login_manager.login_message_category = 'info'
 
     # Register blueprints
+    from app.blueprints.marketing import marketing_bp
     from app.blueprints.auth import auth_bp
     from app.blueprints.tenant import tenant_bp
     from app.blueprints.department import department_bp
@@ -195,6 +196,8 @@ def create_app(config_name='default'):
     from app.blueprints.admin import admin_bp
     from app.blueprints.hr import hr_bp
 
+    # Register marketing blueprint FIRST to catch root route
+    app.register_blueprint(marketing_bp)
     app.register_blueprint(auth_bp)
     app.register_blueprint(tenant_bp, url_prefix='/tenant')
     app.register_blueprint(department_bp, url_prefix='/department')
@@ -343,14 +346,7 @@ def create_app(config_name='default'):
         """Handle 503 errors with a fun page"""
         return render_template('errors/503.html'), 503
 
-    # Root route
-    @app.route('/')
-    def index():
-        from flask import redirect, url_for
-        from flask_login import current_user
-        if current_user.is_authenticated:
-            return redirect(url_for('tenant.home'))
-        return redirect(url_for('auth.login'))
+    # Root route now handled by marketing blueprint
 
     # Health check endpoint for monitoring and load balancers
     @app.route('/health')

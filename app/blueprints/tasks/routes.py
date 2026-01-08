@@ -15,6 +15,8 @@ def index():
     """Tasks management page"""
     from app.models.department import Department
     from app.models.project import Project
+    from app.models.user import User
+    from app.models.agent import Agent
 
     # Get all tasks for current tenant
     query = Task.query.filter_by(tenant_id=g.current_tenant.id)
@@ -38,11 +40,22 @@ def index():
     departments = Department.query.filter_by(tenant_id=g.current_tenant.id).all()
     projects = Project.query.filter_by(tenant_id=g.current_tenant.id).all()
 
+    # Get team members (users) for assignment
+    team_members = User.query.filter_by(tenant_id=g.current_tenant.id, is_active=True).order_by(User.full_name).all()
+
+    # Get agents for assignment
+    agents = Agent.query.join(Agent.department).filter(
+        Department.tenant_id == g.current_tenant.id,
+        Agent.is_active == True
+    ).order_by(Agent.name).all()
+
     return render_template('tasks/index.html',
                           title='Tasks',
                           tasks=tasks,
                           departments=departments,
-                          projects=projects)
+                          projects=projects,
+                          team_members=team_members,
+                          agents=agents)
 
 
 @tasks_bp.route('/<int:task_id>')
@@ -58,6 +71,78 @@ def view(task_id):
     return render_template('tasks/view.html',
                           title=task.title,
                           task=task)
+
+
+@tasks_bp.route('/generate-description', methods=['POST'])
+@login_required
+def generate_description():
+    """Generate a user story description using Parker (Product agent)"""
+    data = request.get_json()
+
+    title = data.get('title', '').strip()
+
+    if not title:
+        return jsonify({'error': 'Title is required'}), 400
+
+    try:
+        from app.models.agent import Agent
+        from app.models.department import Department
+        from app.services.ai_service import AIService
+
+        # Find Parker (Product agent) for the current tenant
+        parker = Agent.query.join(Department).filter(
+            Department.tenant_id == g.current_tenant.id,
+            db.func.lower(Agent.name) == 'parker',
+            Agent.agent_type == 'specialist',
+            Agent.is_active == True
+        ).first()
+
+        if not parker:
+            # Fallback: use a generic AI prompt if Parker doesn't exist
+            ai_service = AIService()
+            prompt = f"""Generate a concise user story description for this task title: "{title}"
+
+Format it as: "As a [type of user], I want to [perform some task], so that I can [achieve some goal/benefit]."
+
+Keep it focused and clear. Return ONLY the user story, nothing else."""
+
+            description = ai_service.chat(
+                messages=[{'role': 'user', 'content': prompt}],
+                system_prompt="You are a product manager helping write clear, concise user stories.",
+                model='claude-haiku-4-5-20251001',
+                max_tokens=150,
+                temperature=0.7
+            ).strip()
+        else:
+            # Use Parker's context for more personalized user stories
+            ai_service = AIService()
+
+            # Build system prompt with Parker's context
+            system_prompt = parker.build_system_prompt_with_context(
+                tenant=g.current_tenant,
+                user=current_user
+            )
+
+            prompt = f"""A team member needs help writing a user story for this task: "{title}"
+
+Generate a concise, clear user story description using this format:
+"As a [type of user], I want to [perform some task], so that I can [achieve some goal/benefit]."
+
+Consider the context of our company and make it specific and actionable. Return ONLY the user story, nothing else."""
+
+            description = ai_service.chat(
+                messages=[{'role': 'user', 'content': prompt}],
+                system_prompt=system_prompt,
+                model='claude-haiku-4-5-20251001',
+                max_tokens=150,
+                temperature=0.7
+            ).strip()
+
+        return jsonify({'description': description})
+
+    except Exception as e:
+        current_app.logger.error(f"Error generating task description: {str(e)}")
+        return jsonify({'error': 'Failed to generate description'}), 500
 
 
 @tasks_bp.route('/create', methods=['POST'])

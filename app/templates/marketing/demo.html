@@ -1,0 +1,203 @@
+{% extends "marketing/layout.html" %}
+
+{% block title %}Request a Demo - Soloquy{% endblock %}
+{% block description %}See Soloquy in action. Schedule a personalized demo with our team.{% endblock %}
+
+{% block content %}
+
+<!-- Demo Hero -->
+<section class="demo-hero-section">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6 mb-5 mb-lg-0">
+                <h1 class="display-4 fw-bold mb-4">
+                    See <span class="brand-gradient">Soloquy</span> in Action
+                </h1>
+                <p class="lead text-muted mb-4">
+                    Schedule a personalized demo and discover how Soloquy can transform
+                    your business with AI-powered agents and automation.
+                </p>
+                <ul class="list-unstyled">
+                    <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i> Live walkthrough of all features</li>
+                    <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i> Customized to your business needs</li>
+                    <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i> Q&A with our product experts</li>
+                    <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i> No commitment required</li>
+                </ul>
+            </div>
+            <div class="col-lg-6">
+                <div class="demo-form-card">
+                    <h3 class="mb-4">Request Your Demo</h3>
+                    <form id="demoRequestForm" action="/demo" method="post">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                        <div class="mb-3">
+                            <label for="name" class="form-label">Full Name *</label>
+                            <input type="text" class="form-control" id="name" name="name" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Work Email *</label>
+                            <input type="email" class="form-control" id="email" name="email" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="company" class="form-label">Company Name *</label>
+                            <input type="text" class="form-control" id="company" name="company" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="company_size" class="form-label">Company Size</label>
+                            <select class="form-select" id="company_size" name="company_size">
+                                <option value="">Select...</option>
+                                <option value="1-10">1-10 employees</option>
+                                <option value="11-50">11-50 employees</option>
+                                <option value="51-200">51-200 employees</option>
+                                <option value="201-500">201-500 employees</option>
+                                <option value="500+">500+ employees</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="phone" class="form-label">Phone Number</label>
+                            <input type="tel" class="form-control" id="phone" name="phone">
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="message" class="form-label">What would you like to see in the demo?</label>
+                            <textarea class="form-control" id="message" name="message" rows="4" placeholder="Tell us about your use case or specific features you're interested in..."></textarea>
+                        </div>
+
+                        <button type="submit" class="btn btn-gradient-primary w-100 btn-lg">
+                            <i class="bi bi-calendar-check me-2"></i>Request Demo
+                        </button>
+
+                        <p class="text-muted small text-center mt-3 mb-0">
+                            We'll respond within 24 hours to schedule your demo
+                        </p>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- What to Expect Section -->
+<section class="what-to-expect-section">
+    <div class="container">
+        <h2 class="text-center mb-5 fw-bold">What to Expect from Your Demo</h2>
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="expectation-card">
+                    <div class="expectation-icon mb-3">
+                        <i class="bi bi-clock-history"></i>
+                    </div>
+                    <h4 class="mb-3">30-Minute Session</h4>
+                    <p class="text-muted">
+                        A focused walkthrough of Soloquy's core features, customized to
+                        your business needs and goals.
+                    </p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="expectation-card">
+                    <div class="expectation-icon mb-3">
+                        <i class="bi bi-person-video3"></i>
+                    </div>
+                    <h4 class="mb-3">Screen Share & Live Q&A</h4>
+                    <p class="text-muted">
+                        See the platform in action with a live screen share, and get all
+                        your questions answered in real-time.
+                    </p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="expectation-card">
+                    <div class="expectation-icon mb-3">
+                        <i class="bi bi-diagram-3"></i>
+                    </div>
+                    <h4 class="mb-3">Implementation Guidance</h4>
+                    <p class="text-muted">
+                        Learn best practices for rolling out Soloquy to your team and
+                        maximizing value from day one.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Why Choose Soloquy Section -->
+<section class="why-choose-section">
+    <div class="container">
+        <h2 class="text-center mb-5 fw-bold">Why Teams Choose <span class="brand-gradient">Soloquy</span></h2>
+        <div class="row g-4">
+            <div class="col-md-6">
+                <div class="benefit-card">
+                    <h4 class="mb-3"><i class="bi bi-lightning-charge text-warning me-2"></i> Fast Implementation</h4>
+                    <p class="text-muted">
+                        Most teams are up and running in under an hour. Our intuitive
+                        interface and guided setup make onboarding a breeze.
+                    </p>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="benefit-card">
+                    <h4 class="mb-3"><i class="bi bi-graph-up-arrow text-success me-2"></i> Proven ROI</h4>
+                    <p class="text-muted">
+                        Teams report 40% time savings on routine tasks and 3x faster
+                        response times to customers using AI agents.
+                    </p>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="benefit-card">
+                    <h4 class="mb-3"><i class="bi bi-shield-check text-info me-2"></i> Enterprise Security</h4>
+                    <p class="text-muted">
+                        Bank-level encryption, SOC 2 compliance, and role-based access
+                        control keep your data safe and secure.
+                    </p>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="benefit-card">
+                    <h4 class="mb-3"><i class="bi bi-headset text-primary me-2"></i> World-Class Support</h4>
+                    <p class="text-muted">
+                        Our team is here to help you succeed with responsive support,
+                        detailed documentation, and regular training sessions.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Alternative CTA -->
+<section class="alternative-cta-section">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-8">
+                <h3 class="mb-2">Prefer to explore on your own?</h3>
+                <p class="text-muted mb-3 mb-lg-0">
+                    Start your 14-day free trial and experience Soloquy yourself. No credit card required.
+                </p>
+            </div>
+            <div class="col-lg-4 text-lg-end">
+                <a href="{{ url_for('auth.register') }}" class="btn btn-outline-light btn-lg">
+                    Start Free Trial <i class="bi bi-arrow-right ms-2"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Form submission handling (for future backend integration)
+    document.getElementById('demoRequestForm').addEventListener('submit', function(e) {
+        // For now, the form will submit normally
+        // In the future, this could be an AJAX submission
+    });
+</script>
+{% endblock %}
