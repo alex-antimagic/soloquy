@@ -253,11 +253,13 @@ def send_message():
     message_type = 'image' if attachment_url else 'text'
 
     # Save user's message
+    # When chatting with an agent, set agent_id so the conversation query can find it
     message = Message(
         content=content or '(image)',
         sender_id=current_user.id,
         department_id=department_id,
         recipient_id=recipient_id,
+        agent_id=agent_id,  # Set agent_id for agent conversations
         message_type=message_type,
         attachment_url=attachment_url,
         attachment_type=attachment_type,

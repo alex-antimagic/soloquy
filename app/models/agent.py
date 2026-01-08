@@ -182,14 +182,14 @@ class Agent(db.Model):
         from app.models.message import Message
 
         # Get messages where:
-        # - This specific agent is involved (not just department)
-        # - User sent the message to this agent, OR
-        # - This agent sent the message
+        # - This specific agent is involved (agent_id is set)
+        # - Message is either FROM the user (sender_id = user_id) OR
+        # - Message is FROM the agent (sender_id is None)
         query = Message.query.filter(
             Message.agent_id == self.id,  # Only this agent's messages
             db.or_(
-                Message.sender_id == user_id,  # User's messages
-                Message.agent_id == self.id     # This agent's responses (redundant but explicit)
+                Message.sender_id == user_id,  # User's messages to this agent
+                Message.sender_id.is_(None)     # This agent's responses (sender_id is None for agent messages)
             )
         )
 
