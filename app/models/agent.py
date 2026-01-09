@@ -767,29 +767,11 @@ class Agent(db.Model):
         Returns:
             Boolean indicating whether the agent should be visible
         """
-        from app.models.agent_user_preferences import AgentUserPreferences
-
         # First check if user has access at all
         if not self.can_user_access(user):
             return False
 
-        # Check user preferences
-        pref = AgentUserPreferences.query.filter_by(
-            user_id=user.id,
-            agent_id=self.id
-        ).first()
-
-        if pref:
-            return pref.visible_in_sidebar
-
-        # Default behavior based on user's mode preference
-        user_mode = self.get_user_preferred_mode(user)
-
-        # In orchestrator mode: only show orchestrator agents
-        if user_mode == 'orchestrator':
-            return self.is_orchestrator()
-
-        # In direct mode: show all specialist agents
+        # Show all accessible agents in sidebar
         return True
 
     def get_user_preferred_mode(self, user):
@@ -800,11 +782,7 @@ class Agent(db.Model):
             user: User object
 
         Returns:
-            String: 'orchestrator' or 'direct' (defaults to 'orchestrator')
+            String: 'orchestrator' or 'direct' (defaults to 'direct')
         """
-        from app.models.agent_user_preferences import AgentUserPreferences
-
-        # Get user's global preference (any preference record will have the mode)
-        pref = AgentUserPreferences.query.filter_by(user_id=user.id).first()
-
-        return pref.preferred_mode if pref else 'orchestrator'
+        # Default to direct mode (show all agents)
+        return 'direct'
