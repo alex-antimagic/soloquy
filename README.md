@@ -1,4 +1,4 @@
-# Soloquy - Multi-Tenant Business Management Platform
+# worklead - Multi-Tenant Business Management Platform
 
 A Slack-inspired, multi-tenant Flask application for managing businesses with AI-powered department agents.
 
@@ -31,7 +31,7 @@ A Slack-inspired, multi-tenant Flask application for managing businesses with AI
 
 1. **Clone and navigate to the project**
    ```bash
-   cd ~/soloquy
+   cd ~/worklead
    ```
 
 2. **Create and activate virtual environment**
@@ -47,7 +47,7 @@ A Slack-inspired, multi-tenant Flask application for managing businesses with AI
 
 4. **Create PostgreSQL database**
    ```bash
-   createdb soloquy
+   createdb worklead
    ```
 
 5. **Configure environment variables**
@@ -57,7 +57,7 @@ A Slack-inspired, multi-tenant Flask application for managing businesses with AI
 
    Edit `.env` and set:
    - `SECRET_KEY`: A secure random string
-   - `DATABASE_URL`: Your PostgreSQL connection string (default: `postgresql://localhost/soloquy`)
+   - `DATABASE_URL`: Your PostgreSQL connection string (default: `postgresql://localhost/worklead`)
    - `ANTHROPIC_API_KEY`: Your Anthropic API key for Claude
 
 6. **Initialize database**
@@ -83,7 +83,7 @@ A Slack-inspired, multi-tenant Flask application for managing businesses with AI
 ## Project Structure
 
 ```
-soloquy/
+worklead/
 ├── app/
 │   ├── __init__.py              # Application factory
 │   ├── models/                  # Database models
@@ -156,8 +156,8 @@ flask db upgrade
 To start fresh:
 
 ```bash
-dropdb soloquy
-createdb soloquy
+dropdb worklead
+createdb worklead
 flask db upgrade
 ```
 
@@ -173,7 +173,7 @@ pytest
 |----------|-------------|---------|
 | `FLASK_ENV` | Environment (development/production) | `development` |
 | `SECRET_KEY` | Flask secret key | Random (change in production!) |
-| `DATABASE_URL` | PostgreSQL connection string | `postgresql://localhost/soloquy` |
+| `DATABASE_URL` | PostgreSQL connection string | `postgresql://localhost/worklead` |
 | `ANTHROPIC_API_KEY` | Claude API key | None (required for AI features) |
 | `PORT` | Server port | `5000` |
 

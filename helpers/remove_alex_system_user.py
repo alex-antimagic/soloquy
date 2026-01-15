@@ -15,7 +15,7 @@ with app.app_context():
         result = conn.execute(text("""
             SELECT id, email, first_name, last_name
             FROM users
-            WHERE email = 'alex@soloquy.com'
+            WHERE email = 'alex@worklead.ai'
         """))
         alex_user = result.fetchone()
 
@@ -56,7 +56,7 @@ with app.app_context():
             print("✅ Cleanup completed successfully!")
             print(f"\nSummary:")
             print(f"  - Deleted {message_count} message(s)")
-            print(f"  - Deleted 1 user (alex@soloquy.com)")
+            print(f"  - Deleted 1 user (alex@worklead.ai)")
 
         else:
             print("\n📝 Alex user not found in database (may have been deleted already)")

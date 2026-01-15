@@ -1,7 +1,7 @@
 {
-  "name": "soloquy",
+  "name": "worklead",
   "version": "1.0.0",
-  "description": "Soloquy - AI-powered workspace collaboration platform with MCP integration",
+  "description": "worklead - AI-powered workspace collaboration platform with MCP integration",
   "engines": {
     "node": "20.x",
     "npm": "10.x"

@@ -372,7 +372,7 @@ IMPORTANT: Return ONLY the JSON array, no additional text or explanation."""
 
             # Try to fetch the website
             headers = {
-                'User-Agent': 'Mozilla/5.0 (compatible; SoloquyBot/1.0; +https://soloquy.com)'
+                'User-Agent': 'Mozilla/5.0 (compatible; WorkleadBot/1.0; +https://worklead.ai)'
             }
 
             response = requests.head(url, headers=headers, timeout=self.timeout, allow_redirects=True)

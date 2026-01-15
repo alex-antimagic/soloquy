@@ -3392,7 +3392,7 @@ Return ONLY valid JSON in this format:
 
         context = "\n".join(context_parts) if context_parts else "No additional context provided."
 
-        system_prompt = f"""You are a helpful assistant analyzing screenshots for bug reports in the Soloquy application - a Slack-inspired team collaboration platform.
+        system_prompt = f"""You are a helpful assistant analyzing screenshots for bug reports in the worklead application - a Slack-inspired team collaboration platform.
 
 {context}
 

@@ -16,7 +16,7 @@ The Outlook integration uses a **single Azure AD app registration per tenant**. 
 1. Go to [Azure Portal](https://portal.azure.com)
 2. Navigate to **Azure Active Directory** → **App registrations** → **New registration**
 3. Configure:
-   - **Name**: `YourCompany - Soloquy`
+   - **Name**: `YourCompany - worklead`
    - **Supported account types**: `Accounts in this organizational directory only`
    - Click **Register**
 
@@ -38,7 +38,7 @@ The Outlook integration uses a **single Azure AD app registration per tenant**. 
 1. Go to **Certificates & secrets** → **Client secrets**
 2. Click **New client secret**
 3. Set:
-   - **Description**: `Soloquy`
+   - **Description**: `worklead`
    - **Expires**: 24 months (recommended)
 4. **Important**: Copy the secret **Value** immediately (you can't see it again)
 
@@ -61,9 +61,9 @@ To pre-approve for all users in your organization:
 
 This prevents users from seeing the consent screen when they connect their personal Outlook.
 
-### Step 6: Configure in Soloquy
+### Step 6: Configure in worklead
 
-1. In Soloquy, go to **Integrations** → **Outlook**
+1. In worklead, go to **Integrations** → **Outlook**
 2. Click **Configure Workspace Outlook**
 3. Enter:
    - **Application (client) ID**: From Azure app overview page
@@ -80,7 +80,7 @@ Once the admin has completed the Azure AD setup, users can connect their persona
 3. Automatically redirected to Microsoft sign-in
 4. Authenticate with your Microsoft credentials
 5. Grant permissions (if admin consent wasn't given)
-6. Redirected back to Soloquy - Done!
+6. Redirected back to worklead - Done!
 
 **That's it!** No configuration page, no credential entry. The system automatically:
 - Uses the workspace Azure AD app credentials
@@ -165,7 +165,7 @@ Example: If User A has access to `support@company.com` in M365, their AI agents 
 If you previously had users create separate Azure AD apps, you can migrate:
 
 1. Admin: Create a single workspace Azure AD app (follow steps above)
-2. Admin: Configure the workspace integration in Soloquy
+2. Admin: Configure the workspace integration in worklead
 3. Each user: Disconnect their old personal integration
 4. Each user: Reconnect using the new flow (will use workspace credentials automatically)
 5. Users can delete their old Azure AD app registrations

@@ -74,7 +74,7 @@ class BusinessIntelligenceService:
             url = 'https://' + url
 
         headers = {
-            'User-Agent': 'Mozilla/5.0 (compatible; SoloquyBot/1.0; +https://soloquy.com)'
+            'User-Agent': 'Mozilla/5.0 (compatible; WorkleadBot/1.0; +https://worklead.ai)'
         }
 
         response = requests.get(url, headers=headers, timeout=self.timeout, allow_redirects=True)

@@ -1,6 +1,6 @@
-# Soloquy Test Suite
+# worklead Test Suite
 
-Comprehensive test suite for the Soloquy multi-tenant SaaS application.
+Comprehensive test suite for the worklead multi-tenant SaaS application.
 
 ## Setup
 

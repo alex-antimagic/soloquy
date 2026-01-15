@@ -89,7 +89,7 @@ class LeadEnrichmentService:
 
         try:
             headers = {
-                'User-Agent': 'Mozilla/5.0 (compatible; SoloquyBot/1.0; +https://soloquy.com)'
+                'User-Agent': 'Mozilla/5.0 (compatible; WorkleadBot/1.0; +https://worklead.ai)'
             }
             response = requests.get(url, headers=headers, timeout=timeout, allow_redirects=True)
             response.raise_for_status()

@@ -13,7 +13,7 @@ class Config:
     SECRET_KEY = _secret
 
     # Database - Handle Heroku's postgres:// -> postgresql:// conversion
-    database_url = os.environ.get('DATABASE_URL') or 'postgresql://localhost/soloquy'
+    database_url = os.environ.get('DATABASE_URL') or 'postgresql://localhost/worklead'
     if database_url.startswith('postgres://'):
         database_url = database_url.replace('postgres://', 'postgresql://', 1)
     SQLALCHEMY_DATABASE_URI = database_url
@@ -44,7 +44,7 @@ class Config:
 
     # Email Configuration (SendGrid)
     SENDGRID_API_KEY = os.environ.get('SENDGRID_API_KEY')
-    MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER', 'noreply@soloquy.app')
+    MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER', 'noreply@worklead.ai')
     MAIL_ADMIN_EMAIL = os.environ.get('MAIL_ADMIN_EMAIL', 'support@antimagic.com')
 
     # Cloudinary (File Storage)
@@ -115,7 +115,7 @@ class TestingConfig(Config):
     """Testing configuration"""
     TESTING = True
     # Use DATABASE_URL from environment if set (for CI), otherwise use local default
-    test_db_url = os.environ.get('DATABASE_URL') or 'postgresql://localhost/soloquy_test'
+    test_db_url = os.environ.get('DATABASE_URL') or 'postgresql://localhost/worklead_test'
     if test_db_url.startswith('postgres://'):
         test_db_url = test_db_url.replace('postgres://', 'postgresql://', 1)
     SQLALCHEMY_DATABASE_URI = test_db_url

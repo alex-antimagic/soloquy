@@ -1,53 +1,53 @@
-/* Soloquy - Theme-Adaptive Styles */
+/* worklead - Theme-Adaptive Styles */
 
 /* Theme-specific color variables */
 [data-bs-theme="dark"] {
-    --soloquy-bg: #1a1d21;
-    --soloquy-sidebar-bg: #19171d;
-    --soloquy-icon-sidebar-bg: #0d0c0f;
-    --soloquy-hover: #2c2d30;
-    --soloquy-border: #2c2d30;
-    --soloquy-text: #d1d2d3;
-    --soloquy-text-muted: #9ca3af;
-    --soloquy-message-bubble: #2c2d30;
+    --worklead-bg: #1a1d21;
+    --worklead-sidebar-bg: #19171d;
+    --worklead-icon-sidebar-bg: #0d0c0f;
+    --worklead-hover: #2c2d30;
+    --worklead-border: #2c2d30;
+    --worklead-text: #d1d2d3;
+    --worklead-text-muted: #9ca3af;
+    --worklead-message-bubble: #2c2d30;
 }
 
 [data-bs-theme="light"] {
-    --soloquy-bg: #ffffff;
-    --soloquy-sidebar-bg: #f8f9fa;
-    --soloquy-icon-sidebar-bg: #e9ecef;
-    --soloquy-hover: #e9ecef;
-    --soloquy-border: #dee2e6;
-    --soloquy-text: #212529;
-    --soloquy-text-muted: #6c757d;
-    --soloquy-message-bubble: #e9ecef;
+    --worklead-bg: #ffffff;
+    --worklead-sidebar-bg: #f8f9fa;
+    --worklead-icon-sidebar-bg: #e9ecef;
+    --worklead-hover: #e9ecef;
+    --worklead-border: #dee2e6;
+    --worklead-text: #212529;
+    --worklead-text-muted: #6c757d;
+    --worklead-message-bubble: #e9ecef;
 }
 
 /* Brand colors (consistent across themes) */
 :root {
-    --soloquy-active: #1164a3;
-    --soloquy-channel-active: #1164a3;
+    --worklead-active: #1164a3;
+    --worklead-channel-active: #1164a3;
 }
 
 /* Global Styles */
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    background-color: var(--soloquy-bg);
-    color: var(--soloquy-text);
+    background-color: var(--worklead-bg);
+    color: var(--worklead-text);
 }
 
 /* Override Bootstrap Dark Mode */
 .bg-dark {
-    background-color: var(--soloquy-bg) !important;
+    background-color: var(--worklead-bg) !important;
 }
 
 /* Sidebar Styles */
 .sidebar {
-    background-color: var(--soloquy-sidebar-bg);
+    background-color: var(--worklead-sidebar-bg);
     width: 300px;
     min-width: 300px;
     max-width: 300px;
-    border-right: 1px solid var(--soloquy-border);
+    border-right: 1px solid var(--worklead-border);
     position: relative;
     flex-shrink: 0;
     overflow-y: auto;
@@ -56,20 +56,20 @@ body {
 
 .sidebar-header {
     padding: 1rem;
-    border-bottom: 1px solid var(--soloquy-border);
+    border-bottom: 1px solid var(--worklead-border);
     font-weight: 600;
     font-size: 1.125rem;
 }
 
 .sidebar-section {
     padding: 1rem 0;
-    border-bottom: 1px solid var(--soloquy-border);
+    border-bottom: 1px solid var(--worklead-border);
 }
 
 .sidebar-section-title {
     font-size: 0.8125rem;
     font-weight: 600;
-    color: var(--soloquy-text-muted);
+    color: var(--worklead-text-muted);
     padding: 0.25rem 1rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -79,18 +79,18 @@ body {
     display: flex;
     align-items: center;
     padding: 0.375rem 1rem;
-    color: var(--soloquy-text);
+    color: var(--worklead-text);
     text-decoration: none;
     transition: background-color 0.15s ease;
 }
 
 .sidebar-item:hover {
-    background-color: var(--soloquy-hover);
-    color: var(--soloquy-text);
+    background-color: var(--worklead-hover);
+    color: var(--worklead-text);
 }
 
 .sidebar-item.active {
-    background-color: var(--soloquy-channel-active);
+    background-color: var(--worklead-channel-active);
     color: #fff;
 }
 
@@ -106,8 +106,8 @@ body {
 
 /* Tenant Switcher */
 .tenant-switcher {
-    background-color: var(--soloquy-hover);
-    border: 1px solid var(--soloquy-border);
+    background-color: var(--worklead-hover);
+    border: 1px solid var(--worklead-border);
     border-radius: 0.375rem;
     padding: 0.5rem 0.75rem;
     cursor: pointer;
@@ -116,7 +116,7 @@ body {
 }
 
 .tenant-switcher:hover {
-    background-color: var(--soloquy-border);
+    background-color: var(--worklead-border);
 }
 
 /* ========================================
@@ -128,8 +128,8 @@ body {
     width: 60px;
     min-width: 60px;
     max-width: 60px;
-    background-color: var(--soloquy-icon-sidebar-bg);
-    border-right: 1px solid var(--soloquy-border);
+    background-color: var(--worklead-icon-sidebar-bg);
+    border-right: 1px solid var(--worklead-border);
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
@@ -139,7 +139,7 @@ body {
 /* Workspace Header (at top of icon sidebar) */
 .workspace-header {
     padding: 0.75rem 0 0.5rem 0;
-    border-bottom: 1px solid var(--soloquy-border);
+    border-bottom: 1px solid var(--worklead-border);
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
@@ -150,7 +150,7 @@ body {
     font-size: 0.6875rem;
     font-weight: 600;
     text-align: center;
-    color: var(--soloquy-text);
+    color: var(--worklead-text);
     padding: 0 0.25rem;
     margin-bottom: 0.5rem;
     line-height: 1.2;
@@ -202,7 +202,7 @@ body {
     align-items: center;
     justify-content: center;
     gap: 0.125rem;
-    color: var(--soloquy-text);
+    color: var(--worklead-text);
     text-decoration: none;
     transition: background-color 0.2s, color 0.2s;
     border: none;
@@ -222,7 +222,7 @@ body {
 }
 
 .icon-sidebar-item.active {
-    background-color: var(--soloquy-active);
+    background-color: var(--worklead-active);
     color: #fff;
 }
 
@@ -257,7 +257,7 @@ body {
 /* Icon sidebar divider */
 .icon-sidebar-divider {
     height: 1px;
-    background-color: var(--soloquy-border);
+    background-color: var(--worklead-border);
     margin: 0.5rem 0.75rem;
 }
 
@@ -298,7 +298,7 @@ body {
     width: 12px;
     height: 12px;
     border-radius: 50%;
-    border: 2px solid var(--soloquy-icon-sidebar-bg);
+    border: 2px solid var(--worklead-icon-sidebar-bg);
 }
 
 /* Content Sidebar (260px, collapsible) */
@@ -306,8 +306,8 @@ body {
     width: 260px;
     min-width: 260px;
     max-width: 260px;
-    background-color: var(--soloquy-sidebar-bg);
-    border-right: 1px solid var(--soloquy-border);
+    background-color: var(--worklead-sidebar-bg);
+    border-right: 1px solid var(--worklead-border);
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
@@ -322,7 +322,7 @@ body {
 /* Content Sidebar Header */
 .content-sidebar-header {
     padding: 0.75rem 1rem;
-    border-bottom: 1px solid var(--soloquy-border);
+    border-bottom: 1px solid var(--worklead-border);
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -334,7 +334,7 @@ body {
 .collapse-btn {
     background: transparent;
     border: none;
-    color: var(--soloquy-text-muted);
+    color: var(--worklead-text-muted);
     cursor: pointer;
     padding: 0.375rem;
     border-radius: 0.25rem;
@@ -346,8 +346,8 @@ body {
 }
 
 .collapse-btn:hover {
-    background-color: var(--soloquy-hover);
-    color: var(--soloquy-text);
+    background-color: var(--worklead-hover);
+    color: var(--worklead-text);
 }
 
 .collapse-btn i {
@@ -373,7 +373,7 @@ body {
 /* Content Sidebar Footer */
 .content-sidebar-footer {
     flex-shrink: 0;
-    border-top: 1px solid var(--soloquy-border);
+    border-top: 1px solid var(--worklead-border);
     padding: 0.5rem;
 }
 
@@ -402,8 +402,8 @@ body {
 
 /* Header Styles */
 .main-header {
-    background-color: var(--soloquy-bg);
-    border-bottom: 1px solid var(--soloquy-border);
+    background-color: var(--worklead-bg);
+    border-bottom: 1px solid var(--worklead-border);
     padding: 0.75rem 1.5rem;
     height: 49px;
     box-sizing: border-box;
@@ -435,50 +435,50 @@ body {
 
 /* Main Content */
 main {
-    background-color: var(--soloquy-bg);
+    background-color: var(--worklead-bg);
 }
 
 /* Footer */
 .main-footer {
-    background-color: var(--soloquy-bg);
-    border-top: 1px solid var(--soloquy-border);
+    background-color: var(--worklead-bg);
+    border-top: 1px solid var(--worklead-border);
     flex-shrink: 0;
 }
 
 .main-footer a:hover {
-    color: var(--soloquy-text) !important;
+    color: var(--worklead-text) !important;
 }
 
 /* Card Overrides */
 .card {
-    background-color: var(--soloquy-sidebar-bg);
-    border-color: var(--soloquy-border);
+    background-color: var(--worklead-sidebar-bg);
+    border-color: var(--worklead-border);
 }
 
 .card:hover {
-    border-color: var(--soloquy-text-muted);
+    border-color: var(--worklead-text-muted);
 }
 
 /* Form Controls */
 .form-control,
 .form-select {
-    background-color: var(--soloquy-sidebar-bg);
-    border-color: var(--soloquy-border);
-    color: var(--soloquy-text);
+    background-color: var(--worklead-sidebar-bg);
+    border-color: var(--worklead-border);
+    color: var(--worklead-text);
 }
 
 .form-control:focus,
 .form-select:focus {
-    background-color: var(--soloquy-sidebar-bg);
-    border-color: var(--soloquy-active);
-    color: var(--soloquy-text);
+    background-color: var(--worklead-sidebar-bg);
+    border-color: var(--worklead-active);
+    color: var(--worklead-text);
     box-shadow: 0 0 0 0.2rem rgba(17, 100, 163, 0.25);
 }
 
 /* Button Overrides */
 .btn-primary {
-    background-color: var(--soloquy-active);
-    border-color: var(--soloquy-active);
+    background-color: var(--worklead-active);
+    border-color: var(--worklead-active);
 }
 
 .btn-primary:hover,
@@ -533,8 +533,8 @@ main {
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--soloquy-text-muted);
-    background: var(--soloquy-hover);
+    color: var(--worklead-text-muted);
+    background: var(--worklead-hover);
     border-radius: 8px;
     width: 100%;
     height: 100%;
@@ -548,7 +548,7 @@ main {
     width: 12px;
     height: 12px;
     border-radius: 50%;
-    border: 2px solid var(--soloquy-bg);
+    border: 2px solid var(--worklead-bg);
 }
 
 .avatar-status.online {
@@ -616,7 +616,7 @@ main {
 }
 
 .message-left .message-content {
-    background-color: var(--soloquy-message-bubble);
+    background-color: var(--worklead-message-bubble);
     border-radius: 18px 18px 18px 4px;
 }
 
@@ -669,12 +669,12 @@ main {
 .message-author {
     font-size: 0.75rem;
     font-weight: 600;
-    color: var(--soloquy-text-muted);
+    color: var(--worklead-text-muted);
 }
 
 .message-time {
     font-size: 0.6875rem;
-    color: var(--soloquy-text-muted);
+    color: var(--worklead-text-muted);
 }
 
 .message-body {
@@ -724,7 +724,7 @@ main {
 /* Chat Input */
 .chat-input {
     padding: 1rem;
-    border-top: 1px solid var(--soloquy-border);
+    border-top: 1px solid var(--worklead-border);
 }
 
 .chat-input .form-control {
@@ -762,16 +762,16 @@ main {
 }
 
 ::-webkit-scrollbar-track {
-    background: var(--soloquy-sidebar-bg);
+    background: var(--worklead-sidebar-bg);
 }
 
 ::-webkit-scrollbar-thumb {
-    background: var(--soloquy-hover);
+    background: var(--worklead-hover);
     border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: var(--soloquy-text-muted);
+    background: var(--worklead-text-muted);
 }
 
 /* Auth Pages */
@@ -829,7 +829,7 @@ main {
 }
 
 .typing-indicator .message-content {
-    background-color: var(--soloquy-message-bubble) !important;
+    background-color: var(--worklead-message-bubble) !important;
     border-radius: 18px 18px 18px 4px !important;
     padding: 0.75rem 1rem !important;
 }
@@ -870,11 +870,11 @@ main {
 
 /* Utility Classes */
 .text-muted {
-    color: var(--soloquy-text-muted) !important;
+    color: var(--worklead-text-muted) !important;
 }
 
 .border-bottom {
-    border-bottom-color: var(--soloquy-border) !important;
+    border-bottom-color: var(--worklead-border) !important;
 }
 
 /* Chat Container with Tasks Sidebar */
@@ -902,8 +902,8 @@ main:has(.chat-container) {
     width: 320px;
     min-width: 320px;
     max-width: 320px;
-    background-color: var(--soloquy-sidebar-bg);
-    border-left: 1px solid var(--soloquy-border);
+    background-color: var(--worklead-sidebar-bg);
+    border-left: 1px solid var(--worklead-border);
     display: flex;
     flex-direction: column;
     overflow-y: auto;
@@ -913,16 +913,16 @@ main:has(.chat-container) {
 
 .tasks-sidebar-header {
     padding: 1rem;
-    border-bottom: 1px solid var(--soloquy-border);
+    border-bottom: 1px solid var(--worklead-border);
 }
 
 .tasks-sidebar-header h6 {
     font-weight: 600;
-    color: var(--soloquy-text);
+    color: var(--worklead-text);
 }
 
 .tasks-section {
-    border-bottom: 1px solid var(--soloquy-border);
+    border-bottom: 1px solid var(--worklead-border);
 }
 
 [data-bs-theme="dark"] .tasks-section-header {
@@ -940,7 +940,7 @@ main:has(.chat-container) {
 .tasks-section-title {
     font-size: 0.8125rem;
     font-weight: 600;
-    color: var(--soloquy-text-muted);
+    color: var(--worklead-text-muted);
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
@@ -958,7 +958,7 @@ main:has(.chat-container) {
 }
 
 .task-item:hover {
-    background-color: var(--soloquy-hover);
+    background-color: var(--worklead-hover);
 }
 
 .task-item.task-completed .task-title {
@@ -981,7 +981,7 @@ main:has(.chat-container) {
 
 .task-title {
     font-size: 0.875rem;
-    color: var(--soloquy-text);
+    color: var(--worklead-text);
     line-height: 1.4;
     margin-bottom: 0.25rem;
     word-wrap: break-word;
@@ -992,7 +992,7 @@ main:has(.chat-container) {
     flex-wrap: wrap;
     gap: 0.5rem;
     font-size: 0.75rem;
-    color: var(--soloquy-text-muted);
+    color: var(--worklead-text-muted);
 }
 
 .task-meta span {
@@ -1002,7 +1002,7 @@ main:has(.chat-container) {
 }
 
 .task-due {
-    color: var(--soloquy-text-muted);
+    color: var(--worklead-text-muted);
 }
 
 .task-due.text-danger {
@@ -1016,7 +1016,7 @@ main:has(.chat-container) {
 }
 
 .task-assignee {
-    color: var(--soloquy-text-muted);
+    color: var(--worklead-text-muted);
 }
 
 .task-actions {
@@ -1033,7 +1033,7 @@ main:has(.chat-container) {
 .tasks-empty {
     padding: 2rem 1rem;
     text-align: center;
-    color: var(--soloquy-text-muted);
+    color: var(--worklead-text-muted);
 }
 
 .tasks-empty i {
@@ -1060,11 +1060,11 @@ main:has(.chat-container) {
 
 /* Conversations Sidebar (Slack-style) */
 .conversations-sidebar {
-    background-color: var(--soloquy-sidebar-bg);
+    background-color: var(--worklead-sidebar-bg);
     width: 260px;
     min-width: 260px;
     max-width: 260px;
-    border-right: 1px solid var(--soloquy-border);
+    border-right: 1px solid var(--worklead-border);
     position: relative;
     flex-shrink: 0;
     display: flex;
@@ -1077,7 +1077,7 @@ main:has(.chat-container) {
     justify-content: space-between;
     align-items: center;
     padding: 0.75rem 1rem;
-    border-bottom: 1px solid var(--soloquy-border);
+    border-bottom: 1px solid var(--worklead-border);
     height: 49px; /* Match main-header height exactly */
     box-sizing: border-box;
 }
@@ -1087,15 +1087,15 @@ main:has(.chat-container) {
     font-weight: 600;
     margin: 0;
     line-height: 1.2;
-    color: var(--soloquy-text);
+    color: var(--worklead-text);
 }
 
 .conversations-header .btn-link {
-    color: var(--soloquy-text);
+    color: var(--worklead-text);
 }
 
 .conversations-header .btn-link:hover {
-    color: var(--soloquy-active);
+    color: var(--worklead-active);
 }
 
 .conversations-content {
@@ -1111,7 +1111,7 @@ main:has(.chat-container) {
 .conversations-section-title {
     font-size: 0.75rem;
     font-weight: 600;
-    color: var(--soloquy-text-muted);
+    color: var(--worklead-text-muted);
     padding: 0.5rem 1rem;
     display: flex;
     align-items: center;
@@ -1125,7 +1125,7 @@ main:has(.chat-container) {
 .dm-subsection-title {
     font-size: 0.6875rem;
     font-weight: 600;
-    color: var(--soloquy-text-muted);
+    color: var(--worklead-text-muted);
     padding: 0.5rem 1rem 0.25rem;
     display: flex;
     align-items: center;
@@ -1144,7 +1144,7 @@ main:has(.chat-container) {
     align-items: center;
     gap: 0.5rem;
     padding: 0.375rem 1.25rem;
-    color: var(--soloquy-text);
+    color: var(--worklead-text);
     text-decoration: none;
     transition: background-color 0.15s ease;
     cursor: pointer;
@@ -1156,27 +1156,27 @@ main:has(.chat-container) {
 }
 
 .conversation-item:hover {
-    background-color: var(--soloquy-hover);
-    color: var(--soloquy-text);
+    background-color: var(--worklead-hover);
+    color: var(--worklead-text);
 }
 
 .conversation-item.active {
-    background-color: var(--soloquy-channel-active);
+    background-color: var(--worklead-channel-active);
     color: #fff;
 }
 
 .conversation-item.btn-add {
-    color: var(--soloquy-text-muted);
+    color: var(--worklead-text-muted);
     font-size: 0.875rem;
 }
 
 .conversation-item.btn-add:hover {
-    color: var(--soloquy-text);
+    color: var(--worklead-text);
 }
 
 .channel-icon {
     font-weight: 600;
-    color: var(--soloquy-text-muted);
+    color: var(--worklead-text-muted);
     width: 16px;
     text-align: center;
     flex-shrink: 0;
@@ -1204,27 +1204,27 @@ main:has(.chat-container) {
 
 .user-status.online {
     background-color: #10b981;
-    border: 2px solid var(--soloquy-sidebar-bg);
+    border: 2px solid var(--worklead-sidebar-bg);
 }
 
 .user-status.offline {
     background-color: #6b7280;
-    border: 2px solid var(--soloquy-sidebar-bg);
+    border: 2px solid var(--worklead-sidebar-bg);
 }
 
 /* Conversation Avatar */
 .conversation-avatar {
     flex-shrink: 0;
     object-fit: cover;
-    border: 2px solid var(--soloquy-sidebar-bg);
+    border: 2px solid var(--worklead-sidebar-bg);
 }
 
 .conversation-item:hover .conversation-avatar {
-    border-color: var(--soloquy-hover);
+    border-color: var(--worklead-hover);
 }
 
 .conversation-item.active .conversation-avatar {
-    border-color: var(--soloquy-channel-active);
+    border-color: var(--worklead-channel-active);
 }
 
 /* Conversation Info Container */
@@ -1244,7 +1244,7 @@ main:has(.chat-container) {
 
 .conversation-time {
     font-size: 0.75rem;
-    color: var(--soloquy-text-muted);
+    color: var(--worklead-text-muted);
     white-space: nowrap;
 }
 
@@ -1253,7 +1253,7 @@ main:has(.chat-container) {
 }
 
 .conversation-item:hover .conversation-time {
-    color: var(--soloquy-text);
+    color: var(--worklead-text);
 }
 
 /* Member Items */
@@ -1266,15 +1266,15 @@ main:has(.chat-container) {
     align-items: center;
     gap: 0.75rem;
     padding: 0.625rem 1rem;
-    color: var(--soloquy-text);
+    color: var(--worklead-text);
     text-decoration: none;
     transition: background-color 0.15s ease;
     border-radius: 0.25rem;
 }
 
 .member-item:hover {
-    background-color: var(--soloquy-hover);
-    color: var(--soloquy-text);
+    background-color: var(--worklead-hover);
+    color: var(--worklead-text);
 }
 
 .member-avatar {
@@ -1290,7 +1290,7 @@ main:has(.chat-container) {
 .member-name {
     font-size: 0.875rem;
     font-weight: 500;
-    color: var(--soloquy-text);
+    color: var(--worklead-text);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1298,7 +1298,7 @@ main:has(.chat-container) {
 
 .member-role {
     font-size: 0.75rem;
-    color: var(--soloquy-text-muted);
+    color: var(--worklead-text-muted);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1349,7 +1349,7 @@ main:has(.chat-container) {
 
 /* Task list item hover effect */
 .list-group-item-action:hover {
-    background-color: var(--soloquy-hover);
+    background-color: var(--worklead-hover);
     transition: background-color 0.15s ease;
 }
 

@@ -1,3 +1,3 @@
 """
-Test suite for Soloquy multi-tenant SaaS application
+Test suite for worklead multi-tenant SaaS application
 """

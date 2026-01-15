@@ -173,11 +173,11 @@ def register():
                 # Set current tenant
                 session['current_tenant_id'] = invitation.tenant_id
 
-                flash(f'Welcome to Soloquy, {user.full_name}! Your 14-day Pro trial is now active. Please check your email to confirm your account.', 'success')
+                flash(f'Welcome to worklead, {user.full_name}! Your 14-day Pro trial is now active. Please check your email to confirm your account.', 'success')
                 return redirect(url_for('tenant.home'))
 
         # No invitation - redirect to workspace creation wizard
-        flash(f'Welcome to Soloquy, {user.full_name}! Your 14-day Pro trial is now active. Please check your email to confirm your account.', 'success')
+        flash(f'Welcome to worklead, {user.full_name}! Your 14-day Pro trial is now active. Please check your email to confirm your account.', 'success')
         return redirect(url_for('tenant.wizard'))
 
     return render_template('auth/register.html', form=form, title='Register')

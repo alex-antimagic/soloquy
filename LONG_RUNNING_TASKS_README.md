@@ -140,7 +140,7 @@ redis-server
 ```
 
 ### 2. Create Test Task
-1. Log into Soloquy
+1. Log into worklead
 2. Navigate to Tasks
 3. Create a new task:
    - **Title**: "Generate quarterly sales report with charts"

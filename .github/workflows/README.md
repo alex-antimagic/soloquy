@@ -17,7 +17,7 @@ This project uses GitHub Actions for continuous integration and deployment. Ever
 1. **Test Job**: Same as PR (runs first)
 2. **Deploy Job**: Deploys to Heroku (only if tests pass)
    - Uses Heroku API key for authentication
-   - Deploys to `soloquy-dev` app
+   - Deploys to `worklead-dev` app
    - Sends deployment notifications
 
 ## Required GitHub Secrets
@@ -41,7 +41,7 @@ To run the same tests locally:
 
 ```bash
 # Set up test database
-createdb soloquy_test
+createdb worklead_test
 
 # Run migrations
 FLASK_ENV=testing python3 -c "from app import create_app; from flask_migrate import upgrade; app = create_app('testing'); with app.app_context(): upgrade()"
@@ -66,7 +66,7 @@ FLASK_ENV=testing pytest tests/ -v --cov=app
 ### Deployment Fails
 - Main branch is protected
 - Heroku deployment failure does not rollback main
-- Check Heroku logs: `heroku logs --tail -a soloquy-dev`
+- Check Heroku logs: `heroku logs --tail -a worklead-dev`
 
 ## Adding New Tests
 

@@ -1,4 +1,4 @@
-# Soloquy - Heroku Deployment Guide
+# worklead - Heroku Deployment Guide
 
 ## Security Hardening Completed ✅
 

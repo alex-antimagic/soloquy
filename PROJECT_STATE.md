@@ -1,4 +1,4 @@
-# Soloquy - Project State & To-Do List
+# worklead - Project State & To-Do List
 
 **Last Updated**: 2025-11-06
 
@@ -195,7 +195,7 @@
 
 ### Running the Application
 ```bash
-cd ~/soloquy
+cd ~/worklead
 source venv/bin/activate
 PORT=5003 python run.py
 ```

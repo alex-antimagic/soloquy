@@ -296,12 +296,12 @@ def create_ticket():
         return jsonify({'error': 'Subject and description are required'}), 400
 
     try:
-        # For bug reports, use Soloquy workspace (ID: 67) instead of current tenant
-        # This ensures all platform bug reports go to the Soloquy support team
+        # For bug reports, use worklead workspace (ID: 67) instead of current tenant
+        # This ensures all platform bug reports go to the worklead support team
         category = data.get('category')
         if category == 'Bug Report':
-            soloquy_tenant = Tenant.query.filter_by(name='Soloquy').first()
-            tenant_id = soloquy_tenant.id if soloquy_tenant else g.current_tenant.id
+            worklead_tenant = Tenant.query.filter_by(name='worklead').first()
+            tenant_id = worklead_tenant.id if worklead_tenant else g.current_tenant.id
         else:
             tenant_id = g.current_tenant.id
 

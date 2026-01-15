@@ -2,7 +2,7 @@
 
 ## Overview
 
-Soloquy implements comprehensive timezone support to ensure all users see times in their local timezone, regardless of where they're located. This document explains the architecture, conventions, and best practices for working with timezones in the application.
+worklead implements comprehensive timezone support to ensure all users see times in their local timezone, regardless of where they're located. This document explains the architecture, conventions, and best practices for working with timezones in the application.
 
 ## Architecture
 

@@ -1,5 +1,5 @@
 """
-Pytest configuration and fixtures for Soloquy tests
+Pytest configuration and fixtures for worklead tests
 """
 import pytest
 from sqlalchemy import event

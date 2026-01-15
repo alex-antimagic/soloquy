@@ -21,8 +21,8 @@ class EmailService:
     def __init__(self):
         """Initialize SendGrid client"""
         self.api_key = os.environ.get('SENDGRID_API_KEY')
-        self.from_email = os.environ.get('SENDGRID_FROM_EMAIL', 'noreply@soloquy.app')
-        self.from_name = os.environ.get('SENDGRID_FROM_NAME', 'Soloquy')
+        self.from_email = os.environ.get('SENDGRID_FROM_EMAIL', 'noreply@worklead.ai')
+        self.from_name = os.environ.get('SENDGRID_FROM_NAME', 'worklead')
 
         if not SENDGRID_AVAILABLE:
             print("Warning: sendgrid package not installed. Email sending will be disabled.")
@@ -56,7 +56,7 @@ class EmailService:
                                     _external=True)
 
             # Email subject
-            subject = f"{inviter_name} invited you to join {workspace_name} on Soloquy"
+            subject = f"{inviter_name} invited you to join {workspace_name} on worklead"
 
             # HTML email content
             html_content = f"""
@@ -148,20 +148,20 @@ class EmailService:
     <div class="container">
         <div class="header">
             <h1>🎉 You're Invited!</h1>
-            <p>Join your team on Soloquy</p>
+            <p>Join your team on worklead</p>
         </div>
 
         <div class="content">
             <p>Hi there,</p>
 
-            <p><strong>{inviter_name}</strong> has invited you to join their workspace on Soloquy.</p>
+            <p><strong>{inviter_name}</strong> has invited you to join their workspace on worklead.</p>
 
             <div class="workspace-info">
                 <strong>Workspace:</strong> {workspace_name}<br>
                 <strong>Role:</strong> {invitation.role.title()}
             </div>
 
-            <p>Soloquy is an AI-powered workspace platform that helps teams collaborate with intelligent AI agents.</p>
+            <p>worklead is an AI-powered workspace platform that helps teams collaborate with intelligent AI agents.</p>
 
             <center>
                 <a href="{invitation_url}" class="cta-button">Accept Invitation</a>
@@ -173,8 +173,8 @@ class EmailService:
         </div>
 
         <div class="footer">
-            <p>This email was sent by Soloquy</p>
-            <p><a href="https://soloquy.app">Visit Soloquy</a></p>
+            <p>This email was sent by worklead</p>
+            <p><a href="https://worklead.ai">Visit worklead</a></p>
         </div>
     </div>
 </body>
@@ -183,7 +183,7 @@ class EmailService:
 
             # Plain text fallback
             text_content = f"""
-You're invited to join {workspace_name} on Soloquy!
+You're invited to join {workspace_name} on worklead!
 
 {inviter_name} has invited you to join their workspace as a {invitation.role}.
 
@@ -193,7 +193,7 @@ Accept your invitation here:
 This invitation will expire in 7 days.
 
 ---
-Soloquy - AI for everyone
+worklead - AI for everyone
             """
 
             # Create SendGrid message (only if sendgrid is available)
@@ -238,7 +238,7 @@ Soloquy - AI for everyone
             return False
 
         try:
-            subject = "Welcome to Soloquy!"
+            subject = "Welcome to worklead!"
 
             html_content = f"""
 <!DOCTYPE html>
@@ -293,23 +293,23 @@ Soloquy - AI for everyone
 <body>
     <div class="container">
         <div class="header">
-            <h1>Welcome to Soloquy!</h1>
+            <h1>Welcome to worklead!</h1>
         </div>
 
         <div class="content">
             <p>Hi {user.first_name or 'there'},</p>
 
-            <p>Welcome to Soloquy - AI for everyone!</p>
+            <p>Welcome to worklead - AI for everyone!</p>
 
             <p>Your account has been created successfully. You can now create workspaces, invite team members, and collaborate with intelligent AI agents.</p>
 
             <p>If you have any questions or need help getting started, don't hesitate to reach out.</p>
 
-            <p>Best regards,<br>The Soloquy Team</p>
+            <p>Best regards,<br>The worklead Team</p>
         </div>
 
         <div class="footer">
-            <p>This email was sent by Soloquy</p>
+            <p>This email was sent by worklead</p>
         </div>
     </div>
 </body>
@@ -317,18 +317,18 @@ Soloquy - AI for everyone
             """
 
             text_content = f"""
-Welcome to Soloquy!
+Welcome to worklead!
 
 Hi {user.first_name or 'there'},
 
-Welcome to Soloquy - AI for everyone!
+Welcome to worklead - AI for everyone!
 
 Your account has been created successfully. You can now create workspaces, invite team members, and collaborate with intelligent AI agents.
 
 If you have any questions or need help getting started, don't hesitate to reach out.
 
 Best regards,
-The Soloquy Team
+The worklead Team
             """
 
             # Create SendGrid message (only if sendgrid is available)
@@ -364,7 +364,7 @@ The Soloquy Team
             return False
 
         try:
-            subject = "Reset Your Soloquy Password"
+            subject = "Reset Your worklead Password"
             html_content = f"""
 <!DOCTYPE html>
 <html>
@@ -383,7 +383,7 @@ The Soloquy Team
         <div class="header"><h1>Password Reset</h1></div>
         <div class="content">
             <p>Hi {user.first_name or 'there'},</p>
-            <p>We received a request to reset your Soloquy password.</p>
+            <p>We received a request to reset your worklead password.</p>
             <p><a href="{reset_url}" class="button">Reset Password</a></p>
             <p>This link will expire in 1 hour. If you didn't request this, please ignore this email.</p>
         </div>
@@ -410,7 +410,7 @@ The Soloquy Team
             return False
 
         try:
-            subject = "Confirm Your Soloquy Email"
+            subject = "Confirm Your worklead Email"
             html_content = f"""
 <!DOCTYPE html>
 <html>
@@ -426,7 +426,7 @@ The Soloquy Team
 </head>
 <body>
     <div class="container">
-        <div class="header"><h1>Welcome to Soloquy!</h1></div>
+        <div class="header"><h1>Welcome to worklead!</h1></div>
         <div class="content">
             <p>Hi {user.first_name or 'there'},</p>
             <p>Thanks for signing up! Please confirm your email address to get started.</p>
@@ -605,7 +605,7 @@ The Soloquy Team
         </div>
 
         <div class="footer">
-            <p>This is an automated security alert from Soloquy</p>
+            <p>This is an automated security alert from worklead</p>
             <p>Please do not reply to this email</p>
         </div>
     </div>
@@ -633,7 +633,7 @@ What should you do?
 If you have any concerns or questions about this alert, please contact our support team.
 
 ---
-This is an automated security alert from Soloquy
+This is an automated security alert from worklead
 Please do not reply to this email
             """
 
