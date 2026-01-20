@@ -86,9 +86,10 @@
                         {% for agent in department.get_agents() %}
                             {% if agent.is_visible_to_user(current_user) %}
                             <a href="{{ url_for('chat.agent_chat', agent_id=agent.id) }}"
-                               class="conversation-item {% if request.endpoint == 'chat.agent_chat' and request.view_args.get('agent_id') == agent.id %}active{% endif %}"
+                               class="conversation-item agent-item {% if request.endpoint == 'chat.agent_chat' and request.view_args.get('agent_id') == agent.id %}active{% endif %}"
                                data-conversation-type="agent"
                                data-conversation-id="{{ agent.id }}"
+                               data-agent-type="{{ agent.agent_type }}"
                                onclick="markAsRead('agent', '{{ agent.id }}')">
                                 <div class="position-relative" style="flex-shrink: 0;">
                                     {% if agent.avatar_url %}
@@ -317,37 +318,40 @@ if (typeof socket !== 'undefined') {
 }
 
 // Agent mode management
-async function setAgentMode(mode) {
-    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+function setAgentMode(mode) {
+    // Save preference to localStorage
+    localStorage.setItem('agentMode', mode);
 
-    try {
-        const response = await fetch('/chat/set-agent-mode', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': csrfToken
-            },
-            body: JSON.stringify({ mode: mode })
-        });
+    // Update button states
+    document.querySelectorAll('.mode-toggle').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    document.querySelector(`.mode-toggle[data-mode="${mode}"]`).classList.add('active');
 
-        const data = await response.json();
+    // Filter agents based on mode
+    const agentItems = document.querySelectorAll('.agent-item');
+    agentItems.forEach(item => {
+        const agentType = item.getAttribute('data-agent-type');
 
-        if (data.success) {
-            // Update UI
-            document.querySelectorAll('.mode-toggle').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            document.querySelector(`.mode-toggle[data-mode="${mode}"]`).classList.add('active');
-
-            // Reload to show/hide agents
-            window.location.reload();
+        if (mode === 'orchestrator') {
+            // Show only orchestrators (like Oscar)
+            if (agentType === 'orchestrator') {
+                item.style.display = '';
+            } else {
+                item.style.display = 'none';
+            }
         } else {
-            console.error('Failed to set agent mode:', data.error);
+            // Show all agents
+            item.style.display = '';
         }
-    } catch (error) {
-        console.error('Error setting agent mode:', error);
-    }
+    });
 }
+
+// Restore agent mode on page load
+document.addEventListener('DOMContentLoaded', function() {
+    const savedMode = localStorage.getItem('agentMode') || 'direct';
+    setAgentMode(savedMode);
+});
 
 // Set active mode button on page load
 async function loadAgentMode() {
