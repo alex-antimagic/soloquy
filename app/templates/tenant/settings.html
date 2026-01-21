@@ -227,8 +227,19 @@
                                         <span class="badge bg-info mt-1">You</span>
                                     {% endif %}
                                 </div>
-                                <div>
+                                <div class="d-flex align-items-center gap-2">
                                     <span class="badge bg-secondary">{{ member.get_role_in_tenant(current_tenant.id) }}</span>
+                                    {% set member_role = member.get_role_in_tenant(current_tenant.id) %}
+                                    {% if user_role in ['owner', 'admin'] and member.id != current_user.id and member_role != 'owner' %}
+                                        {% if user_role == 'owner' or member_role != 'admin' %}
+                                        <button type="button"
+                                                class="btn btn-sm btn-outline-danger"
+                                                onclick="confirmRemoveMember('{{ member.id }}', '{{ member.full_name }}')"
+                                                title="Remove from workspace">
+                                            <i class="bi bi-person-dash"></i>
+                                        </button>
+                                        {% endif %}
+                                    {% endif %}
                                 </div>
                             </div>
                         </div>
@@ -297,13 +308,38 @@
         </div>
     </div>
     {% endif %}
+
+    <!-- Remove Member Confirmation Modal -->
+    <div class="modal fade" id="removeMemberModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-warning">
+                    <h5 class="modal-title">Remove Member</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to remove <strong id="memberName"></strong> from this workspace?</p>
+                    <p class="text-muted mb-0">They will lose access to all workspace resources, agents, and data.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <form method="POST" action="" id="removeMemberForm">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-danger">
+                            <i class="bi bi-person-dash"></i> Remove Member
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 {% endblock %}
 
 {% block extra_js %}
 <script>
-    // Confirmation name check
+    // Confirmation name check for workspace deletion
     const confirmInput = document.getElementById('confirmName');
     const confirmButton = document.getElementById('confirmDelete');
     const confirmError = document.getElementById('confirmError');
@@ -321,6 +357,20 @@
                 }
             }
         });
+    }
+
+    // Remove member confirmation
+    function confirmRemoveMember(userId, memberName) {
+        // Set member name in modal
+        document.getElementById('memberName').textContent = memberName;
+
+        // Set form action URL
+        const form = document.getElementById('removeMemberForm');
+        form.action = "{{ url_for('tenant.remove_member', user_id=0) }}".replace('0', userId);
+
+        // Show modal
+        const modal = new bootstrap.Modal(document.getElementById('removeMemberModal'));
+        modal.show();
     }
 </script>
 {% endblock %}

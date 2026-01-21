@@ -1,0 +1,272 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">KPI-Based Bonus Management</h2>
+            <p class="text-muted mb-0">Automated bonus calculation based on financial performance</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('hr.financial_metrics_list') }}" class="btn btn-outline-primary">
+                <i class="bi bi-bar-chart"></i> Financial Metrics
+            </a>
+            <a href="{{ url_for('hr.bonus_rules_list') }}" class="btn btn-outline-primary">
+                <i class="bi bi-gear"></i> Bonus Rules
+            </a>
+        </div>
+    </div>
+
+    <!-- YTD Summary Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <p class="text-muted mb-1 small">YTD Revenue</p>
+                            <h4 class="mb-0">${{ "{:,.0f}".format(ytd_summary.total_revenue) }}</h4>
+                        </div>
+                        <div class="bg-primary bg-opacity-10 p-2 rounded">
+                            <i class="bi bi-currency-dollar text-primary fs-4"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <p class="text-muted mb-1 small">YTD Net Revenue</p>
+                            <h4 class="mb-0">${{ "{:,.0f}".format(ytd_summary.total_net_revenue) }}</h4>
+                        </div>
+                        <div class="bg-success bg-opacity-10 p-2 rounded">
+                            <i class="bi bi-graph-up-arrow text-success fs-4"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <p class="text-muted mb-1 small">Avg Monthly Revenue</p>
+                            <h4 class="mb-0">${{ "{:,.0f}".format(ytd_summary.avg_monthly_revenue) }}</h4>
+                        </div>
+                        <div class="bg-info bg-opacity-10 p-2 rounded">
+                            <i class="bi bi-calendar-month text-info fs-4"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <p class="text-muted mb-1 small">Bonus Months</p>
+                            <h4 class="mb-0">{{ ytd_summary.bonus_months }} / {{ ytd_summary.months_with_data }}</h4>
+                        </div>
+                        <div class="bg-warning bg-opacity-10 p-2 rounded">
+                            <i class="bi bi-trophy text-warning fs-4"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Bonus Rules -->
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <!-- Recent Months Status -->
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Recent Months Performance</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Period</th>
+                                    <th>Revenue</th>
+                                    <th>Net Revenue</th>
+                                    <th>Data Source</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for month in recent_months %}
+                                <tr>
+                                    <td><strong>{{ month.period_short }}</strong></td>
+                                    <td>
+                                        {% if month.has_data %}
+                                            ${{ "{:,.0f}".format(month.revenue) }}
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if month.has_data %}
+                                            <strong class="{% if month.net_revenue >= 300000 %}text-success{% endif %}">
+                                                ${{ "{:,.0f}".format(month.net_revenue) }}
+                                            </strong>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if month.data_source == 'quickbooks' %}
+                                            <span class="badge bg-primary">QuickBooks</span>
+                                        {% elif month.data_source == 'manual' %}
+                                            <span class="badge bg-secondary">Manual</span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if month.bonus_calculated %}
+                                            <span class="badge bg-success"><i class="bi bi-check-circle"></i> Calculated</span>
+                                        {% elif month.has_data %}
+                                            <span class="badge bg-warning text-dark">Ready</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">No Data</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{{ url_for('hr.edit_financial_metrics', year=month.year, month=month.month) }}"
+                                               class="btn btn-outline-primary" title="Edit Metrics">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                            {% if month.has_data and not month.bonus_calculated %}
+                                            <form method="POST" action="{{ url_for('hr.trigger_bonus_calculation') }}" class="d-inline">
+                                                <input type="hidden" name="year" value="{{ month.year }}">
+                                                <input type="hidden" name="month" value="{{ month.month }}">
+                                                <button type="submit" class="btn btn-outline-success" title="Calculate Bonuses"
+                                                        onclick="return confirm('Calculate bonuses for {{ month.period_label }}?')">
+                                                    <i class="bi bi-calculator"></i>
+                                                </button>
+                                            </form>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Calculation History -->
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Recent Calculations</h5>
+                    <a href="{{ url_for('hr.bonus_calculation_history') }}" class="btn btn-sm btn-outline-primary">
+                        View All
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if recent_logs %}
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Period</th>
+                                    <th>Bonuses</th>
+                                    <th>Total Amount</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for log in recent_logs %}
+                                <tr>
+                                    <td>{{ log.calculation_date.strftime('%b %d, %Y %I:%M %p') }}</td>
+                                    <td>{{ log.period_label }}</td>
+                                    <td>{{ log.bonuses_created }}</td>
+                                    <td>${{ "{:,.2f}".format(log.total_bonus_amount) }}</td>
+                                    <td>
+                                        {% if log.status == 'completed' %}
+                                            <span class="badge bg-success">Completed</span>
+                                        {% elif log.status == 'no_rules' %}
+                                            <span class="badge bg-secondary">No Rules</span>
+                                        {% elif log.status == 'failed' %}
+                                            <span class="badge bg-danger">Failed</span>
+                                        {% else %}
+                                            <span class="badge bg-info">{{ log.status }}</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4 text-muted">
+                        <i class="bi bi-clock-history fs-1 d-block mb-2"></i>
+                        <p>No calculations yet</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <!-- Active Bonus Rules -->
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Active Bonus Rules</h5>
+                    <a href="{{ url_for('hr.create_bonus_rule') }}" class="btn btn-sm btn-primary">
+                        <i class="bi bi-plus-circle"></i> New Rule
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if active_rules %}
+                        {% for rule in active_rules %}
+                        <div class="border-bottom pb-3 mb-3">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <strong>{{ rule.rule_name }}</strong>
+                                <span class="badge bg-success">Active</span>
+                            </div>
+                            {% set config = rule.get_rule_config() %}
+                            <p class="text-muted small mb-1">
+                                <i class="bi bi-graph-up"></i>
+                                When {{ config.metric|replace('_', ' ')|title }} {{ config.operator }}
+                                ${{ "{:,.0f}".format(config.threshold) }}
+                            </p>
+                            <p class="text-muted small mb-0">
+                                <i class="bi bi-trophy"></i> {{ rule.bonus_type|title }} bonus
+                                {% if rule.use_employee_target_percentage %}
+                                    (employee target %)
+                                {% endif %}
+                            </p>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                    <div class="text-center py-4 text-muted">
+                        <i class="bi bi-gear fs-1 d-block mb-2"></i>
+                        <p class="mb-2">No active bonus rules</p>
+                        <a href="{{ url_for('hr.create_bonus_rule') }}" class="btn btn-sm btn-primary">
+                            Create First Rule
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

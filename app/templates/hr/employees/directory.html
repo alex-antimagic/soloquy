@@ -71,10 +71,18 @@
                     <tr>
                         <td>
                             <div class="d-flex align-items-center gap-2">
+                                {% if employee.avatar_url %}
+                                <img src="{{ employee.avatar_url }}"
+                                     class="rounded-circle"
+                                     width="40"
+                                     height="40"
+                                     alt="{{ employee.full_name }}">
+                                {% else %}
                                 <div class="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center"
                                      style="width: 40px; height: 40px;">
                                     <strong class="text-primary">{{ employee.first_name[0] }}{{ employee.last_name[0] }}</strong>
                                 </div>
+                                {% endif %}
                                 <div>
                                     <strong>{{ employee.full_name }}</strong>
                                     <br>

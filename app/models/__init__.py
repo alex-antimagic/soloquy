@@ -47,3 +47,6 @@ from app.models.onboarding_plan import OnboardingPlan, OnboardingTask
 from app.models.pto_request import PTORequest
 from app.models.job_posting import JobPosting
 from app.models.compensation_change import CompensationChange
+from app.models.monthly_financial_metrics import MonthlyFinancialMetrics
+from app.models.bonus_rule import BonusRule
+from app.models.bonus_calculation_log import BonusCalculationLog

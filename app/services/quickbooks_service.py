@@ -252,19 +252,174 @@ class QuickBooksService:
 
     def get_profit_loss(self, integration, start_date=None, end_date=None):
         """
-        Get profit & loss report (simplified for MVP)
+        Get profit & loss report from QuickBooks
 
         Args:
             integration: Integration model instance
-            start_date: Start date (YYYY-MM-DD) - defaults to start of current month
-            end_date: End date (YYYY-MM-DD) - defaults to today
+            start_date: Start date (date object or YYYY-MM-DD string)
+            end_date: End date (date object or YYYY-MM-DD string)
 
         Returns:
-            dict: Profit & loss summary (simplified - returns None for MVP)
+            dict: Profit & loss summary with revenue, expenses, and net income
         """
-        # Note: Full P&L reporting requires QuickBooks Reports API
-        # For MVP, returning basic date range only
-        # TODO: Implement full P&L report using QB Reports API
+        try:
+            # Format dates
+            if not start_date:
+                start_date = datetime.utcnow().replace(day=1)
+            if not end_date:
+                end_date = datetime.utcnow()
+
+            # Convert to string if date object
+            if hasattr(start_date, 'strftime'):
+                start_date_str = start_date.strftime('%Y-%m-%d')
+            else:
+                start_date_str = start_date
+
+            if hasattr(end_date, 'strftime'):
+                end_date_str = end_date.strftime('%Y-%m-%d')
+            else:
+                end_date_str = end_date
+
+            client = self.get_qb_client(integration)
+
+            # Use QuickBooks Reports API for Profit & Loss
+            # Reference: https://developer.intuit.com/app/developer/qbo/docs/api/accounting/report-entities/profitandloss
+            report_url = f'/v3/company/{integration.company_id}/reports/ProfitAndLoss'
+
+            # Make request using the client's session
+            params = {
+                'start_date': start_date_str,
+                'end_date': end_date_str,
+                'accounting_method': 'Accrual'  # or 'Cash'
+            }
+
+            # Use the auth client to make the request
+            auth_client = client.auth_client
+            response = auth_client.make_request(
+                'GET',
+                url=report_url,
+                params=params,
+                header_auth=True
+            )
+
+            if response.status_code != 200:
+                print(f"QuickBooks API error: {response.status_code} - {response.text}")
+                return self._get_fallback_pl_data(start_date_str, end_date_str)
+
+            report_data = response.json()
+
+            # Parse the P&L report
+            pl_summary = self._parse_profit_loss_report(report_data)
+            pl_summary['start_date'] = start_date_str
+            pl_summary['end_date'] = end_date_str
+
+            return pl_summary
+
+        except Exception as e:
+            print(f"Error fetching P&L report: {e}")
+            # Return fallback data
+            return self._get_fallback_pl_data(
+                start_date_str if 'start_date_str' in locals() else None,
+                end_date_str if 'end_date_str' in locals() else None
+            )
+
+    def _parse_profit_loss_report(self, report_data):
+        """
+        Parse QuickBooks P&L report JSON response
+
+        Args:
+            report_data: JSON response from QuickBooks P&L report
+
+        Returns:
+            dict: Parsed summary with total_revenue, total_expenses, net_income, gross_profit
+        """
+        try:
+            total_revenue = 0.0
+            total_expenses = 0.0
+            gross_profit = 0.0
+            net_income = 0.0
+
+            # Navigate through the report structure
+            rows = report_data.get('Rows', {}).get('Row', [])
+
+            for row in rows:
+                row_type = row.get('type', '')
+                header = row.get('Header', {})
+                group_type = row.get('group', '')
+
+                # Look for Income section
+                if 'ColData' in header:
+                    col_data = header.get('ColData', [])
+                    if col_data and 'value' in col_data[0]:
+                        section_name = col_data[0]['value']
+
+                        if 'Total Income' in section_name or 'Total Revenue' in section_name:
+                            # Get the total from Summary row
+                            summary = row.get('Summary', {})
+                            if summary:
+                                summary_cols = summary.get('ColData', [])
+                                if len(summary_cols) > 1:  # Usually column 1 has the amount
+                                    try:
+                                        total_revenue = float(summary_cols[1].get('value', 0))
+                                    except (ValueError, TypeError):
+                                        pass
+
+                        elif 'Total Expenses' in section_name or 'Total Cost' in section_name:
+                            summary = row.get('Summary', {})
+                            if summary:
+                                summary_cols = summary.get('ColData', [])
+                                if len(summary_cols) > 1:
+                                    try:
+                                        total_expenses = float(summary_cols[1].get('value', 0))
+                                    except (ValueError, TypeError):
+                                        pass
+
+                        elif 'Gross Profit' in section_name:
+                            summary = row.get('Summary', {})
+                            if summary:
+                                summary_cols = summary.get('ColData', [])
+                                if len(summary_cols) > 1:
+                                    try:
+                                        gross_profit = float(summary_cols[1].get('value', 0))
+                                    except (ValueError, TypeError):
+                                        pass
+
+                        elif 'Net Income' in section_name or 'Net Operating Income' in section_name:
+                            summary = row.get('Summary', {})
+                            if summary:
+                                summary_cols = summary.get('ColData', [])
+                                if len(summary_cols) > 1:
+                                    try:
+                                        net_income = float(summary_cols[1].get('value', 0))
+                                    except (ValueError, TypeError):
+                                        pass
+
+            # If net_income not found, calculate it
+            if net_income == 0 and (total_revenue > 0 or total_expenses > 0):
+                net_income = total_revenue - total_expenses
+
+            # If gross_profit not found, use net_income
+            if gross_profit == 0 and net_income != 0:
+                gross_profit = net_income
+
+            return {
+                'total_revenue': total_revenue,
+                'total_expenses': total_expenses,
+                'net_income': net_income,
+                'gross_profit': gross_profit
+            }
+
+        except Exception as e:
+            print(f"Error parsing P&L report: {e}")
+            return {
+                'total_revenue': 0.0,
+                'total_expenses': 0.0,
+                'net_income': 0.0,
+                'gross_profit': 0.0
+            }
+
+    def _get_fallback_pl_data(self, start_date=None, end_date=None):
+        """Return fallback P&L data when API fails"""
         if not start_date:
             start_date = datetime.utcnow().replace(day=1).strftime('%Y-%m-%d')
         if not end_date:
@@ -275,7 +430,8 @@ class QuickBooksService:
             'end_date': end_date,
             'total_revenue': 0.0,
             'total_expenses': 0.0,
-            'net_income': 0.0
+            'net_income': 0.0,
+            'gross_profit': 0.0
         }
 
     def get_financial_summary(self, integration):

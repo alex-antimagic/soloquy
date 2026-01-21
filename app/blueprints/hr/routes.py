@@ -416,9 +416,14 @@ def employee_profile(employee_id):
         employee_id=employee.id
     ).order_by(PTORequest.start_date.desc()).all()
 
-    # Get compensation changes (for admin users only)
+    # Check access permissions
+    is_admin = current_user.get_role_in_tenant(tenant.id) in ['owner', 'admin']
+    is_own_profile = employee.user_id == current_user.id
+    can_view_salary = is_admin or is_own_profile
+
+    # Get compensation changes (for admin users or viewing own profile)
     compensation_changes = None
-    if current_user.get_role_in_tenant(tenant.id) in ['owner', 'admin']:
+    if can_view_salary:
         from app.models.compensation_change import CompensationChange
         compensation_changes = CompensationChange.query.filter_by(
             employee_id=employee.id
@@ -430,6 +435,8 @@ def employee_profile(employee_id):
                           onboarding_plan=onboarding_plan,
                           pto_requests=pto_requests,
                           compensation_changes=compensation_changes,
+                          can_view_salary=can_view_salary,
+                          is_admin=is_admin,
                           now=date.today)
 
 

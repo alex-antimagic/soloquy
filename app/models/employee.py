@@ -67,6 +67,24 @@ class Employee(db.Model):
         return f'{self.first_name} {self.last_name}'
 
     @property
+    def avatar_url(self):
+        """Get avatar from linked user account (no duplication)"""
+        return self.user.avatar_url if self.user else None
+
+    def sync_from_user(self):
+        """
+        Sync employee data from linked user account.
+        Updates first_name, last_name, and email from user profile.
+
+        Note: Does NOT sync title → role (different business meanings)
+        """
+        if self.user:
+            self.first_name = self.user.first_name or self.first_name
+            self.last_name = self.user.last_name or self.last_name
+            self.email = self.user.email
+            # Note: Don't sync user.title → employee.role (different meanings)
+
+    @property
     def pto_scheduled_future(self):
         """Get total days of approved PTO scheduled in the future"""
         from app.models.pto_request import PTORequest

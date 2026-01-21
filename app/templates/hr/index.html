@@ -50,9 +50,14 @@
             <a href="{{ url_for('hr.recruitment') }}" class="btn btn-outline-primary">
                 <i class="bi bi-person-lines-fill"></i> Recruitment
             </a>
-            <a href="{{ url_for('hr.employees') }}" class="btn btn-primary">
+            <a href="{{ url_for('hr.employees') }}" class="btn btn-outline-primary">
                 <i class="bi bi-people-fill"></i> Employees
             </a>
+            {% if is_admin %}
+            <a href="{{ url_for('hr.bonus_dashboard') }}" class="btn btn-primary">
+                <i class="bi bi-trophy"></i> Bonuses
+            </a>
+            {% endif %}
         </div>
     </div>
 
@@ -145,6 +150,29 @@
         </div>
         {% endif %}
     </div>
+
+    <!-- Admin Metrics (Bonuses) -->
+    {% if is_admin %}
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <a href="{{ url_for('hr.bonus_dashboard') }}" class="text-decoration-none">
+                <div class="card metric-card h-100 border-primary">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div>
+                                <p class="text-muted small mb-1">KPI-Based Bonuses</p>
+                                <h6 class="mb-0 text-primary">Manage Performance Bonuses</h6>
+                            </div>
+                            <div class="metric-icon bg-primary bg-opacity-10">
+                                <i class="bi bi-trophy fs-4 text-primary"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+    {% endif %}
 
     <!-- Main Content -->
     <div class="row g-4">
@@ -291,6 +319,9 @@
                         <a href="{{ url_for('hr.compensation') }}" class="btn btn-outline-success text-start">
                             <i class="bi bi-cash-coin"></i> Compensation Planning
                         </a>
+                        <a href="{{ url_for('hr.bonus_dashboard') }}" class="btn btn-outline-primary text-start">
+                            <i class="bi bi-trophy"></i> KPI-Based Bonuses
+                        </a>
                         {% endif %}
                     </div>
                 </div>
@@ -328,6 +359,9 @@
                         {% if pending_compensation > 0 %}
                         <span class="badge bg-success float-end">{{ pending_compensation }}</span>
                         {% endif %}
+                    </a>
+                    <a href="{{ url_for('hr.bonus_dashboard') }}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-trophy"></i> KPI-Based Bonuses
                     </a>
                     {% endif %}
                 </div>

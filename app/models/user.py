@@ -113,6 +113,14 @@ class User(UserMixin, db.Model):
         ).first()
         return membership.role if membership else None
 
+    def get_employee_in_tenant(self, tenant_id):
+        """Get employee record for this user in a specific tenant"""
+        from app.models.employee import Employee
+        return Employee.query.filter_by(
+            tenant_id=tenant_id,
+            user_id=self.id
+        ).first()
+
     def get_workspace_limit(self):
         """Get the maximum number of workspaces allowed for this user's plan"""
         if self.plan == 'pro':
@@ -245,3 +253,30 @@ class User(UserMixin, db.Model):
     def find_by_confirmation_token(token):
         """Find user by email confirmation token"""
         return User.query.filter_by(email_confirmation_token=token).first()
+
+
+# Event listener for User-to-Employee sync
+from sqlalchemy import event
+
+
+@event.listens_for(User, 'after_update')
+def sync_user_profile_to_employees(mapper, connection, target):
+    """Sync user profile changes to all linked employee records"""
+    # Import here to avoid circular dependency
+    from app.services.employee_sync_service import EmployeeSyncService
+
+    # Check if relevant fields changed
+    history = db.inspect(target).attrs
+    if (history.first_name.history.has_changes() or
+        history.last_name.history.has_changes() or
+        history.email.history.has_changes() or
+        history.avatar_url.history.has_changes()):
+
+        # Use after_commit to ensure transaction is complete
+        @event.listens_for(db.session, 'after_commit', once=True)
+        def sync_employees():
+            try:
+                EmployeeSyncService.sync_all_employees_for_user(target.id)
+            except Exception as e:
+                import logging
+                logging.error(f"Failed to sync employees for user {target.id}: {str(e)}")

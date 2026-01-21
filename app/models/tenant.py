@@ -99,3 +99,58 @@ class TenantMembership(db.Model):
     def is_admin(self):
         """Check if membership has admin or owner role"""
         return self.role in ['owner', 'admin']
+
+
+# Event listeners for Employee auto-sync
+from sqlalchemy import event
+
+
+@event.listens_for(TenantMembership, 'after_insert')
+def create_employee_on_membership(mapper, connection, target):
+    """Auto-create employee record when user joins workspace"""
+    if target.is_active:
+        # Import here to avoid circular dependency
+        from app.services.employee_sync_service import EmployeeSyncService
+
+        # Use after_commit to ensure transaction is complete
+        @event.listens_for(db.session, 'after_commit', once=True)
+        def create_employee():
+            try:
+                EmployeeSyncService.create_employee_from_user(
+                    user_id=target.user_id,
+                    tenant_id=target.tenant_id,
+                    joined_at=target.joined_at or datetime.utcnow()
+                )
+            except Exception as e:
+                # Log error but don't fail the membership creation
+                import logging
+                logging.error(f"Failed to create employee for user {target.user_id}: {str(e)}")
+
+
+@event.listens_for(TenantMembership, 'after_update')
+def handle_membership_status_change(mapper, connection, target):
+    """Handle activation/deactivation of workspace membership"""
+    # Import here to avoid circular dependency
+    from app.models.employee import Employee
+    from app.services.employee_sync_service import EmployeeSyncService
+
+    # Check if is_active changed
+    history = db.inspect(target).attrs.is_active.history
+    if history.has_changes():
+        employee = Employee.query.filter_by(
+            tenant_id=target.tenant_id,
+            user_id=target.user_id
+        ).first()
+
+        if employee:
+            # Use after_commit to ensure transaction is complete
+            @event.listens_for(db.session, 'after_commit', once=True)
+            def update_employee_status():
+                try:
+                    if not target.is_active:
+                        EmployeeSyncService.handle_membership_removal(employee.id)
+                    else:
+                        EmployeeSyncService.reactivate_employee(employee.id)
+                except Exception as e:
+                    import logging
+                    logging.error(f"Failed to update employee status for user {target.user_id}: {str(e)}")

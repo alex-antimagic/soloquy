@@ -683,6 +683,54 @@ def settings():
                           user_role=user_role)
 
 
+@tenant_bp.route('/settings/members/<int:user_id>/remove', methods=['POST'])
+@login_required
+@require_tenant_role('owner', 'admin')
+def remove_member(user_id):
+    """Remove a member from the workspace"""
+    if not g.current_tenant:
+        flash('Please select a workspace first.', 'warning')
+        return redirect(url_for('tenant.home'))
+
+    # Get the user to be removed
+    user_to_remove = User.query.get_or_404(user_id)
+
+    # Get current user's role
+    current_user_role = current_user.get_role_in_tenant(g.current_tenant.id)
+    target_user_role = user_to_remove.get_role_in_tenant(g.current_tenant.id)
+
+    # Security checks
+    if user_to_remove.id == current_user.id:
+        flash('You cannot remove yourself from the workspace.', 'danger')
+        return redirect(url_for('tenant.settings'))
+
+    if target_user_role == 'owner':
+        flash('The workspace owner cannot be removed.', 'danger')
+        return redirect(url_for('tenant.settings'))
+
+    # Only owners can remove admins
+    if target_user_role == 'admin' and current_user_role != 'owner':
+        flash('Only the workspace owner can remove administrators.', 'danger')
+        return redirect(url_for('tenant.settings'))
+
+    # Find and remove the membership
+    membership = TenantMembership.query.filter_by(
+        tenant_id=g.current_tenant.id,
+        user_id=user_id
+    ).first()
+
+    if not membership:
+        flash('Member not found in this workspace.', 'danger')
+        return redirect(url_for('tenant.settings'))
+
+    # Remove the membership
+    db.session.delete(membership)
+    db.session.commit()
+
+    flash(f'{user_to_remove.full_name} has been removed from the workspace.', 'success')
+    return redirect(url_for('tenant.settings'))
+
+
 @tenant_bp.route('/settings/applets')
 @login_required
 @require_tenant_role('owner', 'admin')

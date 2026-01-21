@@ -14,14 +14,26 @@
 
         <div class="d-flex justify-content-between align-items-center">
             <div class="d-flex align-items-center gap-3">
+                {% if employee.avatar_url %}
+                <img src="{{ employee.avatar_url }}"
+                     class="rounded-circle"
+                     width="80"
+                     height="80"
+                     alt="{{ employee.full_name }}">
+                {% else %}
                 <div class="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center"
                      style="width: 80px; height: 80px;">
                     <h2 class="text-primary mb-0">{{ employee.first_name[0] }}{{ employee.last_name[0] }}</h2>
                 </div>
+                {% endif %}
                 <div>
                     <h2 class="mb-1">{{ employee.full_name }}</h2>
                     <p class="text-muted mb-0">{{ employee.role or 'Employee' }}</p>
-                    <p class="text-muted small mb-0">{{ employee.employee_number }} · {{ employee.department_name or 'No Department' }}</p>
+                    <p class="text-muted small mb-0">{{ employee.employee_number }} · {{ employee.department_name or 'No Department' }}
+                    {% if employee.user %}
+                        · <i class="bi bi-link-45deg"></i> <span class="text-success">Linked to user account</span>
+                    {% endif %}
+                    </p>
                 </div>
             </div>
             <div class="d-flex gap-2 align-items-center">

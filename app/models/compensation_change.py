@@ -40,6 +40,11 @@ class CompensationChange(db.Model):
     notes = db.Column(db.Text)
     status = db.Column(db.String(50), default='planned', index=True)  # 'planned', 'approved', 'implemented', 'cancelled'
 
+    # KPI-based bonus tracking
+    kpi_rule_id = db.Column(db.Integer, db.ForeignKey('bonus_rules.id', ondelete='SET NULL'))
+    calculation_log_id = db.Column(db.Integer, db.ForeignKey('bonus_calculation_logs.id', ondelete='SET NULL'))
+    financial_metrics_id = db.Column(db.Integer, db.ForeignKey('monthly_financial_metrics.id', ondelete='SET NULL'))
+
     # Approval tracking
     created_by_user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'))
     approved_by_user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'))
@@ -54,6 +59,9 @@ class CompensationChange(db.Model):
     employee = db.relationship('Employee', backref=db.backref('compensation_changes', lazy='dynamic'))
     created_by = db.relationship('User', foreign_keys=[created_by_user_id], backref='compensation_changes_created')
     approved_by = db.relationship('User', foreign_keys=[approved_by_user_id], backref='compensation_changes_approved')
+    kpi_rule = db.relationship('BonusRule', back_populates='compensation_changes')
+    calculation_log = db.relationship('BonusCalculationLog', back_populates='compensation_changes')
+    financial_metrics = db.relationship('MonthlyFinancialMetrics')
 
     def __repr__(self):
         return f'<CompensationChange {self.id}: {self.change_type} for Employee {self.employee_id}>'
@@ -68,6 +76,11 @@ class CompensationChange(db.Model):
     def is_pending_approval(self):
         """Check if this change is awaiting approval"""
         return self.status == 'planned'
+
+    @property
+    def is_kpi_bonus(self):
+        """Check if this is an auto-generated KPI-based bonus"""
+        return self.kpi_rule_id is not None
 
     def approve(self, approved_by_user):
         """
