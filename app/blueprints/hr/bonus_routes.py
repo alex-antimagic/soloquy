@@ -112,12 +112,14 @@ def edit_financial_metrics(year, month):
     # GET - show form
     metrics = FinancialMetricsService.get_metrics_for_period(current_tenant.id, year, month)
     period_label = date(year, month, 1).strftime('%B %Y')
+    month_name = date(year, month, 1).strftime('%B')
 
     return render_template('hr/bonuses/edit_metrics.html',
                          metrics=metrics,
                          year=year,
                          month=month,
                          period_label=period_label,
+                         month_name=month_name,
                          current_tenant=current_tenant)
 
 

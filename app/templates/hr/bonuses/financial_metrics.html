@@ -51,7 +51,7 @@
                                 {% for metric in metrics %}
                                 <tr>
                                     <td>
-                                        <strong>{{ metric.get_month_name() }} {{ metric.year }}</strong>
+                                        <strong>{{ metric.period_label }}</strong>
                                         {% if metric.is_finalized %}
                                         <span class="badge bg-success ms-2">Finalized</span>
                                         {% endif %}
@@ -94,7 +94,7 @@
                                         <form method="POST"
                                               action="{{ url_for('hr.trigger_bonus_calculation') }}"
                                               class="d-inline"
-                                              onsubmit="return confirm('Calculate bonuses for {{ metric.get_month_name() }} {{ metric.year }}?');">
+                                              onsubmit="return confirm('Calculate bonuses for {{ metric.period_label }}?');">
                                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                             <input type="hidden" name="year" value="{{ metric.year }}">
                                             <input type="hidden" name="month" value="{{ metric.month }}">

@@ -70,6 +70,10 @@ class BonusRule(db.Model):
         except (json.JSONDecodeError, TypeError):
             return {}
 
+    def get_config(self):
+        """Alias for get_rule_config() for template compatibility"""
+        return self.get_rule_config()
+
     def set_rule_config(self, config_dict):
         """Set rule configuration from Python dict"""
         self.rule_config = json.dumps(config_dict)
