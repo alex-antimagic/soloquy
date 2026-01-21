@@ -39,6 +39,9 @@ def index():
     """HR Dashboard"""
     tenant = g.current_tenant
 
+    # Check if user is admin
+    is_admin = current_user.get_role_in_tenant(tenant.id) in ['owner', 'admin']
+
     # Get aggregate metrics
     total_employees = Employee.query.filter_by(
         tenant_id=tenant.id,
@@ -62,6 +65,15 @@ def index():
         Employee.hire_date >= first_day_of_month,
         Employee.status == 'active'
     ).count()
+
+    # Pending compensation approvals (admin only)
+    pending_compensation = 0
+    if is_admin:
+        from app.models.compensation_change import CompensationChange
+        pending_compensation = CompensationChange.query.join(Employee).filter(
+            Employee.tenant_id == tenant.id,
+            CompensationChange.status == 'planned'
+        ).count()
 
     # Active onboarding plans (started in last 30 days)
     thirty_days_ago = date.today() - timedelta(days=30)
@@ -95,6 +107,8 @@ def index():
                           open_positions=open_positions,
                           pending_pto=pending_pto,
                           new_hires_count=new_hires_count,
+                          pending_compensation=pending_compensation,
+                          is_admin=is_admin,
                           active_onboarding=active_onboarding,
                           upcoming_interviews=upcoming_interviews,
                           upcoming_pto=upcoming_pto)

@@ -109,6 +109,25 @@
                 </div>
             </a>
         </div>
+        {% if is_admin %}
+        <div class="col-md-3">
+            <a href="{{ url_for('hr.compensation') }}" class="text-decoration-none">
+                <div class="card metric-card h-100">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div>
+                                <p class="text-muted small mb-1">Pending Comp Approvals</p>
+                                <h3 class="mb-0">{{ pending_compensation or 0 }}</h3>
+                            </div>
+                            <div class="metric-icon bg-success bg-opacity-10">
+                                <i class="bi bi-cash-coin fs-4 text-success"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+        {% else %}
         <div class="col-md-3">
             <div class="card h-100">
                 <div class="card-body">
@@ -124,6 +143,7 @@
                 </div>
             </div>
         </div>
+        {% endif %}
     </div>
 
     <!-- Main Content -->
@@ -267,6 +287,11 @@
                         <a href="{{ url_for('hr.time_off') }}" class="btn btn-outline-warning text-start">
                             <i class="bi bi-calendar-check"></i> Review PTO Requests
                         </a>
+                        {% if is_admin %}
+                        <a href="{{ url_for('hr.compensation') }}" class="btn btn-outline-success text-start">
+                            <i class="bi bi-cash-coin"></i> Compensation Planning
+                        </a>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -297,6 +322,14 @@
                         <span class="badge bg-warning text-dark float-end">{{ pending_pto }}</span>
                         {% endif %}
                     </a>
+                    {% if is_admin %}
+                    <a href="{{ url_for('hr.compensation') }}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-cash-coin"></i> Compensation
+                        {% if pending_compensation > 0 %}
+                        <span class="badge bg-success float-end">{{ pending_compensation }}</span>
+                        {% endif %}
+                    </a>
+                    {% endif %}
                 </div>
             </div>
         </div>
