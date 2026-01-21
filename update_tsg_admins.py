@@ -38,10 +38,10 @@ with app.app_context():
     alex_user = User.query.get(alex_user_id)
     print(f"Found owner: {alex_user.full_name} ({alex_user.email})")
 
-    # Find Noah Rafalko
+    # Find Noah Rafalko by email or name
     noah_user = User.query.filter(
-        (User.full_name.ilike('%Noah%Rafalko%')) |
-        (User.email.ilike('%noah%'))
+        (User.email.ilike('%noah%')) |
+        ((User.first_name.ilike('%Noah%')) & (User.last_name.ilike('%Rafalko%')))
     ).first()
 
     if not noah_user:
