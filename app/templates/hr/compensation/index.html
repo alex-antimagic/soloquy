@@ -1,0 +1,301 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">Compensation Planning</h2>
+            <p class="text-muted mb-0">Plan and track salary changes, bonuses, and raises</p>
+        </div>
+        <a href="{{ url_for('hr.plan_change') }}" class="btn btn-primary">
+            <i class="bi bi-plus-lg"></i> Plan Change
+        </a>
+    </div>
+
+    <!-- Metrics Row -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card border-warning">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <p class="text-muted mb-1 small">Pending Approvals</p>
+                            <h3 class="mb-0">{{ pending_approvals }}</h3>
+                        </div>
+                        <div class="bg-warning bg-opacity-10 p-3 rounded">
+                            <i class="bi bi-hourglass-split fs-4 text-warning"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card border-success">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <p class="text-muted mb-1 small">Planned Salary Increases</p>
+                            <h3 class="mb-0">${{ "{:,.2f}".format(total_planned_increase) }}</h3>
+                        </div>
+                        <div class="bg-success bg-opacity-10 p-3 rounded">
+                            <i class="bi bi-graph-up-arrow fs-4 text-success"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card border-info">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <p class="text-muted mb-1 small">Planned Bonuses</p>
+                            <h3 class="mb-0">${{ "{:,.2f}".format(total_planned_bonuses) }}</h3>
+                        </div>
+                        <div class="bg-info bg-opacity-10 p-3 rounded">
+                            <i class="bi bi-cash-coin fs-4 text-info"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Left Column: Upcoming Changes -->
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header bg-primary bg-opacity-10">
+                    <h5 class="mb-0">
+                        <i class="bi bi-calendar-event"></i> Upcoming Changes
+                        <span class="badge bg-primary ms-2">{{ upcoming_changes|length }}</span>
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    {% if upcoming_changes %}
+                    <div class="list-group list-group-flush">
+                        {% for change in upcoming_changes %}
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <h6 class="mb-1">{{ change.employee.full_name }}</h6>
+                                    <p class="text-muted small mb-0">
+                                        {{ change.employee.department_name or 'N/A' }} · {{ change.employee.role or 'N/A' }}
+                                    </p>
+                                </div>
+                                <div class="text-end">
+                                    {% if change.status == 'planned' %}
+                                    <span class="badge bg-warning text-dark">Planned</span>
+                                    {% elif change.status == 'approved' %}
+                                    <span class="badge bg-success">Approved</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="mb-2">
+                                <span class="badge bg-secondary me-2">{{ change.change_type|replace('_', ' ')|title }}</span>
+                                <strong class="small">Effective: {{ change.effective_date.strftime('%b %d, %Y') }}</strong>
+                            </div>
+
+                            {% if change.change_type in ['salary_change', 'raise', 'promotion'] and change.new_salary %}
+                            <div class="small mb-2">
+                                <span class="text-muted">Salary:</span>
+                                {% if change.previous_salary %}
+                                ${{ "{:,.2f}".format(change.previous_salary) }} →
+                                {% endif %}
+                                <strong class="text-success">${{ "{:,.2f}".format(change.new_salary) }}</strong>
+                                {% if change.raise_percentage %}
+                                <span class="badge bg-success bg-opacity-10 text-success">+{{ "%.1f"|format(change.raise_percentage) }}%</span>
+                                {% endif %}
+                            </div>
+                            {% elif change.change_type == 'bonus' and change.bonus_amount %}
+                            <div class="small mb-2">
+                                <span class="text-muted">Bonus:</span>
+                                <strong class="text-info">${{ "{:,.2f}".format(change.bonus_amount) }}</strong>
+                                {% if change.bonus_type %}
+                                <span class="text-muted">({{ change.bonus_type|title }})</span>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+
+                            {% if change.reason %}
+                            <p class="small text-muted mb-2">{{ change.reason }}</p>
+                            {% endif %}
+
+                            <div class="d-flex gap-2">
+                                {% if change.status == 'planned' %}
+                                <button class="btn btn-sm btn-success" onclick="approveChange({{ change.id }})">
+                                    <i class="bi bi-check-lg"></i> Approve
+                                </button>
+                                <button class="btn btn-sm btn-danger" onclick="cancelChange({{ change.id }})">
+                                    <i class="bi bi-x-lg"></i> Cancel
+                                </button>
+                                {% elif change.status == 'approved' %}
+                                <button class="btn btn-sm btn-primary" onclick="implementChange({{ change.id }})">
+                                    <i class="bi bi-check-circle"></i> Implement Now
+                                </button>
+                                <button class="btn btn-sm btn-danger" onclick="cancelChange({{ change.id }})">
+                                    <i class="bi bi-x-lg"></i> Cancel
+                                </button>
+                                {% endif %}
+                                <a href="{{ url_for('hr.employee_profile', employee_id=change.employee.id) }}"
+                                   class="btn btn-sm btn-outline-secondary">
+                                    <i class="bi bi-person"></i> View Employee
+                                </a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5 text-muted">
+                        <i class="bi bi-calendar-x fs-1 d-block mb-2"></i>
+                        <p class="mb-0">No upcoming compensation changes</p>
+                        <a href="{{ url_for('hr.plan_change') }}" class="btn btn-sm btn-primary mt-2">
+                            Plan Your First Change
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Recent History -->
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header bg-secondary bg-opacity-10">
+                    <h5 class="mb-0">
+                        <i class="bi bi-clock-history"></i> Recent History
+                        <span class="text-muted small">(Last 90 Days)</span>
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    {% if recent_changes %}
+                    <div class="list-group list-group-flush">
+                        {% for change in recent_changes %}
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <h6 class="mb-1">{{ change.employee.full_name }}</h6>
+                                    <p class="text-muted small mb-0">{{ change.employee.department_name or 'N/A' }}</p>
+                                </div>
+                                <span class="badge bg-success">Implemented</span>
+                            </div>
+
+                            <div class="mb-2">
+                                <span class="badge bg-secondary me-2">{{ change.change_type|replace('_', ' ')|title }}</span>
+                                <strong class="small">{{ change.effective_date.strftime('%b %d, %Y') }}</strong>
+                            </div>
+
+                            {% if change.change_type in ['salary_change', 'raise', 'promotion'] and change.new_salary %}
+                            <div class="small mb-1">
+                                <span class="text-muted">New Salary:</span>
+                                <strong>${{ "{:,.2f}".format(change.new_salary) }}</strong>
+                                {% if change.raise_percentage %}
+                                <span class="text-success">(+{{ "%.1f"|format(change.raise_percentage) }}%)</span>
+                                {% endif %}
+                            </div>
+                            {% elif change.change_type == 'bonus' and change.bonus_amount %}
+                            <div class="small mb-1">
+                                <span class="text-muted">Bonus:</span>
+                                <strong>${{ "{:,.2f}".format(change.bonus_amount) }}</strong>
+                                {% if change.bonus_type %}
+                                <span class="text-muted">({{ change.bonus_type|title }})</span>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+
+                            {% if change.reason %}
+                            <p class="small text-muted mb-0">{{ change.reason }}</p>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5 text-muted">
+                        <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                        <p class="mb-0">No recent compensation changes</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function approveChange(changeId) {
+    if (!confirm('Approve this compensation change?')) return;
+
+    fetch(`/hr/compensation/${changeId}/approve`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() }}'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.error || 'Failed to approve change');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to approve change');
+    });
+}
+
+function implementChange(changeId) {
+    if (!confirm('Implement this compensation change now? This will update the employee\'s salary record.')) return;
+
+    fetch(`/hr/compensation/${changeId}/implement`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() }}'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.error || 'Failed to implement change');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to implement change');
+    });
+}
+
+function cancelChange(changeId) {
+    if (!confirm('Cancel this compensation change?')) return;
+
+    fetch(`/hr/compensation/${changeId}/cancel`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() }}'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.error || 'Failed to cancel change');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to cancel change');
+    });
+}
+</script>
+{% endblock %}

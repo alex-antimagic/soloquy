@@ -137,6 +137,14 @@
                         Time Off Requests
                     </button>
                 </li>
+                {% if current_user.get_role_in_tenant(current_tenant.id) in ['owner', 'admin'] %}
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="compensation-tab" data-bs-toggle="tab"
+                            data-bs-target="#compensation" type="button" role="tab">
+                        Compensation
+                    </button>
+                </li>
+                {% endif %}
             </ul>
 
             <!-- Tab Content -->
@@ -319,6 +327,105 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Compensation Tab (Admin Only) -->
+                {% if current_user.get_role_in_tenant(current_tenant.id) in ['owner', 'admin'] %}
+                <div class="tab-pane fade" id="compensation" role="tabpanel">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h5 class="card-title mb-0">Compensation History</h5>
+                                <a href="{{ url_for('hr.plan_change') }}?employee_id={{ employee.id }}" class="btn btn-sm btn-primary">
+                                    <i class="bi bi-plus-lg"></i> Plan Change
+                                </a>
+                            </div>
+
+                            <!-- Current Compensation -->
+                            {% if employee.salary %}
+                            <div class="alert alert-info mb-4">
+                                <div class="row text-center">
+                                    <div class="col-md-6">
+                                        <div class="fs-4 fw-bold">{{ employee.salary_currency or 'USD' }} ${{ "{:,.2f}".format(employee.salary) }}</div>
+                                        <small class="text-muted">Current Salary</small>
+                                    </div>
+                                    {% if employee.bonus_target_percentage %}
+                                    <div class="col-md-6">
+                                        <div class="fs-4 fw-bold">{{ employee.bonus_target_percentage }}%</div>
+                                        <small class="text-muted">Bonus Target</small>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            <!-- Compensation Changes -->
+                            {% if compensation_changes %}
+                            <h6 class="mb-3">Change History</h6>
+                            <div class="list-group">
+                                {% for change in compensation_changes %}
+                                <div class="list-group-item">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <div>
+                                            <span class="badge bg-secondary me-2">{{ change.change_type|replace('_', ' ')|title }}</span>
+                                            <strong>{{ change.effective_date.strftime('%b %d, %Y') }}</strong>
+                                        </div>
+                                        {% if change.status == 'planned' %}
+                                        <span class="badge bg-warning text-dark">Planned</span>
+                                        {% elif change.status == 'approved' %}
+                                        <span class="badge bg-success">Approved</span>
+                                        {% elif change.status == 'implemented' %}
+                                        <span class="badge bg-primary">Implemented</span>
+                                        {% elif change.status == 'cancelled' %}
+                                        <span class="badge bg-secondary">Cancelled</span>
+                                        {% endif %}
+                                    </div>
+
+                                    {% if change.change_type in ['salary_change', 'raise', 'promotion'] and change.new_salary %}
+                                    <div class="small mb-2">
+                                        {% if change.previous_salary %}
+                                        ${{ "{:,.2f}".format(change.previous_salary) }} →
+                                        {% endif %}
+                                        <strong class="text-success">${{ "{:,.2f}".format(change.new_salary) }}</strong>
+                                        {% if change.raise_percentage %}
+                                        <span class="badge bg-success bg-opacity-10 text-success">+{{ "%.1f"|format(change.raise_percentage) }}%</span>
+                                        {% endif %}
+                                    </div>
+                                    {% elif change.change_type == 'bonus' and change.bonus_amount %}
+                                    <div class="small mb-2">
+                                        <strong class="text-info">${{ "{:,.2f}".format(change.bonus_amount) }}</strong>
+                                        {% if change.bonus_type %}
+                                        <span class="text-muted">({{ change.bonus_type|title }})</span>
+                                        {% endif %}
+                                    </div>
+                                    {% endif %}
+
+                                    {% if change.reason %}
+                                    <div class="small text-muted mb-1">
+                                        <strong>Reason:</strong> {{ change.reason }}
+                                    </div>
+                                    {% endif %}
+
+                                    {% if change.notes %}
+                                    <div class="small text-muted">
+                                        <strong>Notes:</strong> {{ change.notes }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <div class="text-center py-5 text-muted">
+                                <i class="bi bi-cash-stack fs-1 d-block mb-2"></i>
+                                <p class="mb-0">No compensation changes recorded</p>
+                                <a href="{{ url_for('hr.plan_change') }}?employee_id={{ employee.id }}" class="btn btn-sm btn-primary mt-2">
+                                    Plan First Change
+                                </a>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>

@@ -1,0 +1,243 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">Plan Compensation Change</h2>
+            <p class="text-muted mb-0">Schedule a salary change, bonus, or raise</p>
+        </div>
+        <a href="{{ url_for('hr.compensation') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Compensation
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="card">
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('hr.plan_change') }}" id="compensationForm">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                        <!-- Employee Selection -->
+                        <div class="mb-4">
+                            <label for="employee_id" class="form-label">Employee *</label>
+                            <select class="form-select" id="employee_id" name="employee_id" required>
+                                <option value="">Select an employee...</option>
+                                {% for employee in employees %}
+                                <option value="{{ employee.id }}"
+                                        data-salary="{{ employee.salary or 0 }}"
+                                        data-currency="{{ employee.salary_currency }}">
+                                    {{ employee.full_name }} - {{ employee.role or 'N/A' }}
+                                    {% if employee.salary %}
+                                    (${{ "{:,.2f}".format(employee.salary) }})
+                                    {% endif %}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Change Type -->
+                        <div class="mb-4">
+                            <label for="change_type" class="form-label">Change Type *</label>
+                            <select class="form-select" id="change_type" name="change_type" required>
+                                <option value="">Select change type...</option>
+                                <option value="salary_change">Salary Change</option>
+                                <option value="raise">Raise</option>
+                                <option value="promotion">Promotion</option>
+                                <option value="bonus">Bonus</option>
+                            </select>
+                            <div class="form-text">
+                                <strong>Salary Change:</strong> Change base salary (e.g., market adjustment)<br>
+                                <strong>Raise:</strong> Increase salary (e.g., annual review)<br>
+                                <strong>Promotion:</strong> Promotion with salary increase<br>
+                                <strong>Bonus:</strong> One-time bonus payment
+                            </div>
+                        </div>
+
+                        <!-- Effective Date -->
+                        <div class="mb-4">
+                            <label for="effective_date" class="form-label">Effective Date *</label>
+                            <input type="date" class="form-control" id="effective_date" name="effective_date" required>
+                            <div class="form-text">When this change should take effect</div>
+                        </div>
+
+                        <!-- Salary Change Fields (shown for salary_change, raise, promotion) -->
+                        <div id="salary_fields" style="display: none;">
+                            <div class="card bg-light mb-4">
+                                <div class="card-body">
+                                    <h5 class="card-title mb-3">Salary Information</h5>
+
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label">Current Salary</label>
+                                            <input type="text" class="form-control" id="current_salary_display" readonly>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="new_salary" class="form-label">New Salary *</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text">$</span>
+                                                <input type="number" class="form-control" id="new_salary" name="new_salary"
+                                                       step="0.01" min="0" placeholder="0.00">
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <label for="new_salary_currency" class="form-label">Currency</label>
+                                            <select class="form-select" id="new_salary_currency" name="new_salary_currency">
+                                                <option value="USD" selected>USD</option>
+                                                <option value="EUR">EUR</option>
+                                                <option value="GBP">GBP</option>
+                                                <option value="CAD">CAD</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Increase</label>
+                                            <input type="text" class="form-control" id="salary_increase_display" readonly>
+                                            <div class="form-text">Calculated automatically</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Bonus Fields (shown for bonus) -->
+                        <div id="bonus_fields" style="display: none;">
+                            <div class="card bg-light mb-4">
+                                <div class="card-body">
+                                    <h5 class="card-title mb-3">Bonus Information</h5>
+
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label for="bonus_amount" class="form-label">Bonus Amount *</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text">$</span>
+                                                <input type="number" class="form-control" id="bonus_amount" name="bonus_amount"
+                                                       step="0.01" min="0" placeholder="0.00">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="bonus_currency" class="form-label">Currency</label>
+                                            <select class="form-select" id="bonus_currency" name="bonus_currency">
+                                                <option value="USD" selected>USD</option>
+                                                <option value="EUR">EUR</option>
+                                                <option value="GBP">GBP</option>
+                                                <option value="CAD">CAD</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-0">
+                                        <label for="bonus_type" class="form-label">Bonus Type *</label>
+                                        <select class="form-select" id="bonus_type" name="bonus_type">
+                                            <option value="">Select bonus type...</option>
+                                            <option value="annual">Annual Bonus</option>
+                                            <option value="performance">Performance Bonus</option>
+                                            <option value="signing">Signing Bonus</option>
+                                            <option value="retention">Retention Bonus</option>
+                                            <option value="spot">Spot Bonus</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Reason -->
+                        <div class="mb-4">
+                            <label for="reason" class="form-label">Reason *</label>
+                            <input type="text" class="form-control" id="reason" name="reason"
+                                   placeholder="e.g., Annual review, Promotion to Senior Engineer, Market adjustment" required>
+                            <div class="form-text">Brief explanation for this compensation change</div>
+                        </div>
+
+                        <!-- Notes -->
+                        <div class="mb-4">
+                            <label for="notes" class="form-label">Notes (Optional)</label>
+                            <textarea class="form-control" id="notes" name="notes" rows="3"
+                                      placeholder="Any additional context or details..."></textarea>
+                        </div>
+
+                        <!-- Submit Buttons -->
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-lg"></i> Plan Compensation Change
+                            </button>
+                            <a href="{{ url_for('hr.compensation') }}" class="btn btn-outline-secondary">
+                                Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Show/hide fields based on change type
+document.getElementById('change_type').addEventListener('change', function() {
+    const changeType = this.value;
+    const salaryFields = document.getElementById('salary_fields');
+    const bonusFields = document.getElementById('bonus_fields');
+
+    // Reset visibility
+    salaryFields.style.display = 'none';
+    bonusFields.style.display = 'none';
+
+    // Clear required attributes
+    document.getElementById('new_salary').removeAttribute('required');
+    document.getElementById('bonus_amount').removeAttribute('required');
+    document.getElementById('bonus_type').removeAttribute('required');
+
+    if (['salary_change', 'raise', 'promotion'].includes(changeType)) {
+        salaryFields.style.display = 'block';
+        document.getElementById('new_salary').setAttribute('required', 'required');
+    } else if (changeType === 'bonus') {
+        bonusFields.style.display = 'block';
+        document.getElementById('bonus_amount').setAttribute('required', 'required');
+        document.getElementById('bonus_type').setAttribute('required', 'required');
+    }
+});
+
+// Update current salary display when employee changes
+document.getElementById('employee_id').addEventListener('change', function() {
+    const selectedOption = this.options[this.selectedIndex];
+    const currentSalary = parseFloat(selectedOption.dataset.salary) || 0;
+    const currency = selectedOption.dataset.currency || 'USD';
+
+    const displayValue = currentSalary > 0
+        ? `$${currentSalary.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} ${currency}`
+        : 'Not set';
+
+    document.getElementById('current_salary_display').value = displayValue;
+
+    // Store for calculations
+    document.getElementById('current_salary_display').dataset.amount = currentSalary;
+});
+
+// Calculate salary increase
+document.getElementById('new_salary').addEventListener('input', function() {
+    const currentSalary = parseFloat(document.getElementById('current_salary_display').dataset.amount) || 0;
+    const newSalary = parseFloat(this.value) || 0;
+
+    if (currentSalary > 0 && newSalary > 0) {
+        const increase = newSalary - currentSalary;
+        const percentage = (increase / currentSalary) * 100;
+
+        const increaseText = increase >= 0
+            ? `+$${increase.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} (+${percentage.toFixed(1)}%)`
+            : `-$${Math.abs(increase).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} (${percentage.toFixed(1)}%)`;
+
+        document.getElementById('salary_increase_display').value = increaseText;
+    } else {
+        document.getElementById('salary_increase_display').value = '';
+    }
+});
+
+// Set default effective date to today
+document.getElementById('effective_date').valueAsDate = new Date();
+</script>
+{% endblock %}

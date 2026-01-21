@@ -402,11 +402,20 @@ def employee_profile(employee_id):
         employee_id=employee.id
     ).order_by(PTORequest.start_date.desc()).all()
 
+    # Get compensation changes (for admin users only)
+    compensation_changes = None
+    if current_user.get_role_in_tenant(tenant.id) in ['owner', 'admin']:
+        from app.models.compensation_change import CompensationChange
+        compensation_changes = CompensationChange.query.filter_by(
+            employee_id=employee.id
+        ).order_by(CompensationChange.effective_date.desc()).all()
+
     return render_template('hr/employees/profile.html',
                           title=employee.full_name,
                           employee=employee,
                           onboarding_plan=onboarding_plan,
-                          pto_requests=pto_requests)
+                          pto_requests=pto_requests,
+                          compensation_changes=compensation_changes)
 
 
 # ========== TIME OFF ROUTES ==========

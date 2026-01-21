@@ -136,6 +136,41 @@
                 <span>Website Builder</span>
             </a>
             {% endif %}
+
+            {% if 'hr' in enabled_applets %}
+            <!-- HR/People Collapsible Section -->
+            <div class="sidebar-item {% if 'hr' in request.endpoint %}active{% endif %}" data-bs-toggle="collapse" data-bs-target="#hrSubmenu" style="cursor: pointer;">
+                <i class="bi bi-people-fill"></i>
+                <span>HR/People</span>
+                <i class="bi bi-chevron-down float-end"></i>
+            </div>
+            <div class="collapse {% if 'hr' in request.endpoint %}show{% endif %}" id="hrSubmenu">
+                <a href="{{ url_for('hr.index') }}" class="sidebar-item ps-5 {% if request.endpoint == 'hr.index' %}active{% endif %}">
+                    <i class="bi bi-speedometer2"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="{{ url_for('hr.employees') }}" class="sidebar-item ps-5 {% if 'employees' in request.endpoint %}active{% endif %}">
+                    <i class="bi bi-person-badge"></i>
+                    <span>Employees</span>
+                </a>
+                <a href="{{ url_for('hr.recruitment') }}" class="sidebar-item ps-5 {% if 'recruitment' in request.endpoint %}active{% endif %}">
+                    <i class="bi bi-briefcase"></i>
+                    <span>Recruitment</span>
+                </a>
+                <a href="{{ url_for('hr.onboarding') }}" class="sidebar-item ps-5 {% if 'onboarding' in request.endpoint %}active{% endif %}">
+                    <i class="bi bi-clipboard-check"></i>
+                    <span>Onboarding</span>
+                </a>
+                <a href="{{ url_for('hr.time_off') }}" class="sidebar-item ps-5 {% if 'time_off' in request.endpoint %}active{% endif %}">
+                    <i class="bi bi-calendar-event"></i>
+                    <span>Time Off</span>
+                </a>
+                <a href="{{ url_for('hr.compensation') }}" class="sidebar-item ps-5 {% if 'compensation' in request.endpoint %}active{% endif %}">
+                    <i class="bi bi-cash-coin"></i>
+                    <span>Compensation</span>
+                </a>
+            </div>
+            {% endif %}
         </div>
 
         <!-- Dashboards -->

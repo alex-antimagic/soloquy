@@ -46,3 +46,4 @@ from app.models.employee import Employee
 from app.models.onboarding_plan import OnboardingPlan, OnboardingTask
 from app.models.pto_request import PTORequest
 from app.models.job_posting import JobPosting
+from app.models.compensation_change import CompensationChange

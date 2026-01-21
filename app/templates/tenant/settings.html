@@ -6,6 +6,13 @@
         <div class="col">
             <h2>Workspace Settings</h2>
             <p class="text-muted">{{ current_tenant.name }}</p>
+            {% if user_role in ['owner', 'admin'] %}
+            <div class="alert alert-light border">
+                <i class="bi bi-puzzle me-2"></i>
+                <strong>Manage Applets:</strong>
+                <a href="{{ url_for('tenant.applets_settings') }}" class="alert-link">Enable/disable workspace applets (HR, CRM, Projects, etc.)</a>
+            </div>
+            {% endif %}
         </div>
     </div>
 
