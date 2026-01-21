@@ -24,13 +24,36 @@
                     <p class="text-muted small mb-0">{{ employee.employee_number }} · {{ employee.department_name or 'No Department' }}</p>
                 </div>
             </div>
-            <div>
+            <div class="d-flex gap-2 align-items-center">
                 {% if employee.status == 'active' %}
                 <span class="badge bg-success fs-6">Active</span>
                 {% elif employee.status == 'on_leave' %}
                 <span class="badge bg-warning text-dark fs-6">On Leave</span>
                 {% elif employee.status == 'terminated' %}
                 <span class="badge bg-danger fs-6">Terminated</span>
+                {% endif %}
+
+                {% if current_user.get_role_in_tenant(current_tenant.id) in ['owner', 'admin'] %}
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        Actions
+                    </button>
+                    <ul class="dropdown-menu">
+                        {% if employee.status == 'active' %}
+                        <li>
+                            <a class="dropdown-item text-danger" href="#" onclick="updateEmployeeStatus({{ employee.id }}, 'terminated'); return false;">
+                                <i class="bi bi-person-x"></i> Deactivate Employee
+                            </a>
+                        </li>
+                        {% elif employee.status == 'terminated' %}
+                        <li>
+                            <a class="dropdown-item text-success" href="#" onclick="updateEmployeeStatus({{ employee.id }}, 'active'); return false;">
+                                <i class="bi bi-person-check"></i> Reactivate Employee
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </div>
                 {% endif %}
             </div>
         </div>
@@ -430,4 +453,39 @@
         </div>
     </div>
 </div>
+
+<script>
+function updateEmployeeStatus(employeeId, newStatus) {
+    const actionWord = newStatus === 'terminated' ? 'deactivate' : 'reactivate';
+    const confirmMessage = newStatus === 'terminated'
+        ? 'Are you sure you want to deactivate this employee? They will be marked as terminated.'
+        : 'Are you sure you want to reactivate this employee?';
+
+    if (!confirm(confirmMessage)) {
+        return;
+    }
+
+    fetch(`/hr/employees/${employeeId}/update-status`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify({ status: newStatus })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Reload page to show updated status
+            window.location.reload();
+        } else {
+            alert(data.error || 'Failed to update employee status');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to update employee status');
+    });
+}
+</script>
 {% endblock %}

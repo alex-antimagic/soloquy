@@ -429,7 +429,8 @@ def employee_profile(employee_id):
                           employee=employee,
                           onboarding_plan=onboarding_plan,
                           pto_requests=pto_requests,
-                          compensation_changes=compensation_changes)
+                          compensation_changes=compensation_changes,
+                          now=datetime.utcnow)
 
 
 # ========== TIME OFF ROUTES ==========
@@ -465,6 +466,46 @@ def time_off():
                           pending_requests=pending_requests,
                           upcoming_pto=upcoming_pto,
                           calendar_entries=calendar_entries)
+
+
+@hr_bp.route('/employees/<int:employee_id>/update-status', methods=['POST'])
+@login_required
+def update_employee_status(employee_id):
+    """Update employee status (activate/deactivate)"""
+    tenant = g.current_tenant
+
+    # Check admin access
+    if current_user.get_role_in_tenant(tenant.id) not in ['owner', 'admin']:
+        return jsonify({'error': 'Access denied'}), 403
+
+    employee = Employee.query.filter_by(
+        id=employee_id,
+        tenant_id=tenant.id
+    ).first_or_404()
+
+    data = request.get_json()
+    new_status = data.get('status')
+
+    if new_status not in ['active', 'terminated']:
+        return jsonify({'error': 'Invalid status'}), 400
+
+    old_status = employee.status
+    employee.status = new_status
+
+    if new_status == 'terminated' and not employee.termination_date:
+        employee.termination_date = date.today()
+
+    db.session.commit()
+
+    action_word = 'deactivated' if new_status == 'terminated' else 'reactivated'
+    flash(f'{employee.full_name} has been {action_word}.', 'success')
+
+    return jsonify({
+        'success': True,
+        'message': f'Employee {action_word}',
+        'new_status': new_status,
+        'old_status': old_status
+    })
 
 
 @hr_bp.route('/time-off/<int:request_id>/review', methods=['POST'])
