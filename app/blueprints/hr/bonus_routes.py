@@ -54,10 +54,10 @@ def bonus_dashboard():
 @hr_bp.route('/bonuses/financial-metrics')
 @login_required
 def financial_metrics_list():
-    current_tenant = g.current_tenant
     """
     View/manage monthly financial metrics
     """
+    current_tenant = g.current_tenant
     year = request.args.get('year', type=int, default=date.today().year)
 
     # Get all metrics for the year
@@ -82,10 +82,10 @@ def financial_metrics_list():
 @hr_bp.route('/bonuses/financial-metrics/<int:year>/<int:month>', methods=['GET', 'POST'])
 @login_required
 def edit_financial_metrics(year, month):
-    current_tenant = g.current_tenant
     """
     Manual entry/edit form for financial metrics
     """
+    current_tenant = g.current_tenant
     if request.method == 'POST':
         try:
             revenue = request.form.get('revenue', type=float)
@@ -124,10 +124,10 @@ def edit_financial_metrics(year, month):
 @hr_bp.route('/bonuses/rules')
 @login_required
 def bonus_rules_list():
-    current_tenant = g.current_tenant
     """
     List all bonus rules with edit/delete actions
     """
+    current_tenant = g.current_tenant
     rules = BonusRule.query.filter_by(
         tenant_id=current_tenant.id
     ).order_by(BonusRule.created_at.desc()).all()
@@ -140,10 +140,10 @@ def bonus_rules_list():
 @hr_bp.route('/bonuses/rules/create', methods=['GET', 'POST'])
 @login_required
 def create_bonus_rule():
-    current_tenant = g.current_tenant
     """
     Create new bonus rule
     """
+    current_tenant = g.current_tenant
     if request.method == 'POST':
         try:
             import json
@@ -192,10 +192,10 @@ def create_bonus_rule():
 @hr_bp.route('/bonuses/rules/<int:rule_id>/toggle', methods=['POST'])
 @login_required
 def toggle_bonus_rule(rule_id):
-    current_tenant = g.current_tenant
     """
     Toggle bonus rule active/inactive
     """
+    current_tenant = g.current_tenant
     try:
         rule = BonusRule.query.get_or_404(rule_id)
 
@@ -217,10 +217,10 @@ def toggle_bonus_rule(rule_id):
 @hr_bp.route('/bonuses/calculate', methods=['POST'])
 @login_required
 def trigger_bonus_calculation():
-    current_tenant = g.current_tenant
     """
     Manually trigger bonus calculation for a specific period
     """
+    current_tenant = g.current_tenant
     try:
         year = request.form.get('year', type=int)
         month = request.form.get('month', type=int)
@@ -261,10 +261,10 @@ def trigger_bonus_calculation():
 @hr_bp.route('/bonuses/history')
 @login_required
 def bonus_calculation_history():
-    current_tenant = g.current_tenant
     """
     Audit log of all bonus calculations
     """
+    current_tenant = g.current_tenant
     page = request.args.get('page', 1, type=int)
     per_page = 20
 
@@ -282,10 +282,10 @@ def bonus_calculation_history():
 @hr_bp.route('/bonuses/sync-quickbooks', methods=['POST'])
 @login_required
 def sync_quickbooks_metrics():
-    current_tenant = g.current_tenant
     """
     AJAX endpoint to sync QuickBooks P&L data for a specific month
     """
+    current_tenant = g.current_tenant
     try:
         year = request.json.get('year', type=int)
         month = request.json.get('month', type=int)
