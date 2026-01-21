@@ -183,7 +183,10 @@ def create_bonus_rule():
             return redirect(url_for('hr.bonus_rules_list'))
 
         except Exception as e:
+            db.session.rollback()
             flash(f'Error creating rule: {str(e)}', 'danger')
+            return render_template('hr/bonuses/create_rule.html',
+                                 current_tenant=current_tenant)
 
     return render_template('hr/bonuses/create_rule.html',
                          current_tenant=current_tenant)
