@@ -21,7 +21,25 @@ def bonus_dashboard():
     """
     Bonus management dashboard showing overview and recent activity
     """
+    from app.models.employee import Employee
+    from app.models.compensation_change import CompensationChange
+
     current_tenant = g.current_tenant
+
+    # Get employee record for current user
+    employee = Employee.query.filter_by(
+        tenant_id=current_tenant.id,
+        user_id=current_user.id
+    ).first()
+
+    # Get employee's bonuses
+    my_bonuses = []
+    if employee:
+        my_bonuses = CompensationChange.query.filter_by(
+            tenant_id=current_tenant.id,
+            employee_id=employee.id,
+            change_type='bonus'
+        ).order_by(CompensationChange.effective_date.desc()).limit(10).all()
 
     # Get recent months status
     recent_months = FinancialMetricsService.get_recent_months_status(current_tenant.id, months_back=6)
@@ -48,7 +66,9 @@ def bonus_dashboard():
                          active_rules=active_rules,
                          recent_logs=recent_logs,
                          ytd_summary=ytd_summary,
-                         current_tenant=current_tenant)
+                         current_tenant=current_tenant,
+                         employee=employee,
+                         my_bonuses=my_bonuses)
 
 
 @hr_bp.route('/bonuses/financial-metrics')

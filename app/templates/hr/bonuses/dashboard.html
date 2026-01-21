@@ -18,6 +18,97 @@
         </div>
     </div>
 
+    <!-- My Bonuses Section (Employee View) -->
+    {% if employee %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-primary">
+                <div class="card-header bg-primary bg-opacity-10">
+                    <h5 class="mb-0"><i class="bi bi-trophy"></i> My Bonus Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-3">
+                            <div class="border rounded p-3">
+                                <p class="text-muted mb-1 small">Bonus Target</p>
+                                <h4 class="mb-0">{{ employee.bonus_target_percentage }}%</h4>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="border rounded p-3">
+                                <p class="text-muted mb-1 small">Current Salary</p>
+                                <h4 class="mb-0">${{ "{:,.0f}".format(employee.current_salary) if employee.current_salary else '0' }}</h4>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="border rounded p-3">
+                                <p class="text-muted mb-1 small">Monthly Bonus Target</p>
+                                <h4 class="mb-0">${{ "{:,.2f}".format((employee.current_salary or 0) * (employee.bonus_target_percentage or 0) / 100) }}</h4>
+                                <p class="text-muted small mb-0">When revenue target is met</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="border rounded p-3">
+                                <p class="text-muted mb-1 small">Total Bonuses YTD</p>
+                                <h4 class="mb-0">${{ "{:,.2f}".format(my_bonuses|selectattr('status', 'equalto', 'approved')|map(attribute='bonus_amount')|sum) if my_bonuses else '0.00' }}</h4>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if my_bonuses %}
+                    <h6 class="mb-3">My Recent Bonuses</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Period</th>
+                                    <th>Bonus Type</th>
+                                    <th>Amount</th>
+                                    <th>Status</th>
+                                    <th>Effective Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for bonus in my_bonuses %}
+                                <tr>
+                                    <td>
+                                        {% if bonus.financial_metrics %}
+                                            {{ bonus.financial_metrics.period_short }}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ bonus.bonus_type|title if bonus.bonus_type else 'Performance' }}</td>
+                                    <td><strong>${{ "{:,.2f}".format(bonus.bonus_amount) }}</strong></td>
+                                    <td>
+                                        {% if bonus.status == 'approved' %}
+                                            <span class="badge bg-success">Approved</span>
+                                        {% elif bonus.status == 'pending' %}
+                                            <span class="badge bg-warning text-dark">Pending Approval</span>
+                                        {% elif bonus.status == 'rejected' %}
+                                            <span class="badge bg-danger">Rejected</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">{{ bonus.status|title }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ bonus.effective_date.strftime('%b %d, %Y') }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-3 text-muted">
+                        <i class="bi bi-info-circle me-2"></i>
+                        No bonuses calculated yet. Bonuses are automatically created when company revenue targets are met.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- YTD Summary Cards -->
     <div class="row g-3 mb-4">
         <div class="col-md-3">
