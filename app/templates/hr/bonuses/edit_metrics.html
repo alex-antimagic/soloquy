@@ -1,0 +1,197 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('hr.dashboard') }}">HR</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('hr.bonus_dashboard') }}">Bonuses</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('hr.financial_metrics_list') }}">Financial Metrics</a></li>
+                    <li class="breadcrumb-item active">{{ month_name }} {{ year }}</li>
+                </ol>
+            </nav>
+            <h2><i class="bi bi-pencil-square"></i> Edit Financial Metrics</h2>
+            <p class="text-muted">{{ month_name }} {{ year }}</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Financial Data Entry</h5>
+                    {% if metrics and metrics.data_source == 'quickbooks' %}
+                    <span class="badge bg-primary"><i class="bi bi-cloud"></i> QuickBooks Synced</span>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                        <div class="mb-3">
+                            <label for="revenue" class="form-label">Total Revenue <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number"
+                                       class="form-control"
+                                       id="revenue"
+                                       name="revenue"
+                                       step="0.01"
+                                       value="{{ metrics.total_revenue if metrics else '' }}"
+                                       placeholder="0.00"
+                                       required>
+                            </div>
+                            <div class="form-text">Total income for the month</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="expenses" class="form-label">Total Expenses <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number"
+                                       class="form-control"
+                                       id="expenses"
+                                       name="expenses"
+                                       step="0.01"
+                                       value="{{ metrics.total_expenses if metrics else '' }}"
+                                       placeholder="0.00"
+                                       required>
+                            </div>
+                            <div class="form-text">Total operating expenses for the month</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Net Revenue (Calculated)</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="text"
+                                       class="form-control"
+                                       id="net_revenue_display"
+                                       value="{{ '{:,.2f}'.format(metrics.net_revenue) if metrics and metrics.net_revenue else '0.00' }}"
+                                       readonly>
+                            </div>
+                            <div class="form-text">Automatically calculated: Revenue - Expenses</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="notes" class="form-label">Notes (Optional)</label>
+                            <textarea class="form-control"
+                                      id="notes"
+                                      name="notes"
+                                      rows="3"
+                                      placeholder="Any additional context or notes about this month's financials">{{ metrics.notes if metrics else '' }}</textarea>
+                        </div>
+
+                        <hr class="my-4">
+
+                        {% if metrics and metrics.bonus_calculation_triggered %}
+                        <div class="alert alert-warning">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            <strong>Note:</strong> Bonuses have already been calculated for this month. Updating financial data will not automatically recalculate bonuses.
+                        </div>
+                        {% endif %}
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('hr.financial_metrics_list') }}" class="btn btn-secondary">
+                                <i class="bi bi-x-circle"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i> Save Metrics
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            {% if can_sync_quickbooks %}
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-cloud-download"></i> QuickBooks Sync</h5>
+                </div>
+                <div class="card-body">
+                    <p>Automatically import financial data from QuickBooks for this month.</p>
+                    <form method="POST" action="{{ url_for('hr.sync_quickbooks_metrics') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="year" value="{{ year }}">
+                        <input type="hidden" name="month" value="{{ month }}">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-cloud-download"></i> Sync from QuickBooks
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="col-md-4">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <h6 class="card-title"><i class="bi bi-calculator"></i> Quick Calculator</h6>
+                    <div class="mb-2">
+                        <label class="small">Revenue:</label>
+                        <input type="number" class="form-control form-control-sm" id="calc_revenue" step="0.01" placeholder="0.00">
+                    </div>
+                    <div class="mb-2">
+                        <label class="small">Expenses:</label>
+                        <input type="number" class="form-control form-control-sm" id="calc_expenses" step="0.01" placeholder="0.00">
+                    </div>
+                    <hr>
+                    <div>
+                        <label class="small">Net Revenue:</label>
+                        <div class="alert alert-secondary mb-0 py-2">
+                            <strong id="calc_net">$0.00</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mt-3 bg-light">
+                <div class="card-body">
+                    <h6 class="card-title"><i class="bi bi-info-circle"></i> Data Sources</h6>
+                    <p class="small mb-2">You can enter data from:</p>
+                    <ul class="small mb-0">
+                        <li>QuickBooks P&L reports</li>
+                        <li>Accounting system exports</li>
+                        <li>Monthly financial statements</li>
+                        <li>Bank reconciliation reports</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Auto-calculate net revenue
+function updateNetRevenue() {
+    const revenue = parseFloat(document.getElementById('revenue').value) || 0;
+    const expenses = parseFloat(document.getElementById('expenses').value) || 0;
+    const net = revenue - expenses;
+    document.getElementById('net_revenue_display').value = net.toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+}
+
+document.getElementById('revenue').addEventListener('input', updateNetRevenue);
+document.getElementById('expenses').addEventListener('input', updateNetRevenue);
+
+// Quick calculator
+function updateCalc() {
+    const revenue = parseFloat(document.getElementById('calc_revenue').value) || 0;
+    const expenses = parseFloat(document.getElementById('calc_expenses').value) || 0;
+    const net = revenue - expenses;
+    document.getElementById('calc_net').textContent = '$' + net.toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+}
+
+document.getElementById('calc_revenue').addEventListener('input', updateCalc);
+document.getElementById('calc_expenses').addEventListener('input', updateCalc);
+</script>
+{% endblock %}

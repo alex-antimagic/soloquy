@@ -1,0 +1,175 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('hr.dashboard') }}">HR</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('hr.bonus_dashboard') }}">Bonuses</a></li>
+                    <li class="breadcrumb-item active">Financial Metrics</li>
+                </ol>
+            </nav>
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2><i class="bi bi-graph-up"></i> Financial Metrics</h2>
+                    <p class="text-muted">Monthly revenue and expense tracking for bonus calculations</p>
+                </div>
+                <div>
+                    <select class="form-select" onchange="window.location.href='{{ url_for('hr.financial_metrics_list') }}?year=' + this.value">
+                        {% for y in available_years %}
+                        <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">{{ year }} Financial Data</h5>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Month</th>
+                                <th>Total Revenue</th>
+                                <th>Total Expenses</th>
+                                <th>Net Revenue</th>
+                                <th>Data Source</th>
+                                <th>Bonus Calculated</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if metrics %}
+                                {% for metric in metrics %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ metric.get_month_name() }} {{ metric.year }}</strong>
+                                        {% if metric.is_finalized %}
+                                        <span class="badge bg-success ms-2">Finalized</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>${{ "{:,.2f}".format(metric.total_revenue) if metric.total_revenue else '-' }}</td>
+                                    <td>${{ "{:,.2f}".format(metric.total_expenses) if metric.total_expenses else '-' }}</td>
+                                    <td>
+                                        {% if metric.net_revenue %}
+                                        <strong class="{{ 'text-success' if metric.net_revenue >= 0 else 'text-danger' }}">
+                                            ${{ "{:,.2f}".format(metric.net_revenue) }}
+                                        </strong>
+                                        {% else %}
+                                        -
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if metric.data_source == 'quickbooks' %}
+                                        <span class="badge bg-primary"><i class="bi bi-cloud"></i> QuickBooks</span>
+                                        {% elif metric.data_source == 'manual' %}
+                                        <span class="badge bg-secondary"><i class="bi bi-pencil"></i> Manual</span>
+                                        {% elif metric.data_source == 'crm_deals' %}
+                                        <span class="badge bg-info"><i class="bi bi-briefcase"></i> CRM</span>
+                                        {% else %}
+                                        <span class="badge bg-light text-dark">Not set</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if metric.bonus_calculation_triggered %}
+                                        <span class="badge bg-success"><i class="bi bi-check-circle"></i> Yes</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">No</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{{ url_for('hr.edit_financial_metrics', year=metric.year, month=metric.month) }}"
+                                           class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-pencil"></i> Edit
+                                        </a>
+                                        {% if not metric.bonus_calculation_triggered and metric.total_revenue %}
+                                        <form method="POST"
+                                              action="{{ url_for('hr.trigger_bonus_calculation') }}"
+                                              class="d-inline"
+                                              onsubmit="return confirm('Calculate bonuses for {{ metric.get_month_name() }} {{ metric.year }}?');">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <input type="hidden" name="year" value="{{ metric.year }}">
+                                            <input type="hidden" name="month" value="{{ metric.month }}">
+                                            <button type="submit" class="btn btn-sm btn-success">
+                                                <i class="bi bi-calculator"></i> Calculate Bonuses
+                                            </button>
+                                        </form>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                {% for month in range(12, 0, -1) %}
+                                <tr>
+                                    <td><strong>{{ ['', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][month] }} {{ year }}</strong></td>
+                                    <td colspan="5" class="text-muted">No data entered</td>
+                                    <td>
+                                        <a href="{{ url_for('hr.edit_financial_metrics', year=year, month=month) }}"
+                                           class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-plus-circle"></i> Add Data
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-md-4">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <h6 class="card-title"><i class="bi bi-info-circle"></i> Data Sources</h6>
+                    <p class="small mb-2">Financial metrics can come from:</p>
+                    <ul class="small mb-0">
+                        <li><strong>QuickBooks:</strong> Automatically synced from P&L reports</li>
+                        <li><strong>Manual Entry:</strong> Entered by HR administrators</li>
+                        <li><strong>CRM:</strong> Calculated from won deals</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <h6 class="card-title"><i class="bi bi-shield-check"></i> Data Integrity</h6>
+                    <p class="small mb-2">Best practices:</p>
+                    <ul class="small mb-0">
+                        <li>Finalize metrics before calculating bonuses</li>
+                        <li>QuickBooks sync is most accurate</li>
+                        <li>Manual entries can be updated anytime</li>
+                        <li>Bonuses only calculate once per month</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <h6 class="card-title"><i class="bi bi-calendar-check"></i> Monthly Workflow</h6>
+                    <ol class="small mb-0">
+                        <li class="mb-1">Enter or sync financial data</li>
+                        <li class="mb-1">Review bonus rules</li>
+                        <li class="mb-1">Calculate bonuses</li>
+                        <li class="mb-1">Approve in Compensation</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

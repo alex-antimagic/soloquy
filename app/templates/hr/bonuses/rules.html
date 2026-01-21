@@ -1,0 +1,164 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('hr.dashboard') }}">HR</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('hr.bonus_dashboard') }}">Bonuses</a></li>
+                    <li class="breadcrumb-item active">Rules</li>
+                </ol>
+            </nav>
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2><i class="bi bi-list-check"></i> Bonus Rules</h2>
+                    <p class="text-muted">Configure KPI-based bonus calculation criteria</p>
+                </div>
+                <a href="{{ url_for('hr.create_bonus_rule') }}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> New Rule
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            {% if rules %}
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Active Rules ({{ rules|length }})</h5>
+                </div>
+                <div class="list-group list-group-flush">
+                    {% for rule in rules %}
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <div class="d-flex align-items-center mb-2">
+                                    <h5 class="mb-0 me-3">{{ rule.rule_name }}</h5>
+                                    <span class="badge bg-{{ 'success' if rule.is_active else 'secondary' }}">
+                                        {{ 'Active' if rule.is_active else 'Inactive' }}
+                                    </span>
+                                    <span class="badge bg-info ms-2">{{ rule.bonus_type|title }}</span>
+                                </div>
+
+                                {% if rule.description %}
+                                <p class="text-muted mb-2">{{ rule.description }}</p>
+                                {% endif %}
+
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <strong>Criteria:</strong>
+                                        {% set config = rule.get_config() %}
+                                        {{ config.metric|replace('_', ' ')|title }}
+                                        {{ config.operator }}
+                                        ${{ "{:,.2f}".format(config.threshold) }}
+                                    </div>
+                                    <div class="col-md-6">
+                                        <strong>Bonus Calculation:</strong>
+                                        {% if rule.use_employee_target_percentage %}
+                                        Employee salary × target percentage
+                                        {% else %}
+                                        Fixed amount
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <div class="mt-2 small text-muted">
+                                    Created {{ rule.created_at.strftime('%B %d, %Y') }}
+                                    {% if rule.effective_from %}
+                                    • Effective from {{ rule.effective_from.strftime('%B %d, %Y') }}
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="ms-3">
+                                <button class="btn btn-sm btn-{{ 'warning' if rule.is_active else 'success' }}"
+                                        onclick="toggleRule({{ rule.id }}, {{ rule.is_active|tojson }})">
+                                    <i class="bi bi-{{ 'pause' if rule.is_active else 'play' }}-circle"></i>
+                                    {{ 'Deactivate' if rule.is_active else 'Activate' }}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% else %}
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <i class="bi bi-trophy display-1 text-muted"></i>
+                    <h4 class="mt-3">No Bonus Rules Yet</h4>
+                    <p class="text-muted mb-4">Create your first KPI-based bonus rule to start automated bonus calculations</p>
+                    <a href="{{ url_for('hr.create_bonus_rule') }}" class="btn btn-primary">
+                        <i class="bi bi-plus-circle"></i> Create First Rule
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if rules %}
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <h6 class="card-title"><i class="bi bi-info-circle"></i> How Rules Work</h6>
+                    <ol class="small mb-0">
+                        <li class="mb-2">Rules evaluate financial metrics each month</li>
+                        <li class="mb-2">When criteria are met, bonuses are automatically created</li>
+                        <li class="mb-2">Pending bonuses appear in Compensation for approval</li>
+                        <li class="mb-2">Deactivate rules temporarily without deleting them</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <h6 class="card-title"><i class="bi bi-lightbulb"></i> Best Practices</h6>
+                    <ul class="small mb-0">
+                        <li class="mb-2">Start with simple revenue thresholds</li>
+                        <li class="mb-2">Set employee bonus target percentages in their profiles</li>
+                        <li class="mb-2">Review calculations before approving</li>
+                        <li class="mb-2">Keep rules active year-round for consistency</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleRule(ruleId, isActive) {
+    if (!confirm(isActive ? 'Deactivate this bonus rule?' : 'Activate this bonus rule?')) {
+        return;
+    }
+
+    fetch(`{{ url_for('hr.toggle_bonus_rule', rule_id=0) }}`.replace('0', ruleId), {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() }}'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        alert('Error toggling rule: ' + error);
+    });
+}
+</script>
+{% endblock %}
