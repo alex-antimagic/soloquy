@@ -43,7 +43,7 @@
                         <div class="col-md-3">
                             <div class="border rounded p-3">
                                 <p class="text-muted mb-1 small">Monthly Bonus Target</p>
-                                <h4 class="mb-0">${{ "{:,.2f}".format(float(employee.salary or 0) * float(employee.bonus_target_percentage or 0) / 100) }}</h4>
+                                <h4 class="mb-0">${{ "{:,.2f}".format(monthly_bonus_target) }}</h4>
                                 <p class="text-muted small mb-0">When revenue target is met</p>
                             </div>
                         </div>

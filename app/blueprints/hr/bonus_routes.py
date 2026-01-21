@@ -32,6 +32,11 @@ def bonus_dashboard():
         user_id=current_user.id
     ).first()
 
+    # Calculate monthly bonus target
+    monthly_bonus_target = 0
+    if employee and employee.salary and employee.bonus_target_percentage:
+        monthly_bonus_target = float(employee.salary) * float(employee.bonus_target_percentage) / 100
+
     # Get employee's bonuses
     my_bonuses = []
     if employee:
@@ -68,7 +73,8 @@ def bonus_dashboard():
                          ytd_summary=ytd_summary,
                          current_tenant=current_tenant,
                          employee=employee,
-                         my_bonuses=my_bonuses)
+                         my_bonuses=my_bonuses,
+                         monthly_bonus_target=monthly_bonus_target)
 
 
 @hr_bp.route('/bonuses/financial-metrics')
