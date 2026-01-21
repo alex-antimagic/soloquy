@@ -430,7 +430,7 @@ def employee_profile(employee_id):
                           onboarding_plan=onboarding_plan,
                           pto_requests=pto_requests,
                           compensation_changes=compensation_changes,
-                          now=datetime.utcnow)
+                          now=date.today)
 
 
 # ========== TIME OFF ROUTES ==========
