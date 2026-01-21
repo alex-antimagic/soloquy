@@ -105,7 +105,11 @@ class BonusCalculationService:
             total_bonuses_created = 0
             total_amount = Decimal('0.00')
 
-            as_of_date = date(year, month, 1)
+            # Set effective date to 1st of next month (bonuses for Jan paid on Feb 1)
+            if month == 12:
+                as_of_date = date(year + 1, 1, 1)
+            else:
+                as_of_date = date(year, month + 1, 1)
 
             for rule in passed_rules:
                 # Log passed rule
