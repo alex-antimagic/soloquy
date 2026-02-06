@@ -46,7 +46,7 @@ def index():
         TenantMembership.tenant_id == g.current_tenant.id,
         TenantMembership.is_active == True,
         User.is_active == True
-    ).order_by(User.full_name).all()
+    ).order_by(User.first_name, User.last_name).all()
 
     # Get agents for assignment
     agents = Agent.query.join(Agent.department).filter(
