@@ -16,6 +16,7 @@ def index():
     from app.models.department import Department
     from app.models.project import Project
     from app.models.user import User
+    from app.models.tenant import TenantMembership
     from app.models.agent import Agent
 
     # Get all tasks for current tenant
@@ -41,7 +42,11 @@ def index():
     projects = Project.query.filter_by(tenant_id=g.current_tenant.id).all()
 
     # Get team members (users) for assignment
-    team_members = User.query.filter_by(tenant_id=g.current_tenant.id, is_active=True).order_by(User.full_name).all()
+    team_members = User.query.join(TenantMembership).filter(
+        TenantMembership.tenant_id == g.current_tenant.id,
+        TenantMembership.is_active == True,
+        User.is_active == True
+    ).order_by(User.full_name).all()
 
     # Get agents for assignment
     agents = Agent.query.join(Agent.department).filter(
