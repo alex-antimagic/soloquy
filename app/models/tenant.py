@@ -114,7 +114,7 @@ def create_employee_on_membership(mapper, connection, target):
 
         # Use after_commit to ensure transaction is complete
         @event.listens_for(db.session, 'after_commit', once=True)
-        def create_employee():
+        def create_employee(session):
             try:
                 EmployeeSyncService.create_employee_from_user(
                     user_id=target.user_id,
@@ -145,7 +145,7 @@ def handle_membership_status_change(mapper, connection, target):
         if employee:
             # Use after_commit to ensure transaction is complete
             @event.listens_for(db.session, 'after_commit', once=True)
-            def update_employee_status():
+            def update_employee_status(session):
                 try:
                     if not target.is_active:
                         EmployeeSyncService.handle_membership_removal(employee.id)
