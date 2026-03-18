@@ -41,6 +41,7 @@ class User(UserMixin, db.Model):
     plan = db.Column(db.String(20), default='free', nullable=False)  # 'free' or 'pro'
     stripe_customer_id = db.Column(db.String(255))  # For Stripe integration
     stripe_subscription_id = db.Column(db.String(255))  # For Stripe subscriptions
+    stripe_usage_subscription_item_id = db.Column(db.String(255))  # Metered usage item on subscription
     trial_start_date = db.Column(db.DateTime, nullable=True)  # When trial started
     trial_end_date = db.Column(db.DateTime, nullable=True)  # When trial ends
     trial_activated = db.Column(db.Boolean, default=False, nullable=False)  # Has trial been used
@@ -166,6 +167,32 @@ class User(UserMixin, db.Model):
         if self.is_trial_active():
             return 'pro'
         return self.plan
+
+    def get_ai_message_limit(self):
+        """Monthly AI message limit. Pro gets 1000 included; overage billed via Stripe metered."""
+        if self.effective_plan == 'pro':
+            return 1000  # Included; anything above is metered
+        return 100  # Free plan hard limit
+
+    def get_current_month_ai_usage(self, tenant_id):
+        """Count AI agent responses generated this month for a given tenant."""
+        from app.models.message import Message
+        from app.models.department import Department
+        month_start = datetime.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        return Message.query.join(
+            Department, Message.department_id == Department.id
+        ).filter(
+            Department.tenant_id == tenant_id,
+            Message.sender_id.is_(None),
+            Message.agent_id.isnot(None),
+            Message.created_at >= month_start
+        ).count()
+
+    def get_ai_usage_percentage(self, tenant_id):
+        """Usage as a percentage of the included monthly limit (can exceed 100 on Pro)."""
+        usage = self.get_current_month_ai_usage(tenant_id)
+        limit = self.get_ai_message_limit()
+        return round((usage / limit) * 100) if limit else 0
 
     def get_last_dm_time_with(self, other_user_id):
         """Get timestamp of the last DM with another user"""

@@ -331,6 +331,19 @@ def send_message():
         agent = Agent.query.get(agent_id)
         print(f"[SEND_MESSAGE] Agent found: {agent}")
         if agent:
+            # ── Usage gate ────────────────────────────────────────────────
+            tenant_id = g.current_tenant.id if hasattr(g, 'current_tenant') and g.current_tenant else department_id
+            if tenant_id:
+                current_usage = current_user.get_current_month_ai_usage(tenant_id)
+                limit = current_user.get_ai_message_limit()
+                if current_user.effective_plan == 'free' and current_usage >= limit:
+                    return jsonify({
+                        'error': f'Monthly AI message limit reached ({limit} messages on Free plan). '
+                                 f'Upgrade to Pro for 1,000 included messages + $10/1,000 after.',
+                        'limit_reached': True,
+                        'upgrade_url': '/pricing'
+                    }), 429
+            # ─────────────────────────────────────────────────────────────
             print(f"[SEND_MESSAGE] Starting AI response generation for agent: {agent.name}")
             try:
                 # Get conversation history between THIS user and THIS agent
@@ -489,6 +502,21 @@ def send_message():
                 )
                 db.session.add(agent_message)
                 db.session.commit()
+
+                # Report 1 unit of usage to Stripe metered billing
+                if current_user.stripe_usage_subscription_item_id:
+                    try:
+                        import stripe as _stripe
+                        import time
+                        _stripe.api_key = __import__('os').environ.get('STRIPE_SECRET_KEY')
+                        _stripe.SubscriptionItem.create_usage_record(
+                            current_user.stripe_usage_subscription_item_id,
+                            quantity=1,
+                            timestamp=int(time.time()),
+                            action='increment'
+                        )
+                    except Exception as _e:
+                        print(f"[USAGE REPORT] Stripe usage record failed (non-fatal): {_e}")
 
                 # Link any recently generated files to this message
                 from app.models.generated_file import GeneratedFile
