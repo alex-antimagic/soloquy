@@ -1,0 +1,116 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('website.status_dashboard') }}">Status Page</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('website.status_incidents') }}">Incidents</a></li>
+                    <li class="breadcrumb-item active">Create</li>
+                </ol>
+            </nav>
+            <h1><i class="bi bi-exclamation-triangle"></i> Create New Incident</h1>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-body">
+                    <form method="POST">
+                        <div class="mb-3">
+                            <label for="title" class="form-label">Incident Title *</label>
+                            <input type="text" class="form-control" id="title" name="title" required
+                                   placeholder="e.g., Database Connection Issues">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="initial_message" class="form-label">Initial Status Update *</label>
+                            <textarea class="form-control" id="initial_message" name="initial_message"
+                                      rows="4" required
+                                      placeholder="Describe what happened and what you're doing about it..."></textarea>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="severity" class="form-label">Severity *</label>
+                                <select class="form-select" id="severity" name="severity" required>
+                                    <option value="minor">Minor</option>
+                                    <option value="major">Major</option>
+                                    <option value="critical">Critical</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Affected Components</label>
+                            {% if components %}
+                            {% for component in components %}
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="affected_components"
+                                       value="{{ component.id }}" id="component{{ component.id }}">
+                                <label class="form-check-label" for="component{{ component.id }}">
+                                    {{ component.name }}
+                                </label>
+                            </div>
+                            {% endfor %}
+                            {% else %}
+                            <p class="text-muted">
+                                No components available.
+                                <a href="{{ url_for('website.status_components') }}">Create components first</a>.
+                            </p>
+                            {% endif %}
+                        </div>
+
+                        <hr>
+
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="is_published" name="is_published" checked>
+                                <label class="form-check-label" for="is_published">
+                                    <strong>Publish immediately</strong>
+                                    <small class="text-muted d-block">Make this incident visible on the public status page</small>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="notify_subscribers" name="notify_subscribers">
+                                <label class="form-check-label" for="notify_subscribers">
+                                    <strong>Notify subscribers</strong>
+                                    <small class="text-muted d-block">Send email notification to all subscribers</small>
+                                </label>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-danger">Create Incident</button>
+                        <a href="{{ url_for('website.status_incidents') }}" class="btn btn-secondary">Cancel</a>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-info-circle"></i> Guidelines</h5>
+                    <ul class="mb-0">
+                        <li><strong>Minor:</strong> Small issues with limited impact</li>
+                        <li><strong>Major:</strong> Significant issues affecting multiple users</li>
+                        <li><strong>Critical:</strong> Complete outage or data loss</li>
+                    </ul>
+                    <hr>
+                    <p class="mb-0">
+                        <small class="text-muted">
+                            Be clear and transparent. Customers appreciate honest communication about issues.
+                        </small>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

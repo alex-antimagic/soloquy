@@ -39,6 +39,13 @@ from app.models.website import Website, WebsitePage, WebsiteTheme, WebsiteForm, 
 from app.models.competitor_profile import CompetitorProfile
 from app.models.competitive_analysis import CompetitiveAnalysis
 
+# Status Page Models
+from app.models.status_page_config import StatusPageConfig
+from app.models.status_component import StatusComponent
+from app.models.status_incident import StatusIncident
+from app.models.incident_update import IncidentUpdate
+from app.models.status_subscriber import StatusSubscriber
+
 # HR Models
 from app.models.candidate import Candidate
 from app.models.interview import Interview

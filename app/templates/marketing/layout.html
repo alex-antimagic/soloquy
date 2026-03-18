@@ -41,11 +41,57 @@
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto align-items-lg-center">
-                    <li class="nav-item">
-                        <a class="nav-link" href="/#features">Features</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/#how-it-works">How It Works</a>
+                    <!-- Features Megadropdown -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            Features
+                        </a>
+                        <ul class="dropdown-menu features-dropdown">
+                            <li>
+                                <div class="features-dropdown-grid">
+                                    <a class="features-dropdown-item" href="/#replace-stack">
+                                        <span class="features-dropdown-icon"><i class="bi bi-chat-dots-fill"></i></span>
+                                        <span><strong>Chat</strong><small>Replaces Slack</small></span>
+                                    </a>
+                                    <a class="features-dropdown-item" href="/#replace-stack">
+                                        <span class="features-dropdown-icon"><i class="bi bi-person-lines-fill"></i></span>
+                                        <span><strong>CRM</strong><small>Replaces Salesforce</small></span>
+                                    </a>
+                                    <a class="features-dropdown-item" href="/#replace-stack">
+                                        <span class="features-dropdown-icon"><i class="bi bi-headset"></i></span>
+                                        <span><strong>Support</strong><small>Replaces Zendesk</small></span>
+                                    </a>
+                                    <a class="features-dropdown-item" href="/#replace-stack">
+                                        <span class="features-dropdown-icon"><i class="bi bi-kanban-fill"></i></span>
+                                        <span><strong>Projects</strong><small>Replaces Jira</small></span>
+                                    </a>
+                                    <a class="features-dropdown-item" href="/#replace-stack">
+                                        <span class="features-dropdown-icon"><i class="bi bi-people-fill"></i></span>
+                                        <span><strong>HR</strong><small>Replaces BambooHR</small></span>
+                                    </a>
+                                    <a class="features-dropdown-item" href="/#replace-stack">
+                                        <span class="features-dropdown-icon"><i class="bi bi-check2-all"></i></span>
+                                        <span><strong>Tasks</strong><small>Replaces Asana</small></span>
+                                    </a>
+                                    <a class="features-dropdown-item" href="/#replace-stack">
+                                        <span class="features-dropdown-icon"><i class="bi bi-globe2"></i></span>
+                                        <span><strong>Website</strong><small>Replaces Webflow</small></span>
+                                    </a>
+                                    <a class="features-dropdown-item" href="/#replace-stack">
+                                        <span class="features-dropdown-icon"><i class="bi bi-activity"></i></span>
+                                        <span><strong>Status Page</strong><small>Replaces Statuspage.io</small></span>
+                                    </a>
+                                    <a class="features-dropdown-item" href="/#replace-stack">
+                                        <span class="features-dropdown-icon"><i class="bi bi-bar-chart-line-fill"></i></span>
+                                        <span><strong>Analytics</strong><small>Built-in reporting</small></span>
+                                    </a>
+                                    <a class="features-dropdown-item" href="/#replace-stack">
+                                        <span class="features-dropdown-icon"><i class="bi bi-robot"></i></span>
+                                        <span><strong>AI Agents</strong><small>Know your business</small></span>
+                                    </a>
+                                </div>
+                            </li>
+                        </ul>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="/pricing">Pricing</a>
@@ -88,43 +134,68 @@
     <footer class="marketing-footer">
         <div class="container">
             <div class="row g-4">
-                <div class="col-md-4">
-                    <h5 class="brand-gradient mb-3">worklead</h5>
-                    <p class="text-muted">AI for everyone</p>
+                <!-- Brand -->
+                <div class="col-lg-4 col-md-6">
+                    <h5 class="mb-2"><span class="brand-gradient">worklead</span></h5>
+                    <p class="text-muted mb-0">10 business tools. One AI-powered platform. One login.</p>
+                    <div class="footer-socials">
+                        <a href="#" aria-label="Twitter/X"><i class="bi bi-twitter-x"></i></a>
+                        <a href="#" aria-label="LinkedIn"><i class="bi bi-linkedin"></i></a>
+                        <a href="#" aria-label="GitHub"><i class="bi bi-github"></i></a>
+                    </div>
                 </div>
-                <div class="col-md-2">
+                <!-- Product -->
+                <div class="col-lg-2 col-md-3 col-6">
                     <h6 class="mb-3">Product</h6>
-                    <ul class="list-unstyled">
-                        <li class="mb-2"><a href="/pricing">Pricing</a></li>
-                        <li class="mb-2"><a href="/#features">Features</a></li>
-                        <li class="mb-2"><a href="/demo">Request Demo</a></li>
+                    <ul class="list-unstyled footer-links">
+                        <li><a href="/#features">Features</a></li>
+                        <li><a href="/pricing">Pricing</a></li>
+                        <li><a href="/demo">Request Demo</a></li>
+                        <li><a href="{{ url_for('pages.help') }}">Help Center</a></li>
+                        <li><a href="/#replace-stack">What We Replace</a></li>
                     </ul>
                 </div>
-                <div class="col-md-2">
-                    <h6 class="mb-3">Resources</h6>
-                    <ul class="list-unstyled">
-                        <li class="mb-2"><a href="{{ url_for('pages.help') }}">Help Center</a></li>
-                        <li class="mb-2"><a href="{{ url_for('pages.terms') }}">Terms</a></li>
-                        <li class="mb-2"><a href="{{ url_for('pages.privacy') }}">Privacy</a></li>
+                <!-- Company -->
+                <div class="col-lg-2 col-md-3 col-6">
+                    <h6 class="mb-3">Company</h6>
+                    <ul class="list-unstyled footer-links">
+                        <li><a href="{{ url_for('pages.terms') }}">Terms</a></li>
+                        <li><a href="{{ url_for('pages.privacy') }}">Privacy</a></li>
                     </ul>
                 </div>
-                <div class="col-md-4">
-                    <h6 class="mb-3">Ready to get started?</h6>
-                    <a class="btn btn-gradient-primary w-100 mb-2" href="{{ url_for('auth.register') }}">
-                        Start Free Trial
-                    </a>
-                    <p class="text-muted small">No credit card required</p>
+                <!-- Newsletter -->
+                <div class="col-lg-4 col-md-12">
+                    <h6 class="mb-3">Stay in the loop</h6>
+                    <p class="text-muted small mb-3">Get product updates and tips. No spam, unsubscribe anytime.</p>
+                    <form class="footer-newsletter" onsubmit="return false;">
+                        <div class="input-group">
+                            <input type="email" class="form-control form-control-sm" placeholder="your@email.com" aria-label="Email address">
+                            <button class="btn btn-gradient-primary btn-sm" type="submit">Subscribe</button>
+                        </div>
+                    </form>
+                    <div class="mt-3">
+                        <a class="btn btn-gradient-primary w-100 mb-2" href="{{ url_for('auth.register') }}">
+                            Start Free Trial
+                        </a>
+                        <p class="text-muted small text-center mb-0">No credit card required</p>
+                    </div>
                 </div>
             </div>
             <hr class="my-4">
             <div class="text-center text-muted small">
-                &copy; 2026 worklead. All rights reserved.
+                &copy; 2026 worklead. All rights reserved. &nbsp;·&nbsp; 10 tools. One platform.
             </div>
         </div>
     </footer>
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Navbar compact on scroll
+        window.addEventListener('scroll', function() {
+            document.querySelector('.marketing-navbar').classList.toggle('scrolled', window.scrollY > 60);
+        });
+    </script>
     {% block scripts %}{% endblock %}
 </body>
 </html>

@@ -1,46 +1,96 @@
 {% extends "marketing/layout.html" %}
 
-{% block title %}worklead - Let AI Run Your Business{% endblock %}
-{% block description %}worklead brings AI agents to every part of your business—from customer support to project management. Start your 14-day free trial, no credit card required.{% endblock %}
+{% block title %}worklead — Replace Slack, CRM & 8 More Tools with One AI Business Platform{% endblock %}
+{% block description %}worklead replaces Slack, your CRM, ticketing system, HR tools, project management, and more — all in one AI-powered platform. 10 tools. One login. From $0/month.{% endblock %}
 
 {% block content %}
 
-<!-- Hero Section -->
+<!-- =============================================
+     HERO SECTION
+     ============================================= -->
 <section class="hero-section">
     <div class="container">
         <div class="row align-items-center">
             <div class="col-lg-6 mb-5 mb-lg-0">
+                <span class="section-eyebrow">10 Tools. One Platform.</span>
                 <h1 class="hero-headline">
-                    Let AI Run Your <span class="brand-gradient">Business</span>
+                    Cancel Slack.<br>
+                    Cancel Your CRM.<br>
+                    <span class="brand-gradient">Cancel All of It.</span>
                 </h1>
                 <p class="hero-subheadline">
-                    worklead brings AI agents to every part of your business—from customer
-                    support to project management. Start your 14-day free trial, no credit
-                    card required.
+                    worklead replaces 10 business tools with one AI-powered platform
+                    your whole team actually uses.
+                </p>
+                <p class="text-muted mb-4" style="line-height:1.7;">
+                    Team chat, CRM, helpdesk, HR, project management, and AI agents — all in one workspace.
+                    No more tab switching, copy-pasting between tools, or six separate SaaS bills.
                 </p>
                 <div class="hero-ctas mb-4">
                     <a href="{{ url_for('auth.register') }}" class="btn btn-gradient-primary btn-lg">
-                        <i class="bi bi-rocket-takeoff me-2"></i>Start Free Trial
+                        <i class="bi bi-rocket-takeoff me-2"></i>Start Free — No Credit Card
                     </a>
-                    <a href="#how-it-works" class="btn btn-outline-light btn-lg ms-3">
-                        See How It Works
+                    <a href="#replace-stack" class="btn btn-outline-light btn-lg ms-3">
+                        See What It Replaces
                     </a>
                 </div>
                 <div class="hero-trust-signals">
                     <small class="text-muted">
-                        <i class="bi bi-check-circle me-2"></i>No credit card required
-                        <span class="mx-3">•</span>
-                        <i class="bi bi-check-circle me-2"></i>14-day Pro trial included
-                        <span class="mx-3">•</span>
-                        <i class="bi bi-check-circle me-2"></i>Cancel anytime
+                        <i class="bi bi-check-circle me-1"></i>No credit card required
+                        <span class="mx-2">·</span>
+                        <i class="bi bi-check-circle me-1"></i>Replaces 10 tools
+                        <span class="mx-2">·</span>
+                        <i class="bi bi-check-circle me-1"></i>14-day Pro trial included
                     </small>
                 </div>
             </div>
             <div class="col-lg-6">
+                <!-- CSS-only mock app UI -->
                 <div class="hero-visual">
-                    <div class="screenshot-placeholder">
-                        <i class="bi bi-image" style="font-size: 4rem; opacity: 0.3;"></i>
-                        <p class="text-muted mt-3">Product Screenshot</p>
+                    <div class="hero-mock-glow" aria-hidden="true"></div>
+                    <div class="hero-mock-ui reveal" aria-hidden="true">
+                        <!-- Window titlebar -->
+                        <div class="mock-titlebar">
+                            <span class="mock-dot mock-dot--red"></span>
+                            <span class="mock-dot mock-dot--yellow"></span>
+                            <span class="mock-dot mock-dot--green"></span>
+                            <span class="mock-titlebar-label">worklead — Sales Workspace</span>
+                        </div>
+                        <!-- App body -->
+                        <div class="mock-body">
+                            <!-- Icon sidebar -->
+                            <div class="mock-sidebar">
+                                <div class="mock-sidebar-icon mock-sidebar-icon--active"><i class="bi bi-chat-dots"></i></div>
+                                <div class="mock-sidebar-icon"><i class="bi bi-kanban"></i></div>
+                                <div class="mock-sidebar-icon"><i class="bi bi-people"></i></div>
+                                <div class="mock-sidebar-icon"><i class="bi bi-bar-chart"></i></div>
+                                <div class="mock-sidebar-icon"><i class="bi bi-gear"></i></div>
+                            </div>
+                            <!-- Chat thread -->
+                            <div class="mock-chat">
+                                <div class="mock-message mock-message--user">
+                                    <div class="mock-avatar mock-avatar--user">JD</div>
+                                    <div class="mock-bubble mock-bubble--user">
+                                        Summarize Q1 pipeline and flag any at-risk deals
+                                    </div>
+                                </div>
+                                <div class="mock-message mock-message--ai">
+                                    <div class="mock-avatar mock-avatar--ai"><i class="bi bi-robot"></i></div>
+                                    <div class="mock-bubble mock-bubble--ai">
+                                        <div class="mock-ai-label">AI Sales Agent</div>
+                                        Q1 pipeline: <strong>$284K</strong> across 12 deals.
+                                        <span class="mock-badge mock-badge--warn">2 at risk</span>
+                                        — Acme Corp (stalled 14d) and TechFlow (budget freeze).
+                                    </div>
+                                </div>
+                                <div class="mock-message mock-message--ai">
+                                    <div class="mock-avatar mock-avatar--ai"><i class="bi bi-robot"></i></div>
+                                    <div class="mock-bubble mock-bubble--ai mock-typing">
+                                        <span></span><span></span><span></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -48,94 +98,266 @@
     </div>
 </section>
 
-<!-- Features Section -->
+<!-- =============================================
+     REPLACES BAR
+     ============================================= -->
+<section class="replaces-bar-section">
+    <div class="container text-center">
+        <p class="replaces-bar-label mb-3">One platform. All of these. Gone.</p>
+        <div class="replaces-pills justify-content-center">
+            <span class="replace-pill"><i class="bi bi-chat-square-text"></i> Team Chat</span>
+            <span class="replace-pill"><i class="bi bi-person-lines-fill"></i> CRM</span>
+            <span class="replace-pill"><i class="bi bi-headset"></i> Helpdesk</span>
+            <span class="replace-pill"><i class="bi bi-people"></i> HR Tools</span>
+            <span class="replace-pill"><i class="bi bi-kanban"></i> Project Management</span>
+            <span class="replace-pill"><i class="bi bi-list-check"></i> Task Tracking</span>
+            <span class="replace-pill"><i class="bi bi-globe"></i> Website Builder</span>
+            <span class="replace-pill"><i class="bi bi-bar-chart-line"></i> Analytics</span>
+            <span class="replace-pill"><i class="bi bi-activity"></i> Status Page</span>
+            <span class="replace-pill"><i class="bi bi-robot"></i> AI Agents</span>
+        </div>
+        <p class="text-muted small mt-3">All included. No extra charge.</p>
+    </div>
+</section>
+
+<!-- =============================================
+     VALUE STATS
+     ============================================= -->
+<section class="social-proof-section">
+    <div class="container">
+        <div class="row g-4 text-center reveal-stagger">
+            <div class="col-6 col-md-3 reveal">
+                <div class="stat-card">
+                    <h3 class="brand-gradient display-4 fw-bold stat-number" data-target="10" data-suffix="">10</h3>
+                    <p class="text-muted">Business Tools, Included</p>
+                </div>
+            </div>
+            <div class="col-6 col-md-3 reveal">
+                <div class="stat-card">
+                    <h3 class="brand-gradient display-4 fw-bold stat-number" data-target="1" data-suffix="">1</h3>
+                    <p class="text-muted">Login for Your Whole Team</p>
+                </div>
+            </div>
+            <div class="col-6 col-md-3 reveal">
+                <div class="stat-card">
+                    <h3 class="brand-gradient display-4 fw-bold">14</h3>
+                    <p class="text-muted">Day Free Pro Trial</p>
+                </div>
+            </div>
+            <div class="col-6 col-md-3 reveal">
+                <div class="stat-card">
+                    <h3 class="brand-gradient display-4 fw-bold">$29</h3>
+                    <p class="text-muted">Per Month, Whole Business</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- =============================================
+     TOOL CONSOLIDATION — "The Math Is Pretty Simple"
+     ============================================= -->
+<section id="replace-stack" class="replace-stack-section">
+    <div class="container">
+        <div class="text-center mb-5 reveal">
+            <span class="section-eyebrow">The Great Consolidation</span>
+            <h2 class="display-5 fw-bold">The Math Is Pretty Simple</h2>
+            <p class="text-muted fs-5 mt-3">
+                The average SMB spends $2,400/year per employee on SaaS tools.<br>worklead replaces all of them.
+            </p>
+        </div>
+
+        <div class="tools-grid reveal-stagger">
+            <div class="tool-replace-item reveal">
+                <div class="tool-old"><i class="bi bi-chat-square-text"></i> Slack</div>
+                <div class="tool-arrow"><i class="bi bi-arrow-right"></i></div>
+                <div class="tool-new"><i class="bi bi-chat-dots-fill"></i> worklead Chat</div>
+            </div>
+            <div class="tool-replace-item reveal">
+                <div class="tool-old"><i class="bi bi-cloud-arrow-up"></i> Salesforce</div>
+                <div class="tool-arrow"><i class="bi bi-arrow-right"></i></div>
+                <div class="tool-new"><i class="bi bi-person-lines-fill"></i> worklead CRM</div>
+            </div>
+            <div class="tool-replace-item reveal">
+                <div class="tool-old"><i class="bi bi-ticket-perforated"></i> Zendesk</div>
+                <div class="tool-arrow"><i class="bi bi-arrow-right"></i></div>
+                <div class="tool-new"><i class="bi bi-headset"></i> worklead Support</div>
+            </div>
+            <div class="tool-replace-item reveal">
+                <div class="tool-old"><i class="bi bi-kanban"></i> Jira</div>
+                <div class="tool-arrow"><i class="bi bi-arrow-right"></i></div>
+                <div class="tool-new"><i class="bi bi-kanban-fill"></i> worklead Projects</div>
+            </div>
+            <div class="tool-replace-item reveal">
+                <div class="tool-old"><i class="bi bi-people"></i> BambooHR</div>
+                <div class="tool-arrow"><i class="bi bi-arrow-right"></i></div>
+                <div class="tool-new"><i class="bi bi-people-fill"></i> worklead HR</div>
+            </div>
+            <div class="tool-replace-item reveal">
+                <div class="tool-old"><i class="bi bi-list-check"></i> Asana</div>
+                <div class="tool-arrow"><i class="bi bi-arrow-right"></i></div>
+                <div class="tool-new"><i class="bi bi-check2-all"></i> worklead Tasks</div>
+            </div>
+            <div class="tool-replace-item reveal">
+                <div class="tool-old"><i class="bi bi-funnel"></i> HubSpot</div>
+                <div class="tool-arrow"><i class="bi bi-arrow-right"></i></div>
+                <div class="tool-new"><i class="bi bi-megaphone-fill"></i> worklead Marketing</div>
+            </div>
+            <div class="tool-replace-item reveal">
+                <div class="tool-old"><i class="bi bi-journal-text"></i> Notion</div>
+                <div class="tool-arrow"><i class="bi bi-arrow-right"></i></div>
+                <div class="tool-new"><i class="bi bi-file-richtext-fill"></i> worklead Docs</div>
+            </div>
+            <div class="tool-replace-item reveal">
+                <div class="tool-old"><i class="bi bi-activity"></i> Statuspage.io</div>
+                <div class="tool-arrow"><i class="bi bi-arrow-right"></i></div>
+                <div class="tool-new"><i class="bi bi-shield-check"></i> worklead Status</div>
+            </div>
+            <div class="tool-replace-item reveal">
+                <div class="tool-old"><i class="bi bi-globe"></i> WordPress / Webflow</div>
+                <div class="tool-arrow"><i class="bi bi-arrow-right"></i></div>
+                <div class="tool-new"><i class="bi bi-globe2"></i> worklead Website</div>
+            </div>
+        </div>
+
+        <div class="savings-banner reveal mt-4">
+            Average team saves <strong>$18,000/year</strong> switching to worklead
+            <a href="{{ url_for('auth.register') }}" class="btn btn-gradient-primary btn-sm ms-3">
+                Start Free Trial
+            </a>
+        </div>
+    </div>
+</section>
+
+<!-- =============================================
+     FEATURES SECTION — Alternating rows + card grid
+     ============================================= -->
 <section id="features" class="features-section">
     <div class="container">
-        <div class="text-center mb-5">
-            <h2 class="display-5 fw-bold">Everything You Need, <span class="brand-gradient">AI-Powered</span></h2>
-            <p class="text-muted fs-5">worklead combines the best business tools into one intelligent platform</p>
+        <div class="text-center mb-5 reveal">
+            <span class="section-eyebrow">Built Different</span>
+            <h2 class="display-5 fw-bold">Everything In One Place.<br><span class="brand-gradient">And It's All AI-Powered.</span></h2>
+            <p class="text-muted fs-5 mt-3">Every tool your business needs — built to work together, trained on your context.</p>
         </div>
-        <div class="row g-4">
-            <!-- Feature 1: AI Agents -->
-            <div class="col-md-6 col-lg-4">
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <i class="bi bi-robot"></i>
+
+        <!-- Feature Row A: AI Agents -->
+        <div class="row align-items-center g-5 mb-5 feature-row reveal">
+            <div class="col-lg-5">
+                <div class="feature-row-panel">
+                    <i class="bi bi-robot"></i>
+                    <div class="mt-3 d-flex flex-wrap gap-2 justify-content-center">
+                        <span class="feature-agent-badge">Sales AI</span>
+                        <span class="feature-agent-badge">Support AI</span>
+                        <span class="feature-agent-badge">HR AI</span>
+                        <span class="feature-agent-badge">Marketing AI</span>
+                        <span class="feature-agent-badge">+more</span>
                     </div>
-                    <h4 class="mb-3">AI Agents for Every Department</h4>
+                </div>
+            </div>
+            <div class="col-lg-7">
+                <span class="section-eyebrow">AI Agents</span>
+                <h3 class="fw-bold mb-3">A specialist AI for every department</h3>
+                <p class="text-muted">
+                    Deploy AI agents for Sales, Support, HR, Marketing, and more — each one trained on your data,
+                    your tone, and your business processes. This isn't ChatGPT with a company name slapped on it.
+                    It's an AI that actually works <em>here</em>.
+                </p>
+                <ul class="feature-checkmarks">
+                    <li><i class="bi bi-check-circle-fill"></i> Replaces Zendesk and Intercom bots</li>
+                    <li><i class="bi bi-check-circle-fill"></i> Trained on your knowledge base and CRM data</li>
+                    <li><i class="bi bi-check-circle-fill"></i> Escalates to humans when needed, with full context</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Feature Row B: Team Chat + CRM -->
+        <div class="row align-items-center g-5 mb-5 feature-row flex-lg-row-reverse reveal">
+            <div class="col-lg-5">
+                <div class="feature-row-panel">
+                    <i class="bi bi-chat-dots-fill"></i>
+                    <div class="mt-3 d-flex flex-wrap gap-2 justify-content: center">
+                        <span class="feature-agent-badge">DMs &amp; Channels</span>
+                        <span class="feature-agent-badge">CRM-linked</span>
+                        <span class="feature-agent-badge">AI in every chat</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-7">
+                <span class="section-eyebrow">Communication</span>
+                <h3 class="fw-bold mb-3">Team Chat + CRM, Actually Connected</h3>
+                <p class="text-muted">
+                    Real-time messaging, channels, threads, and DMs — all inside the same platform where your
+                    deals, tickets, and projects live. Every customer conversation is automatically logged to
+                    your CRM timeline. No copy-paste, no lost context.
+                </p>
+                <ul class="feature-checkmarks">
+                    <li><i class="bi bi-check-circle-fill"></i> Replaces Slack — no extra subscription needed</li>
+                    <li><i class="bi bi-check-circle-fill"></i> Message history tied to CRM contacts automatically</li>
+                    <li><i class="bi bi-check-circle-fill"></i> AI agents are already in every channel, ready to help</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Feature Row C: Automation -->
+        <div class="row align-items-center g-5 mb-5 feature-row reveal">
+            <div class="col-lg-5">
+                <div class="feature-row-panel">
+                    <i class="bi bi-lightning-charge-fill"></i>
+                    <div class="mt-3 d-flex flex-wrap gap-2 justify-content-center">
+                        <span class="feature-agent-badge">Auto-assign tasks</span>
+                        <span class="feature-agent-badge">Auto-generate reports</span>
+                        <span class="feature-agent-badge">Auto-route tickets</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-7">
+                <span class="section-eyebrow">Automation</span>
+                <h3 class="fw-bold mb-3">Work Happens Automatically</h3>
+                <p class="text-muted">
+                    Let AI handle the repetitive stuff. Tasks are created from chat conversations, tickets are
+                    triaged and routed before a human touches them, and reports write themselves. You stop
+                    managing tools and start making decisions.
+                </p>
+                <ul class="feature-checkmarks">
+                    <li><i class="bi bi-check-circle-fill"></i> Replaces Monday.com and Zapier workflows</li>
+                    <li><i class="bi bi-check-circle-fill"></i> Tasks auto-created from chat and ticket threads</li>
+                    <li><i class="bi bi-check-circle-fill"></i> AI drafts reports, summaries, and follow-ups</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Bottom 3: Card Grid -->
+        <div class="row g-4 reveal-stagger">
+            <div class="col-md-6 col-lg-4 reveal">
+                <div class="feature-card h-100">
+                    <span class="feature-replaces-badge">Replaces HubSpot + Salesforce</span>
+                    <div class="feature-icon"><i class="bi bi-person-lines-fill"></i></div>
+                    <h4 class="mb-3">Built-In CRM</h4>
                     <p class="text-muted">
-                        Deploy specialist AI agents for Sales, Support, HR, Marketing,
-                        and more. Each agent knows your business inside and out.
+                        Track leads, manage your pipeline, and let AI qualify and route contacts automatically.
+                        Every interaction across chat, email, and tickets — logged in one timeline.
                     </p>
                 </div>
             </div>
-
-            <!-- Feature 2: All-in-One -->
-            <div class="col-md-6 col-lg-4">
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <i class="bi bi-layers"></i>
-                    </div>
-                    <h4 class="mb-3">All-in-One Platform</h4>
+            <div class="col-md-6 col-lg-4 reveal">
+                <div class="feature-card h-100">
+                    <span class="feature-replaces-badge">Replaces BambooHR + Gusto HR</span>
+                    <div class="feature-icon"><i class="bi bi-people"></i></div>
+                    <h4 class="mb-3">HR Without the HR Software</h4>
                     <p class="text-muted">
-                        Replace Slack, CRM, project management, and HR tools with one
-                        unified workspace your team will love.
+                        Manage your team, track PTO, handle onboarding, and store employee records — all in
+                        the same workspace. Your HR AI handles the questions your team would normally email HR about.
                     </p>
                 </div>
             </div>
-
-            <!-- Feature 3: Integrations -->
-            <div class="col-md-6 col-lg-4">
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <i class="bi bi-puzzle"></i>
-                    </div>
-                    <h4 class="mb-3">Powerful Integrations</h4>
-                    <p class="text-muted">
-                        Connect Gmail, Outlook, QuickBooks, Stripe, and more. Your AI
-                        agents work with the tools you already use.
-                    </p>
-                </div>
-            </div>
-
-            <!-- Feature 4: Collaboration -->
-            <div class="col-md-6 col-lg-4">
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <i class="bi bi-people"></i>
-                    </div>
-                    <h4 class="mb-3">Real-Time Collaboration</h4>
-                    <p class="text-muted">
-                        Chat with your team and AI agents in real-time. Collaborate on
-                        tasks, deals, and projects seamlessly.
-                    </p>
-                </div>
-            </div>
-
-            <!-- Feature 5: Automation -->
-            <div class="col-md-6 col-lg-4">
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <i class="bi bi-lightning-charge"></i>
-                    </div>
-                    <h4 class="mb-3">Smart Automation</h4>
-                    <p class="text-muted">
-                        Let AI handle repetitive tasks automatically. From lead routing
-                        to report generation, work smarter, not harder.
-                    </p>
-                </div>
-            </div>
-
-            <!-- Feature 6: Security -->
-            <div class="col-md-6 col-lg-4">
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <i class="bi bi-shield-check"></i>
-                    </div>
+            <div class="col-md-6 col-lg-4 reveal">
+                <div class="feature-card h-100">
+                    <span class="feature-replaces-badge">SOC 2 · SSO · RBAC</span>
+                    <div class="feature-icon"><i class="bi bi-shield-fill-check"></i></div>
                     <h4 class="mb-3">Enterprise Security</h4>
                     <p class="text-muted">
-                        Bank-level encryption, role-based access control, and SOC 2
-                        compliance. Your data is safe with us.
+                        Bank-level encryption, role-based access control, and SOC 2 compliance. Your data is never
+                        used to train AI models. Enterprise-grade security without the enterprise price tag.
                     </p>
                 </div>
             </div>
@@ -143,14 +365,16 @@
     </div>
 </section>
 
-<!-- How It Works Section -->
+<!-- =============================================
+     HOW IT WORKS
+     ============================================= -->
 <section id="how-it-works" class="how-it-works-section">
     <div class="container">
-        <div class="text-center mb-5">
-            <h2 class="display-5 fw-bold">Get Started in <span class="brand-gradient">3 Simple Steps</span></h2>
+        <div class="text-center mb-5 reveal">
+            <h2 class="display-5 fw-bold">Get Running in <span class="brand-gradient">3 Simple Steps</span></h2>
         </div>
-        <div class="row g-4">
-            <div class="col-md-4">
+        <div class="row g-4 steps-row reveal-stagger">
+            <div class="col-md-4 reveal">
                 <div class="step-card">
                     <div class="step-number">1</div>
                     <h4 class="mb-3">Sign Up in Seconds</h4>
@@ -160,23 +384,23 @@
                     </p>
                 </div>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-4 reveal">
                 <div class="step-card">
                     <div class="step-number">2</div>
-                    <h4 class="mb-3">Add Your Team</h4>
+                    <h4 class="mb-3">Invite Your Team</h4>
                     <p class="text-muted">
-                        Invite teammates and deploy AI agents for Sales, Support, HR,
-                        and other departments.
+                        Add teammates and deploy AI agents for Sales, Support, HR,
+                        and other departments — configured to your business.
                     </p>
                 </div>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-4 reveal">
                 <div class="step-card">
                     <div class="step-number">3</div>
-                    <h4 class="mb-3">Watch AI Work</h4>
+                    <h4 class="mb-3">Watch AI Handle the Busywork</h4>
                     <p class="text-muted">
-                        Let your AI agents handle support tickets, qualify leads,
-                        manage projects, and more.
+                        Your AI agents triage tickets, qualify leads, manage projects,
+                        and answer your team's questions — around the clock.
                     </p>
                 </div>
             </div>
@@ -184,55 +408,67 @@
     </div>
 </section>
 
-<!-- Social Proof Section -->
-<section class="social-proof-section">
+<!-- =============================================
+     TESTIMONIALS
+     ============================================= -->
+<section class="social-proof-section" style="background: #1a1d21; padding-top: 2rem;">
     <div class="container">
-        <div class="text-center mb-5">
-            <h2 class="display-5 fw-bold">Trusted by <span class="brand-gradient">Innovative Teams</span></h2>
+        <div class="text-center mb-5 reveal">
+            <h2 class="display-5 fw-bold">Trusted by <span class="brand-gradient">Teams Who Were Done</span></h2>
+            <p class="text-muted fs-5">Done paying for 10 tools. Done switching tabs. Done.</p>
         </div>
-
-        <!-- Usage Stats -->
-        <div class="row g-4 text-center mb-5">
-            <div class="col-6 col-md-3">
-                <div class="stat-card">
-                    <h3 class="brand-gradient display-4 fw-bold">10K+</h3>
-                    <p class="text-muted">Messages Processed</p>
-                </div>
-            </div>
-            <div class="col-6 col-md-3">
-                <div class="stat-card">
-                    <h3 class="brand-gradient display-4 fw-bold">500+</h3>
-                    <p class="text-muted">AI Agents Deployed</p>
-                </div>
-            </div>
-            <div class="col-6 col-md-3">
-                <div class="stat-card">
-                    <h3 class="brand-gradient display-4 fw-bold">50+</h3>
-                    <p class="text-muted">Businesses Using worklead</p>
-                </div>
-            </div>
-            <div class="col-6 col-md-3">
-                <div class="stat-card">
-                    <h3 class="brand-gradient display-4 fw-bold">99.9%</h3>
-                    <p class="text-muted">Uptime</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Testimonial Placeholder -->
-        <div class="row g-4 justify-content-center">
-            <div class="col-md-8 col-lg-6">
-                <div class="testimonial-card">
-                    <div class="mb-3">
-                        <i class="bi bi-quote text-muted" style="font-size: 3rem;"></i>
+        <div class="row g-4 reveal-stagger">
+            <div class="col-md-4 reveal">
+                <div class="testimonial-card h-100">
+                    <div class="testimonial-stars">
+                        <i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i>
                     </div>
-                    <p class="testimonial-quote fs-5 mb-4">
-                        worklead transformed how we run our business. The AI agents
-                        handle our support tickets faster than our team ever could.
+                    <p class="testimonial-quote fs-6">
+                        "We were paying over $400/month across Slack, HubSpot, Zendesk, and Asana for a 5-person team.
+                        worklead replaced all four in a weekend. The AI agents alone are worth 10x what we pay."
                     </p>
-                    <div class="testimonial-author">
-                        <strong>Jane Doe</strong>
-                        <div><small class="text-muted">CEO, Example Startup</small></div>
+                    <div class="testimonial-author-row">
+                        <div class="testimonial-avatar">MT</div>
+                        <div>
+                            <strong>Marcus T.</strong>
+                            <small class="text-muted d-block">Co-Founder, early-stage SaaS</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 reveal">
+                <div class="testimonial-card h-100">
+                    <div class="testimonial-stars">
+                        <i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i>
+                    </div>
+                    <p class="testimonial-quote fs-6">
+                        "Within a day, our support agent was handling 80% of tickets without human intervention —
+                        and it actually sounded like us. I've never seen an AI onboard so fast."
+                    </p>
+                    <div class="testimonial-author-row">
+                        <div class="testimonial-avatar">PK</div>
+                        <div>
+                            <strong>Priya K.</strong>
+                            <small class="text-muted d-block">Head of Operations, e-commerce brand</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 reveal">
+                <div class="testimonial-card h-100">
+                    <div class="testimonial-stars">
+                        <i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i>
+                    </div>
+                    <p class="testimonial-quote fs-6">
+                        "worklead feels like we hired a 9th person who works 24/7 and knows everything.
+                        It's embarrassing how much simpler our ops are now."
+                    </p>
+                    <div class="testimonial-author-row">
+                        <div class="testimonial-avatar">DR</div>
+                        <div>
+                            <strong>Daniel R.</strong>
+                            <small class="text-muted d-block">Founder, professional services firm</small>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -240,16 +476,19 @@
     </div>
 </section>
 
-<!-- Pricing Teaser Section -->
+<!-- =============================================
+     PRICING TEASER
+     ============================================= -->
 <section class="pricing-teaser-section">
     <div class="container">
-        <div class="text-center mb-5">
+        <div class="text-center mb-5 reveal">
+            <span class="section-eyebrow">Pricing</span>
             <h2 class="display-5 fw-bold">Simple, <span class="brand-gradient">Transparent Pricing</span></h2>
             <p class="text-muted fs-5">Start free, upgrade when you're ready. No surprises.</p>
         </div>
-        <div class="row g-4 justify-content-center">
+        <div class="row g-4 justify-content-center reveal-stagger">
             <!-- Free Plan -->
-            <div class="col-md-5 col-lg-4">
+            <div class="col-md-5 col-lg-4 reveal">
                 <div class="pricing-card h-100">
                     <h4 class="mb-4">Free</h4>
                     <div class="pricing-amount mb-4">
@@ -260,58 +499,172 @@
                         <li><i class="bi bi-check-circle"></i> 1 workspace</li>
                         <li><i class="bi bi-check-circle"></i> 5 AI agents</li>
                         <li><i class="bi bi-check-circle"></i> 100 messages/month</li>
-                        <li><i class="bi bi-check-circle"></i> Basic integrations</li>
+                        <li><i class="bi bi-check-circle"></i> Core tools included</li>
                     </ul>
                     <a href="{{ url_for('auth.register') }}" class="btn btn-outline-light w-100">
                         Start Free
                     </a>
                 </div>
             </div>
-
             <!-- Pro Plan -->
-            <div class="col-md-5 col-lg-4">
+            <div class="col-md-5 col-lg-4 reveal">
                 <div class="pricing-card pricing-card-featured h-100">
-                    <div class="featured-badge">14-Day Trial</div>
+                    <div class="featured-badge">Most Popular</div>
                     <h4 class="mb-4">Pro</h4>
                     <div class="pricing-amount mb-4">
                         <span class="h1">$29</span>
                         <span class="text-muted">/month</span>
                     </div>
                     <ul class="pricing-features mb-4">
-                        <li><i class="bi bi-check-circle"></i> Unlimited workspaces</li>
+                        <li><i class="bi bi-check-circle"></i> Unlimited users</li>
                         <li><i class="bi bi-check-circle"></i> Unlimited AI agents</li>
                         <li><i class="bi bi-check-circle"></i> Unlimited messages</li>
-                        <li><i class="bi bi-check-circle"></i> All integrations</li>
+                        <li><i class="bi bi-check-circle"></i> All 10 tools included</li>
                         <li><i class="bi bi-check-circle"></i> Priority support</li>
                         <li><i class="bi bi-check-circle"></i> Advanced analytics</li>
                     </ul>
                     <a href="{{ url_for('auth.register') }}" class="btn btn-gradient-primary w-100">
                         Start 14-Day Trial
                     </a>
-                    <small class="text-muted d-block mt-2">No credit card required</small>
+                    <small class="text-muted d-block mt-2 text-center">No credit card required</small>
                 </div>
             </div>
         </div>
-        <div class="text-center mt-4">
+        <p class="text-center text-muted mt-4">
+            That's not a typo. <strong>$29/month for your entire business.</strong> Unlimited users on Pro.
+        </p>
+        <div class="text-center mt-2">
             <a href="/pricing" class="text-muted">View full pricing details <i class="bi bi-arrow-right"></i></a>
         </div>
     </div>
 </section>
 
-<!-- Final CTA Section -->
+<!-- =============================================
+     FAQ SECTION
+     ============================================= -->
+<section class="faq-section">
+    <div class="container">
+        <div class="text-center mb-5 reveal">
+            <span class="section-eyebrow">FAQ</span>
+            <h2 class="display-5 fw-bold">Questions Worth Asking</h2>
+        </div>
+        <div class="row justify-content-center">
+            <div class="col-lg-8 reveal">
+                <div class="accordion" id="faqAccordion">
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq1">
+                                Does worklead really replace Slack, my CRM, and all those other tools?
+                            </button>
+                        </h2>
+                        <div id="faq1" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                Yes — worklead includes built-in team chat, a full CRM, helpdesk and ticketing, HR management,
+                                project and task management, a website/blog builder, a status page, and analytics. You don't
+                                need to integrate worklead with your stack. worklead <em>is</em> your stack.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq2">
+                                We're already deep into HubSpot / Slack / Asana. Is switching realistic?
+                            </button>
+                        </h2>
+                        <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                Switching tools always takes some effort, but worklead is designed to import your data and get
+                                your team productive fast. Most teams are fully operational within a week. The bigger question
+                                is: how much is fragmented-tool debt costing you right now?
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq3">
+                                How are the AI agents different from just using ChatGPT?
+                            </button>
+                        </h2>
+                        <div id="faq3" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                ChatGPT is a general-purpose AI. worklead's agents are configured for your specific business —
+                                your customers, your processes, your team's context, your data. Your Support agent knows your
+                                product. Your HR agent knows your policies. That context is the whole point.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq4">
+                                What does "unlimited users" on Pro actually mean?
+                            </button>
+                        </h2>
+                        <div id="faq4" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                Exactly what it says. At $29/month, you can add your entire team with no per-seat charges.
+                                Most SaaS tools charge $10–$25 per user per month. worklead's flat pricing is deliberately
+                                designed to make the math obvious.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq5">
+                                Is my data safe? Where is it stored?
+                            </button>
+                        </h2>
+                        <div id="faq5" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                worklead uses bank-level encryption in transit and at rest. Your data is yours — we don't use
+                                it to train AI models, and you can export or delete it at any time. Enterprise-grade security
+                                without the enterprise price tag.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq6">
+                                Can I start for free without a credit card?
+                            </button>
+                        </h2>
+                        <div id="faq6" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                Yes. The free plan includes 1 workspace, 5 AI agents, and 100 messages/month — enough to
+                                see whether worklead fits your workflow. Your free account automatically includes a 14-day
+                                Pro trial so you can test everything before deciding.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- =============================================
+     FINAL CTA
+     ============================================= -->
 <section class="final-cta-section">
-    <div class="container text-center">
-        <h2 class="display-5 fw-bold mb-4">Ready to Transform Your Business with <span class="brand-gradient">AI</span>?</h2>
+    <div class="container text-center reveal">
+        <h2 class="display-5 fw-bold mb-4">
+            Your Stack Is Expensive.<br>
+            Your Tab Bar Is Embarrassing.<br>
+            <span class="brand-gradient">Fix Both.</span>
+        </h2>
         <p class="text-muted fs-5 mb-4">
-            Join innovative teams already using worklead to scale smarter, not harder.
+            Join teams that ditched the tool sprawl and moved everything to worklead.
+            Start free — upgrade when you're ready.
         </p>
         <a href="{{ url_for('auth.register') }}" class="btn btn-gradient-primary btn-lg">
-            <i class="bi bi-rocket-takeoff me-2"></i>Start Your Free Trial
+            <i class="bi bi-rocket-takeoff me-2"></i>Start Free — No Credit Card
         </a>
         <div class="mt-3">
             <small class="text-muted">
-                No credit card required • 14-day Pro trial • Cancel anytime
+                No credit card required · 14-day Pro trial · Cancel anytime · 10 tools included
             </small>
+        </div>
+        <div class="mt-3">
+            <a href="/demo" class="text-muted small">Talk to a human instead <i class="bi bi-arrow-right"></i></a>
         </div>
     </div>
 </section>
@@ -320,19 +673,56 @@
 
 {% block scripts %}
 <script>
-    // Smooth scrolling for anchor links
-    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-        anchor.addEventListener('click', function (e) {
-            e.preventDefault();
-            const target = document.querySelector(this.getAttribute('href'));
+    // 1. Smooth scrolling for anchor links
+    document.querySelectorAll('a[href^="#"]').forEach(function(anchor) {
+        anchor.addEventListener('click', function(e) {
+            var href = this.getAttribute('href');
+            if (href === '#') return;
+            var target = document.querySelector(href);
             if (target) {
-                const offsetTop = target.offsetTop - 80; // Account for fixed navbar
-                window.scrollTo({
-                    top: offsetTop,
-                    behavior: 'smooth'
-                });
+                e.preventDefault();
+                window.scrollTo({ top: target.offsetTop - 80, behavior: 'smooth' });
             }
         });
+    });
+
+    // 2. Scroll reveal — fade in elements with .reveal class
+    var revealObserver = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+            if (!entry.isIntersecting) return;
+            entry.target.classList.add('is-visible');
+            revealObserver.unobserve(entry.target);
+        });
+    }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+    document.querySelectorAll('.reveal').forEach(function(el) {
+        revealObserver.observe(el);
+    });
+
+    // 3. Count-up animation for stat numbers
+    function animateCountUp(el) {
+        var target = parseInt(el.dataset.target, 10);
+        var suffix = el.dataset.suffix || '';
+        var start  = performance.now();
+        var duration = 1600;
+        (function tick(now) {
+            var progress = Math.min((now - start) / duration, 1);
+            var eased    = 1 - Math.pow(1 - progress, 3);
+            el.textContent = Math.floor(eased * target).toLocaleString() + suffix;
+            if (progress < 1) requestAnimationFrame(tick);
+        })(start);
+    }
+
+    var statsObserver = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+            if (!entry.isIntersecting) return;
+            animateCountUp(entry.target);
+            statsObserver.unobserve(entry.target);
+        });
+    }, { threshold: 0.5 });
+
+    document.querySelectorAll('.stat-number[data-target]').forEach(function(el) {
+        statsObserver.observe(el);
     });
 </script>
 {% endblock %}

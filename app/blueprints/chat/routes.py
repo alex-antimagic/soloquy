@@ -484,7 +484,8 @@ def send_message():
                 agent_message = Message(
                     content=agent_response_text,
                     agent_id=agent.id,
-                    department_id=department_id
+                    department_id=department_id,
+                    recipient_id=current_user.id  # Scope response to this user
                 )
                 db.session.add(agent_message)
                 db.session.commit()
@@ -582,7 +583,8 @@ Return ONLY the task numbers (1, 2, 3, etc.) that the agent mentioned or address
                     content=error_content,
                     agent_id=agent.id,
                     department_id=department_id,
-                    message_type='error'  # Mark as error message
+                    message_type='error',  # Mark as error message
+                    recipient_id=current_user.id  # Scope response to this user
                 )
                 db.session.add(agent_message)
                 db.session.commit()

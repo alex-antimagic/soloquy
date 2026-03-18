@@ -1,0 +1,186 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('website.status_dashboard') }}">Status Page</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('website.status_incidents') }}">Incidents</a></li>
+                    <li class="breadcrumb-item active">{{ incident.title }}</li>
+                </ol>
+            </nav>
+            <h1>{{ incident.title }}</h1>
+        </div>
+        <div class="col-auto">
+            <a href="{{ url_for('public_bp.incident_detail', tenant_slug=current_tenant.slug, incident_id=incident.id) }}"
+               target="_blank" class="btn btn-outline-primary">
+                <i class="bi bi-eye"></i> View Public Page
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <!-- Add Update Form -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <strong><i class="bi bi-plus-circle"></i> Add Update</strong>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('website.add_incident_update', incident_id=incident.id) }}">
+                        <div class="mb-3">
+                            <label for="message" class="form-label">Update Message *</label>
+                            <textarea class="form-control" id="message" name="message" rows="3" required
+                                      placeholder="Provide an update on the incident status..."></textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="update_type" class="form-label">Update Type *</label>
+                            <select class="form-select" id="update_type" name="update_type" required>
+                                <option value="update">General Update</option>
+                                <option value="investigating">Investigating</option>
+                                <option value="identified">Identified</option>
+                                <option value="monitoring">Monitoring</option>
+                                <option value="resolved">Resolved</option>
+                            </select>
+                            <small class="text-muted">Selecting a status will also update the incident status</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="notify_subscribers" name="notify_subscribers">
+                                <label class="form-check-label" for="notify_subscribers">
+                                    Notify subscribers via email
+                                </label>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">Post Update</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Timeline -->
+            <div class="card">
+                <div class="card-header">
+                    <strong><i class="bi bi-clock-history"></i> Timeline ({{ incident.updates|length }} updates)</strong>
+                </div>
+                <div class="card-body">
+                    {% if incident.updates %}
+                    <div class="timeline">
+                        {% for update in incident.updates %}
+                        <div class="d-flex mb-4">
+                            <div class="me-3">
+                                <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center"
+                                     style="width: 40px; height: 40px;">
+                                    <i class="bi bi-chat-dots"></i>
+                                </div>
+                            </div>
+                            <div class="flex-grow-1">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <span class="badge
+                                                {% if update.update_type == 'resolved' %}bg-success
+                                                {% elif update.update_type == 'monitoring' %}bg-info
+                                                {% elif update.update_type == 'identified' %}bg-warning text-dark
+                                                {% else %}bg-secondary
+                                                {% endif %}">
+                                                {{ update.update_type.replace('_', ' ').title() }}
+                                            </span>
+                                            <small class="text-muted">
+                                                {{ update.created_at.strftime('%b %d, %Y %I:%M %p') }}
+                                            </small>
+                                        </div>
+                                        <p class="mb-0">{{ update.message }}</p>
+                                        {% if update.notification_sent %}
+                                        <small class="text-muted">
+                                            <i class="bi bi-envelope-check"></i> Notification sent
+                                        </small>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted mb-0">No updates yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <!-- Incident Info -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <strong>Incident Details</strong>
+                </div>
+                <div class="card-body">
+                    <p class="mb-2">
+                        <strong>Status:</strong><br>
+                        <span class="badge
+                            {% if incident.status == 'resolved' %}bg-success
+                            {% elif incident.status == 'monitoring' %}bg-info
+                            {% elif incident.status == 'identified' %}bg-warning text-dark
+                            {% else %}bg-secondary
+                            {% endif %}">
+                            {{ incident.status.replace('_', ' ').title() }}
+                        </span>
+                    </p>
+                    <p class="mb-2">
+                        <strong>Severity:</strong><br>
+                        <span class="badge
+                            {% if incident.severity == 'critical' %}bg-danger
+                            {% elif incident.severity == 'major' %}bg-warning text-dark
+                            {% else %}bg-info
+                            {% endif %}">
+                            {{ incident.severity.upper() }}
+                        </span>
+                    </p>
+                    <p class="mb-2">
+                        <strong>Published:</strong><br>
+                        {% if incident.is_published %}
+                        <span class="badge bg-success">Yes</span>
+                        {% else %}
+                        <span class="badge bg-secondary">Draft</span>
+                        {% endif %}
+                    </p>
+                    <p class="mb-2">
+                        <strong>Created:</strong><br>
+                        {{ incident.created_at.strftime('%b %d, %Y %I:%M %p') }}
+                    </p>
+                    {% if incident.resolved_at %}
+                    <p class="mb-0">
+                        <strong>Resolved:</strong><br>
+                        {{ incident.resolved_at.strftime('%b %d, %Y %I:%M %p') }}
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Affected Components -->
+            {% set affected_components = incident.get_affected_components() %}
+            {% if affected_components %}
+            <div class="card">
+                <div class="card-header">
+                    <strong>Affected Components</strong>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled mb-0">
+                        {% for component in affected_components %}
+                        <li class="mb-2">
+                            <i class="bi bi-hdd-rack text-muted"></i> {{ component.name }}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

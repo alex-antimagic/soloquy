@@ -10,7 +10,13 @@ from app.blueprints.website.forms import WebsiteSettingsForm, WebsitePageForm, W
 from app.models.website import Website, WebsitePage, WebsiteTheme, WebsiteForm, FormSubmission
 from app.models.workspace_applet import WorkspaceApplet
 from app.models.department import Department
+from app.models.status_page_config import StatusPageConfig
+from app.models.status_component import StatusComponent
+from app.models.status_incident import StatusIncident
+from app.models.incident_update import IncidentUpdate
+from app.models.status_subscriber import StatusSubscriber
 from app.services.applet_manager import is_applet_enabled
+from datetime import datetime
 import secrets
 
 
@@ -49,6 +55,15 @@ def dashboard():
         # Create default theme
         theme = WebsiteTheme(website=website)
         db.session.add(theme)
+
+        # Auto-create status page config (enabled by default)
+        status_config = StatusPageConfig(
+            website_id=website.id,
+            is_enabled=True,
+            page_title='System Status',
+            page_description=f'Current status of {tenant.name} services'
+        )
+        db.session.add(status_config)
 
         db.session.commit()
 
@@ -657,3 +672,338 @@ def analysis_progress(analysis_id):
         return redirect(url_for('website.view_analysis', analysis_id=analysis.id))
 
     return render_template('website/analysis_progress.html', analysis=analysis)
+
+
+# =============================================================================
+# STATUS PAGE ADMIN ROUTES
+# =============================================================================
+
+@website_bp.route('/status')
+@login_required
+def status_dashboard():
+    """Status page admin dashboard"""
+    tenant = g.current_tenant
+    website = Website.query.filter_by(tenant_id=tenant.id).first()
+
+    if not website:
+        flash('Please set up your website first.', 'warning')
+        return redirect(url_for('website.dashboard'))
+
+    # Get or create status page config
+    config = StatusPageConfig.query.filter_by(website_id=website.id).first()
+    if not config:
+        config = StatusPageConfig(
+            website_id=website.id,
+            page_title='System Status',
+            page_description=f'Current status of {tenant.name} services'
+        )
+        db.session.add(config)
+        db.session.commit()
+
+    # Get statistics
+    total_components = StatusComponent.query.filter_by(config_id=config.id).count()
+    active_incidents = StatusIncident.query.filter_by(
+        config_id=config.id
+    ).filter(StatusIncident.status != 'resolved').count()
+    total_subscribers = StatusSubscriber.query.filter_by(
+        config_id=config.id,
+        confirmed=True,
+        is_active=True
+    ).count()
+
+    # Get recent incidents
+    recent_incidents = StatusIncident.query.filter_by(
+        config_id=config.id
+    ).order_by(StatusIncident.created_at.desc()).limit(10).all()
+
+    return render_template('website/status/dashboard.html',
+                         website=website,
+                         config=config,
+                         total_components=total_components,
+                         active_incidents=active_incidents,
+                         total_subscribers=total_subscribers,
+                         recent_incidents=recent_incidents)
+
+
+@website_bp.route('/status/settings', methods=['GET', 'POST'])
+@login_required
+def status_settings():
+    """Configure status page settings"""
+    tenant = g.current_tenant
+    website = Website.query.filter_by(tenant_id=tenant.id).first_or_404()
+    config = StatusPageConfig.query.filter_by(website_id=website.id).first_or_404()
+
+    if request.method == 'POST':
+        config.is_enabled = request.form.get('is_enabled') == 'on'
+        config.page_title = request.form.get('page_title', '').strip()
+        config.page_description = request.form.get('page_description', '').strip()
+        config.support_url = request.form.get('support_url', '').strip() or None
+        config.show_incident_history_days = int(request.form.get('show_incident_history_days', 90))
+
+        db.session.commit()
+        flash('Status page settings updated successfully!', 'success')
+        return redirect(url_for('website.status_settings'))
+
+    return render_template('website/status/settings.html',
+                         website=website,
+                         config=config)
+
+
+@website_bp.route('/status/components')
+@login_required
+def status_components():
+    """Manage system components"""
+    tenant = g.current_tenant
+    website = Website.query.filter_by(tenant_id=tenant.id).first_or_404()
+    config = StatusPageConfig.query.filter_by(website_id=website.id).first_or_404()
+
+    components = StatusComponent.query.filter_by(
+        config_id=config.id
+    ).order_by(StatusComponent.position).all()
+
+    return render_template('website/status/components.html',
+                         website=website,
+                         config=config,
+                         components=components)
+
+
+@website_bp.route('/status/components/create', methods=['POST'])
+@login_required
+def create_component():
+    """Create a new component"""
+    tenant = g.current_tenant
+    website = Website.query.filter_by(tenant_id=tenant.id).first_or_404()
+    config = StatusPageConfig.query.filter_by(website_id=website.id).first_or_404()
+
+    name = request.form.get('name', '').strip()
+    description = request.form.get('description', '').strip()
+
+    if not name:
+        flash('Component name is required.', 'error')
+        return redirect(url_for('website.status_components'))
+
+    # Get max position
+    max_pos = db.session.query(db.func.max(StatusComponent.position)).filter_by(
+        config_id=config.id
+    ).scalar() or 0
+
+    component = StatusComponent(
+        config_id=config.id,
+        name=name,
+        description=description,
+        position=max_pos + 1,
+        status='operational'
+    )
+
+    db.session.add(component)
+    db.session.commit()
+
+    flash(f'Component "{name}" created successfully!', 'success')
+    return redirect(url_for('website.status_components'))
+
+
+@website_bp.route('/status/components/<int:component_id>/update-status', methods=['POST'])
+@login_required
+def update_component_status(component_id):
+    """Update component status (AJAX endpoint)"""
+    tenant = g.current_tenant
+    website = Website.query.filter_by(tenant_id=tenant.id).first_or_404()
+    config = StatusPageConfig.query.filter_by(website_id=website.id).first_or_404()
+
+    component = StatusComponent.query.filter_by(
+        id=component_id,
+        config_id=config.id
+    ).first_or_404()
+
+    new_status = request.form.get('status')
+    if new_status not in ['operational', 'degraded_performance', 'partial_outage', 'major_outage']:
+        return jsonify({'success': False, 'error': 'Invalid status'}), 400
+
+    component.update_status(new_status)
+    db.session.commit()
+
+    return jsonify({'success': True, 'component': component.name, 'status': new_status})
+
+
+@website_bp.route('/status/incidents')
+@login_required
+def status_incidents():
+    """View all incidents"""
+    tenant = g.current_tenant
+    website = Website.query.filter_by(tenant_id=tenant.id).first_or_404()
+    config = StatusPageConfig.query.filter_by(website_id=website.id).first_or_404()
+
+    # Filter by status if provided
+    status_filter = request.args.get('status', 'all')
+
+    query = StatusIncident.query.filter_by(config_id=config.id)
+
+    if status_filter != 'all':
+        if status_filter == 'active':
+            query = query.filter(StatusIncident.status != 'resolved')
+        else:
+            query = query.filter_by(status=status_filter)
+
+    incidents = query.order_by(StatusIncident.created_at.desc()).all()
+
+    return render_template('website/status/incidents.html',
+                         website=website,
+                         config=config,
+                         incidents=incidents,
+                         status_filter=status_filter)
+
+
+@website_bp.route('/status/incidents/create', methods=['GET', 'POST'])
+@login_required
+def create_incident():
+    """Create a new incident"""
+    tenant = g.current_tenant
+    website = Website.query.filter_by(tenant_id=tenant.id).first_or_404()
+    config = StatusPageConfig.query.filter_by(website_id=website.id).first_or_404()
+
+    components = StatusComponent.query.filter_by(config_id=config.id).all()
+
+    if request.method == 'POST':
+        title = request.form.get('title', '').strip()
+        initial_message = request.form.get('initial_message', '').strip()
+        severity = request.form.get('severity', 'minor')
+        affected_ids = request.form.getlist('affected_components')
+        is_published = request.form.get('is_published') == 'on'
+        notify = request.form.get('notify_subscribers') == 'on'
+
+        if not title or not initial_message:
+            flash('Title and initial message are required.', 'error')
+            return redirect(url_for('website.create_incident'))
+
+        # Create incident
+        incident = StatusIncident(
+            config_id=config.id,
+            title=title,
+            severity=severity,
+            status='investigating',
+            affected_component_ids=[int(id) for id in affected_ids if id],
+            created_by_id=current_user.id,
+            is_published=is_published
+        )
+        db.session.add(incident)
+        db.session.flush()  # Get incident ID
+
+        # Create initial update
+        update = IncidentUpdate(
+            incident_id=incident.id,
+            message=initial_message,
+            update_type='investigating',
+            created_by_id=current_user.id,
+            notify_subscribers=notify
+        )
+        db.session.add(update)
+        db.session.commit()
+
+        # Send notifications if requested
+        if notify and is_published:
+            from app.services.status_notification_service import send_incident_notification
+            send_incident_notification(incident, update, 'created')
+
+        flash('Incident created successfully!', 'success')
+        return redirect(url_for('website.view_incident', incident_id=incident.id))
+
+    return render_template('website/status/create_incident.html',
+                         website=website,
+                         config=config,
+                         components=components)
+
+
+@website_bp.route('/status/incidents/<int:incident_id>')
+@login_required
+def view_incident(incident_id):
+    """View incident details"""
+    tenant = g.current_tenant
+    website = Website.query.filter_by(tenant_id=tenant.id).first_or_404()
+    config = StatusPageConfig.query.filter_by(website_id=website.id).first_or_404()
+
+    incident = StatusIncident.query.filter_by(
+        id=incident_id,
+        config_id=config.id
+    ).first_or_404()
+
+    return render_template('website/status/incident_detail.html',
+                         website=website,
+                         config=config,
+                         incident=incident)
+
+
+@website_bp.route('/status/incidents/<int:incident_id>/update', methods=['POST'])
+@login_required
+def add_incident_update(incident_id):
+    """Add update to existing incident"""
+    tenant = g.current_tenant
+    website = Website.query.filter_by(tenant_id=tenant.id).first_or_404()
+    config = StatusPageConfig.query.filter_by(website_id=website.id).first_or_404()
+
+    incident = StatusIncident.query.filter_by(
+        id=incident_id,
+        config_id=config.id
+    ).first_or_404()
+
+    message = request.form.get('message', '').strip()
+    update_type = request.form.get('update_type', 'update')
+    notify = request.form.get('notify_subscribers') == 'on'
+
+    if not message:
+        flash('Update message is required.', 'error')
+        return redirect(url_for('website.view_incident', incident_id=incident_id))
+
+    # Create update
+    update = IncidentUpdate(
+        incident_id=incident.id,
+        message=message,
+        update_type=update_type,
+        created_by_id=current_user.id,
+        notify_subscribers=notify
+    )
+    db.session.add(update)
+
+    # Update incident status if changing
+    if update_type in ['investigating', 'identified', 'monitoring', 'resolved']:
+        incident.status = update_type
+        if update_type == 'resolved':
+            incident.resolved_at = datetime.utcnow()
+
+    db.session.commit()
+
+    # Send notifications if requested
+    if notify and incident.is_published:
+        from app.services.status_notification_service import send_incident_notification
+        send_incident_notification(incident, update, 'updated')
+
+    flash('Incident update added successfully!', 'success')
+    return redirect(url_for('website.view_incident', incident_id=incident_id))
+
+
+@website_bp.route('/status/subscribers')
+@login_required
+def status_subscribers():
+    """View and manage subscribers"""
+    tenant = g.current_tenant
+    website = Website.query.filter_by(tenant_id=tenant.id).first_or_404()
+    config = StatusPageConfig.query.filter_by(website_id=website.id).first_or_404()
+
+    # Get active subscribers
+    active_subscribers = StatusSubscriber.query.filter_by(
+        config_id=config.id,
+        confirmed=True,
+        is_active=True
+    ).order_by(StatusSubscriber.confirmed_at.desc()).all()
+
+    # Get pending confirmations
+    pending = StatusSubscriber.query.filter_by(
+        config_id=config.id,
+        confirmed=False,
+        is_active=True
+    ).order_by(StatusSubscriber.created_at.desc()).all()
+
+    return render_template('website/status/subscribers.html',
+                         website=website,
+                         config=config,
+                         active_subscribers=active_subscribers,
+                         pending=pending)

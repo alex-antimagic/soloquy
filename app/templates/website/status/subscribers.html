@@ -1,0 +1,100 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('website.status_dashboard') }}">Status Page</a></li>
+                    <li class="breadcrumb-item active">Subscribers</li>
+                </ol>
+            </nav>
+            <h1><i class="bi bi-people"></i> Email Subscribers</h1>
+            <p class="text-muted">Customers who subscribed to status updates</p>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <strong><i class="bi bi-check-circle text-success"></i> Active Subscribers ({{ active_subscribers|length }})</strong>
+                </div>
+                <div class="card-body">
+                    {% if active_subscribers %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Email</th>
+                                    <th>Confirmed</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for subscriber in active_subscribers %}
+                                <tr>
+                                    <td>{{ subscriber.email }}</td>
+                                    <td>{{ subscriber.confirmed_at.strftime('%b %d, %Y') }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted mb-0">No active subscribers yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <strong><i class="bi bi-hourglass-split text-warning"></i> Pending Confirmation ({{ pending|length }})</strong>
+                </div>
+                <div class="card-body">
+                    {% if pending %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Email</th>
+                                    <th>Requested</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for subscriber in pending %}
+                                <tr>
+                                    <td>{{ subscriber.email }}</td>
+                                    <td>{{ subscriber.created_at.strftime('%b %d, %Y') }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted mb-0">No pending confirmations.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-info-circle"></i> About Subscribers</h5>
+                    <ul class="mb-0">
+                        <li>Subscribers receive email notifications when you create or update incidents</li>
+                        <li>New subscribers must confirm their email address before receiving notifications</li>
+                        <li>All notification emails include an unsubscribe link</li>
+                        <li>Only published incidents trigger notifications</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

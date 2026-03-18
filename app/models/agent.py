@@ -184,12 +184,15 @@ class Agent(db.Model):
         # Get messages where:
         # - This specific agent is involved (agent_id is set)
         # - Message is either FROM the user (sender_id = user_id) OR
-        # - Message is FROM the agent (sender_id is None)
+        # - Message is FROM the agent TO this user (recipient_id = user_id, sender_id is None)
         query = Message.query.filter(
             Message.agent_id == self.id,  # Only this agent's messages
             db.or_(
                 Message.sender_id == user_id,  # User's messages to this agent
-                Message.sender_id.is_(None)     # This agent's responses (sender_id is None for agent messages)
+                db.and_(
+                    Message.sender_id.is_(None),       # Agent's responses have no sender
+                    Message.recipient_id == user_id    # Scoped to this user only
+                )
             )
         )
 

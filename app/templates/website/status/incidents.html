@@ -1,0 +1,114 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('website.status_dashboard') }}">Status Page</a></li>
+                    <li class="breadcrumb-item active">Incidents</li>
+                </ol>
+            </nav>
+            <h1><i class="bi bi-exclamation-triangle"></i> Incidents</h1>
+        </div>
+        <div class="col-auto">
+            <a href="{{ url_for('website.create_incident') }}" class="btn btn-danger">
+                <i class="bi bi-plus-circle"></i> Create Incident
+            </a>
+        </div>
+    </div>
+
+    <!-- Filter Tabs -->
+    <ul class="nav nav-tabs mb-4">
+        <li class="nav-item">
+            <a class="nav-link {% if status_filter == 'all' %}active{% endif %}"
+               href="{{ url_for('website.status_incidents', status='all') }}">All</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if status_filter == 'active' %}active{% endif %}"
+               href="{{ url_for('website.status_incidents', status='active') }}">Active</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if status_filter == 'resolved' %}active{% endif %}"
+               href="{{ url_for('website.status_incidents', status='resolved') }}">Resolved</a>
+        </li>
+    </ul>
+
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body">
+                    {% if incidents %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Title</th>
+                                    <th>Severity</th>
+                                    <th>Status</th>
+                                    <th>Published</th>
+                                    <th>Created</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for incident in incidents %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ incident.title }}</strong>
+                                        {% if incident.updates %}
+                                        <br><small class="text-muted">{{ incident.updates|length }} updates</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge
+                                            {% if incident.severity == 'critical' %}bg-danger
+                                            {% elif incident.severity == 'major' %}bg-warning text-dark
+                                            {% else %}bg-info
+                                            {% endif %}">
+                                            {{ incident.severity }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge
+                                            {% if incident.status == 'resolved' %}bg-success
+                                            {% elif incident.status == 'monitoring' %}bg-info
+                                            {% else %}bg-warning text-dark
+                                            {% endif %}">
+                                            {{ incident.status.replace('_', ' ').title() }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if incident.is_published %}
+                                        <span class="badge bg-success">Yes</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">Draft</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ incident.created_at.strftime('%b %d, %Y %I:%M %p') }}</td>
+                                    <td>
+                                        <a href="{{ url_for('website.view_incident', incident_id=incident.id) }}"
+                                           class="btn btn-sm btn-primary">
+                                            <i class="bi bi-eye"></i> View
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center py-5">
+                        No incidents found.
+                        {% if status_filter != 'all' %}
+                        <a href="{{ url_for('website.status_incidents', status='all') }}">View all incidents</a>
+                        {% endif %}
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

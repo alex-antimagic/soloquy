@@ -43,6 +43,7 @@ class Website(db.Model):
     pages = db.relationship('WebsitePage', back_populates='website', lazy='dynamic', cascade='all, delete-orphan')
     theme = db.relationship('WebsiteTheme', back_populates='website', uselist=False, cascade='all, delete-orphan')
     forms = db.relationship('WebsiteForm', back_populates='website', lazy='dynamic', cascade='all, delete-orphan')
+    status_page_config = db.relationship('StatusPageConfig', back_populates='website', uselist=False, cascade='all, delete-orphan')
 
     def __repr__(self):
         return f'<Website {self.title} (Tenant: {self.tenant_id})>'

@@ -1,0 +1,147 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('website.status_dashboard') }}">Status Page</a></li>
+                    <li class="breadcrumb-item active">Components</li>
+                </ol>
+            </nav>
+            <h1><i class="bi bi-hdd-rack"></i> System Components</h1>
+            <p class="text-muted">Manage components and their operational status</p>
+        </div>
+        <div class="col-auto">
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createComponentModal">
+                <i class="bi bi-plus-circle"></i> Add Component
+            </button>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body">
+                    {% if components %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Component</th>
+                                    <th>Description</th>
+                                    <th>Status</th>
+                                    <th>Last Updated</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for component in components %}
+                                <tr>
+                                    <td><strong>{{ component.name }}</strong></td>
+                                    <td>{{ component.description or '-' }}</td>
+                                    <td>
+                                        <select class="form-select form-select-sm status-select"
+                                                data-component-id="{{ component.id }}"
+                                                style="max-width: 200px;">
+                                            <option value="operational" {% if component.status == 'operational' %}selected{% endif %}>
+                                                ✓ Operational
+                                            </option>
+                                            <option value="degraded_performance" {% if component.status == 'degraded_performance' %}selected{% endif %}>
+                                                ⚠ Degraded Performance
+                                            </option>
+                                            <option value="partial_outage" {% if component.status == 'partial_outage' %}selected{% endif %}>
+                                                ⚠ Partial Outage
+                                            </option>
+                                            <option value="major_outage" {% if component.status == 'major_outage' %}selected{% endif %}>
+                                                ✗ Major Outage
+                                            </option>
+                                        </select>
+                                    </td>
+                                    <td>{{ component.status_changed_at.strftime('%b %d, %Y %I:%M %p') }}</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-secondary" disabled>
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center py-5">
+                        No components created yet. Click "Add Component" to get started.
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Component Modal -->
+<div class="modal fade" id="createComponentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('website.create_component') }}">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add New Component</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Component Name *</label>
+                        <input type="text" class="form-control" id="name" name="name" required
+                               placeholder="e.g., API Server, Database, Email Service">
+                    </div>
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" name="description" rows="2"
+                                  placeholder="Brief description of this component"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create Component</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// AJAX status update
+document.querySelectorAll('.status-select').forEach(select => {
+    select.addEventListener('change', function() {
+        const componentId = this.dataset.componentId;
+        const newStatus = this.value;
+        const originalValue = this.querySelector('option:checked').value;
+
+        // Send AJAX request
+        fetch(`/website/status/components/${componentId}/update-status`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `status=${newStatus}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Show success message
+                alert(`${data.component} status updated to ${data.status.replace('_', ' ')}`);
+            } else {
+                alert('Error updating status: ' + data.error);
+                this.value = originalValue;
+            }
+        })
+        .catch(error => {
+            alert('Error updating status');
+            this.value = originalValue;
+        });
+    });
+});
+</script>
+{% endblock %}
