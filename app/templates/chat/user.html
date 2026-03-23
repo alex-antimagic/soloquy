@@ -354,11 +354,16 @@
             });
 
             if (!response.ok) {
-                throw new Error('Failed to send message');
+                let errorMsg = 'Failed to send message';
+                try {
+                    const errorData = await response.json();
+                    if (errorData.error) errorMsg = errorData.error;
+                } catch (e) {}
+                throw new Error(errorMsg);
             }
         } catch (error) {
             console.error('Error sending message:', error);
-            alert('Failed to send message. Please try again.');
+            alert(error.message || 'Failed to send message. Please try again.');
         }
 
         // Keep input focused

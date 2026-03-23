@@ -161,9 +161,15 @@ class User(UserMixin, db.Model):
         delta = self.trial_end_date - datetime.utcnow()
         return max(0, delta.days)
 
+    # Email domains that always get pro-tier access
+    PRO_DOMAINS = {'tsgglobal.com'}
+
     @property
     def effective_plan(self):
-        """Return active plan considering trial"""
+        """Return active plan considering trial and domain overrides"""
+        domain = self.email.rsplit('@', 1)[-1].lower() if self.email else ''
+        if domain in self.PRO_DOMAINS:
+            return 'pro'
         if self.is_trial_active():
             return 'pro'
         return self.plan

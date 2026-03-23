@@ -865,14 +865,25 @@
                 {% if is_agent %}
                 hideTypingIndicator();
                 {% endif %}
-                throw new Error('Failed to send message');
+                let errorMsg = 'Failed to send message';
+                try {
+                    const errorData = await response.json();
+                    if (errorData.error) errorMsg = errorData.error;
+                    if (errorData.limit_reached && errorData.upgrade_url) {
+                        if (confirm(errorMsg + '\n\nWould you like to view upgrade options?')) {
+                            window.location.href = errorData.upgrade_url;
+                        }
+                        return;
+                    }
+                } catch (e) {}
+                throw new Error(errorMsg);
             }
         } catch (error) {
             {% if is_agent %}
             hideTypingIndicator();
             {% endif %}
             console.error('Error sending message:', error);
-            alert('Failed to send message. Please try again.');
+            alert(error.message || 'Failed to send message. Please try again.');
         }
 
         messageInput.focus();

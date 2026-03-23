@@ -710,13 +710,24 @@
                 const errorText = await response.text();
                 console.error('[ERROR] Response body:', errorText);
                 removeTypingIndicator();
-                throw new Error('Failed to send message: ' + response.status);
+                let errorMsg = 'Failed to send message';
+                try {
+                    const errorData = JSON.parse(errorText);
+                    if (errorData.error) errorMsg = errorData.error;
+                    if (errorData.limit_reached && errorData.upgrade_url) {
+                        if (confirm(errorMsg + '\n\nWould you like to view upgrade options?')) {
+                            window.location.href = errorData.upgrade_url;
+                        }
+                        return;
+                    }
+                } catch (e) {}
+                throw new Error(errorMsg);
             }
         } catch (error) {
             removeTypingIndicator();
             console.error('[ERROR] Error sending message:', error);
             console.error('[ERROR] Stack trace:', error.stack);
-            alert('Failed to send message: ' + error.message);
+            alert(error.message);
         }
 
         // Keep input focused

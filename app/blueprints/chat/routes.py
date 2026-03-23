@@ -222,6 +222,7 @@ def upload_chat_image():
 
 @chat_bp.route('/send', methods=['POST'])
 @login_required
+@require_tenant_access
 def send_message():
     """Send a message"""
     data = request.get_json()

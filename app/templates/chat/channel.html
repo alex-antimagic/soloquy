@@ -1113,14 +1113,28 @@
             // Reset uploaded image data after sending
             uploadedImageData = null;
 
-            const data = await response.json();
-
             // Remove typing indicators for mentioned agents only
-            // Agent responses will come via Socket.IO, so we don't add them here
             mentionedAgentNames.forEach(agentName => {
                 removeTypingIndicator(agentName);
             });
 
+            if (!response.ok) {
+                let errorMsg = 'Failed to send message';
+                try {
+                    const errorData = await response.json();
+                    if (errorData.error) errorMsg = errorData.error;
+                    if (errorData.limit_reached && errorData.upgrade_url) {
+                        if (confirm(errorMsg + '\n\nWould you like to view upgrade options?')) {
+                            window.location.href = errorData.upgrade_url;
+                        }
+                        return;
+                    }
+                } catch (e) {}
+                alert(errorMsg);
+                return;
+            }
+
+            const data = await response.json();
             if (!data.success) {
                 alert('Failed to send message: ' + (data.error || 'Unknown error'));
             }
@@ -1130,7 +1144,7 @@
             mentionedAgentNames.forEach(agentName => {
                 removeTypingIndicator(agentName);
             });
-            alert('Failed to send message');
+            alert(error.message || 'Failed to send message');
         }
     });
 
